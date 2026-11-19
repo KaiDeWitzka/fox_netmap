@@ -1,0 +1,11 @@
+{
+  "name": "fox-netmap-ui-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:ui": "node tests/ui_dom_check.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

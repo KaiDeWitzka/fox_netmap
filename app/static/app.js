@@ -48,12 +48,10 @@ function showSidebar(tab) {
   const aside = document.getElementById("detail");
   aside.hidden = false;
   activateTab(tab);
-  if (cy) setTimeout(() => cy.resize(), 30);
 }
 
 function hideSidebar() {
   document.getElementById("detail").hidden = true;
-  if (cy) setTimeout(() => cy.resize(), 30);
 }
 
 function activateTab(tab) {
