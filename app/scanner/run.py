@@ -192,11 +192,11 @@ def main() -> None:
             db.set_setting(conn, "scan_requested", "")
             conn.commit()
             print("[fox_netmap] manueller Scan angefordert")
-            try:
-                summary = run_once(eff, conn)
-                print(f"[fox_netmap] Scan fertig: {summary['seen']} Geraete, {summary['new']} neu")
-            except Exception as exc:
-                print(f"[fox_netmap] Scan-Fehler: {exc}", file=sys.stderr)
+        try:
+            summary = run_once(eff, conn)
+            print(f"[fox_netmap] Scan fertig: {summary['seen']} Geraete, {summary['new']} neu")
+        except Exception as exc:
+            print(f"[fox_netmap] Scan-Fehler: {exc}", file=sys.stderr)
         deadline = time.time() + eff.scan_interval
         while time.time() < deadline:
             if db.get_setting(conn, "scan_requested"):
