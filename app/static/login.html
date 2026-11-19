@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>fox_netmap – Login</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-page">
+  <form id="login-form" class="panel">
+    <h1>fox_netmap</h1>
+    <input id="login-user" placeholder="Benutzer" autocomplete="username" required>
+    <input id="login-pass" type="password" placeholder="Passwort" autocomplete="current-password" required>
+    <button type="submit">Login</button>
+    <p id="login-err" class="muted"></p>
+  </form>
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: login-user.value, password: login-pass.value })
+      });
+      if (r.ok) { location.href = "/"; } else { login-err.textContent = "Login fehlgeschlagen"; }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+:root {
+  --bg: #0f172a;
+  --fg: #e2e8f0;
+  --panel: #1e293b;
+  --border: #334155;
+  --accent: #38bdf8;
+  --muted: #94a3b8;
+}
+html[data-theme="light"] {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --panel: #ffffff;
+  --border: #cbd5e1;
+  --accent: #0284c7;
+  --muted: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+header h1 { font-size: 16px; margin: 0 12px 0 0; color: var(--accent); }
+nav button, header button {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+header input[type="search"], header select {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+#search { min-width: 260px; }
+#scan-status { color: var(--muted); font-size: 12px; }
+main { flex: 1; min-height: 0; }
+.view { height: 100%; }
+#view-map { display: flex; }
+#map { flex: 1; min-width: 0; }
+#detail {
+  width: 340px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 12px;
+}
+#detail h2 { font-size: 15px; margin: 0 0 8px; }
+#detail table { width: 100%; border-collapse: collapse; font-size: 12px; }
+#detail td { border-bottom: 1px solid var(--border); padding: 3px 4px; vertical-align: top; word-break: break-all; }
+#detail td:first-child { color: var(--muted); width: 40%; }
+.chips span {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin: 2px 3px 2px 0;
+  font-size: 12px;
+}
+#detail ul { padding-left: 18px; font-size: 12px; }
+#detail .dev-link { color: var(--accent); cursor: pointer; }
+#view-table { overflow: auto; }
+#device-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+#device-table th, #device-table td { border-bottom: 1px solid var(--border); padding: 4px 8px; text-align: left; white-space: nowrap; }
+#device-table th { position: sticky; top: 0; background: var(--panel); cursor: pointer; user-select: none; }
+#device-table tr:hover td { background: var(--panel); }
+#device-table select, #device-table input {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px;
+}
+.status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.status-online { background: #34d399; }
+.status-offline { background: #64748b; }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 14px;
+  max-width: 640px;
+}
+.panel h2 { margin-top: 0; font-size: 15px; }
+.panel label { display: block; margin: 8px 0; }
+.panel input[type="text"], .panel input[type="number"], .panel select {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; width: 100%;
+}
+.panel button {
+  background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+}
+.muted { color: var(--muted); }
+body.embed header #btn-logout, body.embed #nav-settings, body.embed #btn-scan, body.embed #btn-print { display: none; }
+.login-page { display: flex; align-items: center; justify-content: center; }
+.login-page .panel { width: 320px; display: flex; flex-direction: column; gap: 10px; }
+.login-page input {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+}
+@media print {
+  header, #detail { display: none !important; }
+  body { height: auto; }
+  #view-map { display: none; }
+  #view-table { display: block !important; height: auto; }
+}
