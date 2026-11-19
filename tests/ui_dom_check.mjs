@@ -121,5 +121,22 @@ $("#search").dispatchEvent(new w.Event("input"));
 await sleep(400);
 check("Suche: GET /api/devices?q=nas", calls.some((c) => c.url.includes("/api/devices") && c.url.includes("q=nas")));
 
+const thKeys = () => [...doc.querySelectorAll("#device-table thead th")].map((t) => t.dataset.key);
+const beforeCols = thKeys();
+check("Spalten: draggable-Header", doc.querySelectorAll("#device-table thead th[draggable='true']").length === beforeCols.length);
+const dt = { data: {}, setData(k, v) { this.data[k] = v; }, getData(k) { return this.data[k]; } };
+const th0 = doc.querySelector("#device-table thead th");
+const evDrag = new w.Event("dragstart", { bubbles: true });
+evDrag.dataTransfer = dt;
+th0.dispatchEvent(evDrag);
+const th3 = doc.querySelectorAll("#device-table thead th")[3];
+const evDrop = new w.Event("drop", { bubbles: true, cancelable: true });
+evDrop.dataTransfer = dt;
+th3.dispatchEvent(evDrop);
+const afterCols = thKeys();
+check("Spalten-Drag: Reihenfolge geaendert (th0 vor th3 eingefuegt)", afterCols[0] === beforeCols[1] && afterCols[2] === beforeCols[0]);
+const savedCols = JSON.parse(w.localStorage.getItem("fox_table_cols") || "null");
+check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && savedCols[2] === beforeCols[0]);
+
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

@@ -19,6 +19,25 @@ let cy = null;
 let sortKey = "hostname";
 let sortDir = 1;
 
+const TABLE_COLS = [
+  ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"],
+  ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"],
+  ["ports_str", "Ports"], ["connected_to", "Verbunden mit"], ["note", "Notiz"], ["last_seen", "Zuletzt gesehen"],
+];
+
+function loadColOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("fox_table_cols") || "null");
+    if (Array.isArray(saved) && saved.length === TABLE_COLS.length && saved.every((k) => TABLE_COLS.some(([key]) => key === k)))
+      return saved;
+  } catch (e) {
+    // ungültiger Stand -> Default
+  }
+  return TABLE_COLS.map(([k]) => k);
+}
+
+let colOrder = loadColOrder();
+
 function api(path, opts = {}) {
   const url = TOKEN ? path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN) : path;
   return fetch(url, { headers: { "Content-Type": "application/json" }, ...opts }).then((r) => {
@@ -182,16 +201,11 @@ async function showDetail(mac) {
   showSidebar("detail");
 }
 
-const TABLE_COLS = [
-  ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"],
-  ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"],
-  ["ports_str", "Ports"], ["connected_to", "Verbunden mit"], ["note", "Notiz"], ["last_seen", "Zuletzt gesehen"],
-];
-
 function renderTable() {
   const thead = document.querySelector("#device-table thead");
   const tbody = document.querySelector("#device-table tbody");
-  thead.innerHTML = "<tr>" + TABLE_COLS.map(([k, label]) => `<th data-key="${k}">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "</tr>";
+  const cols = colOrder.map((k) => TABLE_COLS.find(([key]) => key === k));
+  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "</tr>";
   thead.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
     const k = th.dataset.key;
     if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
@@ -231,6 +245,47 @@ function renderTable() {
     tr.addEventListener("click", (e) => { if (e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") showDetail(d.mac); });
     tbody.appendChild(tr);
   }
+}
+
+function bindTableDrag() {
+  const thead = document.querySelector("#device-table thead");
+  let dragKey = null;
+  thead.addEventListener("dragstart", (e) => {
+    const th = e.target.closest("th");
+    if (!th) return;
+    dragKey = th.dataset.key;
+    e.dataTransfer.setData("text/plain", dragKey);
+    e.dataTransfer.effectAllowed = "move";
+  });
+  thead.addEventListener("dragover", (e) => {
+    const th = e.target.closest("th");
+    if (th && dragKey) {
+      e.preventDefault();
+      th.classList.add("drag-over");
+    }
+  });
+  thead.addEventListener("dragleave", (e) => {
+    const th = e.target.closest("th");
+    if (th) th.classList.remove("drag-over");
+  });
+  thead.addEventListener("drop", (e) => {
+    const th = e.target.closest("th");
+    if (!th || !dragKey) return;
+    e.preventDefault();
+    const target = th.dataset.key;
+    th.classList.remove("drag-over");
+    if (target !== dragKey) {
+      colOrder = colOrder.filter((k) => k !== dragKey);
+      colOrder.splice(colOrder.indexOf(target), 0, dragKey);
+      localStorage.setItem("fox_table_cols", JSON.stringify(colOrder));
+      renderTable();
+    }
+    dragKey = null;
+  });
+  thead.addEventListener("dragend", () => {
+    dragKey = null;
+    thead.querySelectorAll("th.drag-over").forEach((t) => t.classList.remove("drag-over"));
+  });
 }
 
 function bindNav() {
@@ -371,6 +426,7 @@ async function init() {
   bindFilters();
   bindSidebar();
   bindScan();
+  bindTableDrag();
   await loadDevices();
   pollScanStatus();
   setInterval(pollScanStatus, 5000);
