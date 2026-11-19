@@ -184,9 +184,9 @@ async function showDetail(mac) {
     cy.edges().filter((e) => e.data("source") === c.mac).addClass("hl");
   }
   const el = document.getElementById("detail-content");
-  const ipLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.url}</a>`).join(" ");
+  const hostLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.label}</a>`).join(", ");
   const rows = [
-    ["Hostname", d.hostname], ["IP", (d.ip || "") + (ipLinks ? " " + ipLinks : "")], ["MAC", d.mac], ["Hersteller", d.vendor],
+    ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", d.mac], ["Hersteller", d.vendor],
     ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
     ["Verbunden mit", d.layout.connected_to || ""], ["Notiz", d.note],
     ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
@@ -259,7 +259,12 @@ function webLinks(d) {
     for (const p of ports) {
       const scheme = WEB_PORTS[p];
       if (scheme) {
-        links.push({ url: `${scheme}://${d.ip}${p === 80 || p === 443 ? "" : ":" + p}`, port: p });
+        links.push({
+          url: `${scheme}://${d.ip}${p === 80 || p === 443 ? "" : ":" + p}`,
+          port: p,
+          scheme,
+          label: scheme + (p === 80 || p === 443 ? "" : ":" + p),
+        });
       }
     }
   }
@@ -270,19 +275,25 @@ function buildCell(d, key) {
   const td = document.createElement("td");
   if (key === "status") {
     td.innerHTML = `<span class="status-dot status-${d.status}"></span>${d.status}`;
-  } else if (key === "ip") {
-    td.textContent = d.ip || "";
-    td.title = d.ip || "";
-    for (const l of webLinks(d)) {
-      const a = document.createElement("a");
-      a.href = l.url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = l.url.replace(/^https?:\/\//, "");
-      a.title = l.url;
-      a.style.cssText = "margin-left:6px;color:var(--accent)";
-      td.appendChild(document.createTextNode(" "));
-      td.appendChild(a);
+  } else if (key === "hostname") {
+    const label = d.hostname || d.ip || "";
+    td.textContent = label;
+    td.title = label;
+    const links = webLinks(d);
+    if (links.length) {
+      td.appendChild(document.createTextNode(" ("));
+      links.forEach((l, i) => {
+        if (i > 0) td.appendChild(document.createTextNode(", "));
+        const a = document.createElement("a");
+        a.href = l.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = l.label;
+        a.title = l.url;
+        a.style.color = "var(--accent)";
+        td.appendChild(a);
+      });
+      td.appendChild(document.createTextNode(")"));
     }
   } else if (key === "category" && !EMBED) {
     const sel = document.createElement("select");
