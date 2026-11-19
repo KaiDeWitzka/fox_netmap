@@ -1,5 +1,4 @@
 import os
-import xml.etree.ElementTree as ET
 
 from app import db
 from app.config import Settings
@@ -115,17 +114,89 @@ def test_snmp_parse_cam():
     assert parsed == {"3c:37:86:ab:cd:ef": 3, "b8:3e:d5:aa:01:02": 7}
 
 
-def test_tr064_parse():
-    xml = (
-        '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
-        '<u:GetHostEntryResponse xmlns:u="urn:dslforum-org:service:Hosts:1">'
-        "<NewMACAddress>AA:BB:CC:DD:EE:FF</NewMACAddress>"
-        "<NewIPAddress>192.168.178.30</NewIPAddress>"
-        "<NewHostName>wohnzimmer-tv</NewHostName>"
-        "<NewActive>1</NewActive>"
-        "</u:GetHostEntryResponse></s:Body></s:Envelope>"
+ENVELOPE = '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>%s</s:Body></s:Envelope>'
+
+HOSTS_COUNT = ENVELOPE % (
+    '<u:GetHostNumberOfEntriesResponse xmlns:u="urn:dslforum-org:service:Hosts:1">'
+    "<NewHostNumberOfEntries>1</NewHostNumberOfEntries></u:GetHostNumberOfEntriesResponse>"
+)
+HOST_ENTRY = ENVELOPE % (
+    '<u:GetGenericHostEntryResponse xmlns:u="urn:dslforum-org:service:Hosts:1">'
+    "<NewMACAddress>AA:BB:CC:DD:EE:FF</NewMACAddress>"
+    "<NewIPAddress>192.168.178.30</NewIPAddress>"
+    "<NewHostName>wohnzimmer-tv</NewHostName>"
+    "<NewActive>1</NewActive>"
+    "<NewInterfaceType>LAN</NewInterfaceType>"
+    "</u:GetGenericHostEntryResponse>"
+)
+SOAP_FAULT = ENVELOPE % (
+    "<s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring>"
+    '<detail><UPnPError xmlns="urn:schemas-upnp-org:control-1-0">'
+    "<errorCode>402</errorCode><errorDescription>Invalid Action</errorDescription>"
+    "</UPnPError></detail></s:Fault>"
+)
+
+
+class _FakeResponse:
+    def __init__(self, text, status=200):
+        self.text = text
+        self.status_code = status
+
+
+def _body_str(content):
+    if isinstance(content, str):
+        return content
+    return (content or b"").decode()
+
+
+def _fake_post_factory(mapping):
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None):
+        body = _body_str(content)
+        for key, resp in mapping.items():
+            if key in body:
+                return resp if isinstance(resp, _FakeResponse) else _FakeResponse(resp)
+        return _FakeResponse("", 404)
+    return fake_post
+
+
+def test_tr064_fetch_hosts(monkeypatch):
+    monkeypatch.setattr(
+        tr064.httpx,
+        "post",
+        _fake_post_factory({"GetHostNumberOfEntries": HOSTS_COUNT, "GetGenericHostEntry": HOST_ENTRY}),
     )
-    root = ET.fromstring(xml)
-    assert tr064._text(root, "NewIPAddress") == "192.168.178.30"
-    assert tr064._text(root, "NewHostName") == "wohnzimmer-tv"
-    assert tr064._text(root, "NewMissing") == ""
+    hosts = tr064.fetch_hosts("192.168.178.1:49000", "user", "pass")
+    assert len(hosts) == 1
+    assert hosts[0]["mac"] == "aa:bb:cc:dd:ee:ff"
+    assert hosts[0]["ip"] == "192.168.178.30"
+    assert hosts[0]["hostname"] == "wohnzimmer-tv"
+    assert hosts[0]["active"] is True
+    assert hosts[0]["type"] == "LAN"
+
+
+def test_tr064_soap_fault_wird_gelesen(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(tr064.httpx, "post", _fake_post_factory({"GetHostNumberOfEntries": _FakeResponse(SOAP_FAULT, 500)}))
+    with pytest.raises(tr064.TR064Error) as excinfo:
+        tr064.fetch_hosts("http://192.168.178.1:49000", "user", "pass")
+    assert "HTTP 500" in str(excinfo.value)
+    assert "Invalid Action" in str(excinfo.value)
+
+
+def test_tr064_https_fallback_auf_http(monkeypatch):
+    urls = []
+
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None):
+        urls.append(url)
+        body = _body_str(content)
+        if url.startswith("https://"):
+            raise tr064.httpx.ConnectError("tls broken")
+        if "GetHostNumberOfEntries" in body:
+            return _FakeResponse(HOSTS_COUNT)
+        return _FakeResponse(HOST_ENTRY)
+
+    monkeypatch.setattr(tr064.httpx, "post", fake_post)
+    hosts = tr064.fetch_hosts_with_fallback("https://192.168.178.1:49000", "user", "pass")
+    assert len(hosts) == 1
+    assert urls[0].startswith("https://") and urls[1].startswith("http://")
