@@ -1,10 +1,13 @@
 import ipaddress
 import logging
 import re
+import socket
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 log = logging.getLogger("fox_netmap")
+
+PROBE_PORTS = [80, 443, 22, 445, 8080]
 
 
 def parse_ip_addr(text: str) -> list[str]:
@@ -73,16 +76,48 @@ def ping_sweep(subnet: str, timeout: float = 1.0, max_hosts: int = 1024) -> set[
     return {ip for ip, ok in zip(hosts, results) if ok}
 
 
+def tcp_probe(ip: str, timeout: float = 0.8, ports=PROBE_PORTS) -> bool:
+    for p in ports:
+        try:
+            with socket.create_connection((ip, p), timeout=timeout):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def tcp_probe_sweep(subnet: str, skip: set, timeout: float = 0.8, max_hosts: int = 1024) -> set[str]:
+    try:
+        net = ipaddress.ip_network(subnet, strict=False)
+    except ValueError:
+        return set()
+    hosts = [str(h) for h in net.hosts()][:max_hosts]
+    candidates = [h for h in hosts if h not in skip]
+    with ThreadPoolExecutor(max_workers=64) as pool:
+        results = list(pool.map(lambda ip: tcp_probe(ip, timeout), candidates))
+    return {ip for ip, ok in zip(candidates, results) if ok}
+
+
 def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
     arp = arp_table()
-    live: set[str] = set()
+    live: dict[str, str] = {}
     for subnet in subnets:
-        found = ping_sweep(subnet, timeout)
-        log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(found))
-        live |= found
+        pinged = ping_sweep(subnet, timeout)
+        log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(pinged))
+        for ip in pinged:
+            live[ip] = "ping"
+        probed = tcp_probe_sweep(subnet, set(pinged), timeout)
+        if probed:
+            log.info("Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar (ICMP blockiert)", subnet, len(probed))
+        for ip in probed:
+            live.setdefault(ip, "tcp")
     devices: list[dict] = []
     for ip in sorted(live, key=lambda s: ipaddress.ip_address(s)):
-        devices.append({"ip": ip, "mac": arp.get(ip), "source": "ping+arp" if arp.get(ip) else "ping"})
+        source = live[ip]
+        mac = arp.get(ip)
+        if mac:
+            source = source + "+arp"
+        devices.append({"ip": ip, "mac": mac, "source": source})
     arp_only = 0
     for ip, mac in arp.items():
         try:
