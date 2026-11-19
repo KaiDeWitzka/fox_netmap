@@ -20,7 +20,15 @@ const calls = [];
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET" });
   const json = async () => {
-    if (String(url).includes("/api/devices")) return [];
+    if (String(url).includes("/api/devices"))
+      return [
+        {
+          mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
+          category: "Server/NAS", status: "online", subnet: "10.0.0.0/24",
+          ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+          port_count: 2, x: null, y: null,
+        },
+      ];
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/settings"))
       return {
@@ -144,6 +152,12 @@ const afterCols = thKeys();
 check("Spalten-Drag: Reihenfolge geaendert (th0 vor th3 eingefuegt)", afterCols[0] === beforeCols[1] && afterCols[2] === beforeCols[0]);
 const savedCols = JSON.parse(w.localStorage.getItem("fox_table_cols") || "null");
 check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && savedCols[2] === beforeCols[0]);
+
+const bodyRow = doc.querySelector("#device-table tbody tr");
+check(
+  "Spalten-Drag: Body-Zellen folgen der neuen Reihenfolge (ip, mac, hostname, vendor, …)",
+  !!bodyRow && bodyRow.children[0].textContent === "10.0.0.5" && bodyRow.children[2].textContent === "nas"
+);
 
 $("#nav [data-view='log']").click();
 await sleep(100);

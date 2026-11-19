@@ -219,32 +219,32 @@ function renderTable() {
   tbody.innerHTML = "";
   for (const d of rows) {
     const tr = document.createElement("tr");
-    const status = `<span class="status-dot status-${d.status}"></span>${d.status}`;
-    for (const c of [d.hostname, d.ip, d.mac, d.vendor]) { const td = document.createElement("td"); td.textContent = c || ""; tr.appendChild(td); }
-    if (EMBED) {
-      const td = document.createElement("td"); td.textContent = d.category; tr.appendChild(td);
-    } else {
-      const td = document.createElement("td");
-      const sel = document.createElement("select");
-      for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = c; if (c === d.category) o.selected = true; sel.appendChild(o); }
-      sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
-      td.appendChild(sel); tr.appendChild(td);
+    for (const key of colOrder) {
+      tr.appendChild(buildCell(d, key));
     }
-    const tdS = document.createElement("td"); tdS.innerHTML = status; tr.appendChild(tdS);
-    for (const v of [d.subnet, d.ports_str, d.connected_to || ""]) { const td = document.createElement("td"); td.textContent = v || ""; tr.appendChild(td); }
-    if (EMBED) {
-      const td = document.createElement("td"); td.textContent = d.note || ""; tr.appendChild(td);
-    } else {
-      const td = document.createElement("td");
-      const inp = document.createElement("input");
-      inp.value = d.note || "";
-      inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) }).then(loadDevices));
-      td.appendChild(inp); tr.appendChild(td);
-    }
-    const tdL = document.createElement("td"); tdL.textContent = d.last_seen || ""; tr.appendChild(tdL);
     tr.addEventListener("click", (e) => { if (e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") showDetail(d.mac); });
     tbody.appendChild(tr);
   }
+}
+
+function buildCell(d, key) {
+  const td = document.createElement("td");
+  if (key === "status") {
+    td.innerHTML = `<span class="status-dot status-${d.status}"></span>${d.status}`;
+  } else if (key === "category" && !EMBED) {
+    const sel = document.createElement("select");
+    for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = c; if (c === d.category) o.selected = true; sel.appendChild(o); }
+    sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
+    td.appendChild(sel);
+  } else if (key === "note" && !EMBED) {
+    const inp = document.createElement("input");
+    inp.value = d.note || "";
+    inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) }).then(loadDevices));
+    td.appendChild(inp);
+  } else {
+    td.textContent = d[key] ?? "";
+  }
+  return td;
 }
 
 function bindTableDrag() {
