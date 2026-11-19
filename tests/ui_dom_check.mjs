@@ -28,6 +28,12 @@ w.fetch = async (url, opts = {}) => {
           ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
           port_count: 2, x: null, y: null,
         },
+        {
+          mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
+          category: "Smart-Home/IoT", status: "online", subnet: "192.168.179.0/24", source: "tcp",
+          ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+          port_count: 0, x: null, y: null,
+        },
       ];
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/device/"))
@@ -201,6 +207,10 @@ check(
     doc.querySelectorAll("#detail-content a").length === 2
 );
 check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
+
+const macThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "mac");
+const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("remote-plug"));
+check("MAC-less (VPN-remote): MAC-Zelle zeigt Strich", !!remoteRow && remoteRow.children[macThIdx].textContent.trim() === "–");
 
 $("#nav [data-view='log']").click();
 await sleep(100);

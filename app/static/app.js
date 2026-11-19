@@ -186,7 +186,7 @@ async function showDetail(mac) {
   const el = document.getElementById("detail-content");
   const hostLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.label}</a>`).join(", ");
   const rows = [
-    ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", d.mac], ["Hersteller", d.vendor],
+    ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", (d.mac || "").startsWith("ip:") ? "– (nur IP bekannt)" : d.mac], ["Hersteller", d.vendor],
     ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
     ["Verbunden mit", d.layout.connected_to || ""], ["Notiz", d.note],
     ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
@@ -295,6 +295,10 @@ function buildCell(d, key) {
       });
       td.appendChild(document.createTextNode(")"));
     }
+  } else if (key === "mac") {
+    const m = d.mac || "";
+    td.textContent = m.startsWith("ip:") ? "–" : m;
+    td.title = m.startsWith("ip:") ? `nur IP bekannt (${m.slice(3)})` : m;
   } else if (key === "category" && !EMBED) {
     const sel = document.createElement("select");
     for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = c; if (c === d.category) o.selected = true; sel.appendChild(o); }

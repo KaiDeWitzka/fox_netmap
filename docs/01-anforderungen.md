@@ -102,7 +102,7 @@ Scanner (zyklisch/manuell)
 
 ## 5. Backlog
 
-- Mehrere Standorte (VPN-vernetzte Netze)
+- Mehrere Standorte (VPN-vernetzte Netze): teilweise umgesetzt — entferntes VPN-Subnetz als weiteres `NETZ_SUBNETS` (Fund via TCP-Probe, da ICMP/ARP dort nicht greifen; MAC nur via TR-064, sonst synthetischer Schlüssel `ip:<ip>` und MAC-Anzeige „–“)
 - Mehr als 200 Geräte (Performance-Optimierung)
 - IPv6
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle)

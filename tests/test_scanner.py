@@ -116,6 +116,7 @@ def test_discover_loggt_pro_subnetz(monkeypatch, caplog):
         "ping_sweep",
         lambda subnet, timeout=1.0: {"192.168.178.0/24": {"192.168.178.1"}, "192.168.179.0/24": set()}[subnet],
     )
+    monkeypatch.setattr(discover, "tcp_probe_sweep", lambda subnet, skip, timeout=0.8: set())
     monkeypatch.setattr(discover, "arp_table", lambda: {"192.168.178.1": "aa:bb:cc:dd:ee:ff"})
     with caplog.at_level(logging.INFO, logger="fox_netmap"):
         devices = discover.discover(["192.168.178.0/24", "192.168.179.0/24"])
@@ -123,6 +124,45 @@ def test_discover_loggt_pro_subnetz(monkeypatch, caplog):
     messages = [r.getMessage() for r in caplog.records]
     assert any("192.168.178.0/24: 1 Hosts" in m for m in messages)
     assert any("192.168.179.0/24: 0 Hosts" in m for m in messages)
+
+
+def test_discover_tcp_fallback(monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setattr(discover, "ping_sweep", lambda subnet, timeout=1.0: set())
+    monkeypatch.setattr(
+        discover,
+        "tcp_probe_sweep",
+        lambda subnet, skip, timeout=0.8: {"192.168.179.20"} if subnet == "192.168.179.0/24" else set(),
+    )
+    monkeypatch.setattr(discover, "arp_table", lambda: {})
+    with caplog.at_level(logging.INFO, logger="fox_netmap"):
+        devices = discover.discover(["192.168.178.0/24", "192.168.179.0/24"])
+    assert {d["ip"]: d["source"] for d in devices} == {"192.168.179.20": "tcp"}
+    assert any("nur per TCP" in r.getMessage() for r in caplog.records)
+
+
+def test_merge_sources_by_ip():
+    from app.scanner.run import merge_sources
+
+    found = [{"ip": "192.168.179.20", "mac": None, "source": "tcp"}]
+    tr = {"aa:bb:cc:dd:ee:01": {"mac": "aa:bb:cc:dd:ee:01", "ip": "192.168.179.20", "hostname": "iot-plug", "active": True, "type": "WLAN"}}
+    out = merge_sources(found, tr)
+    assert len(out) == 1
+    assert out[0]["mac"] == "aa:bb:cc:dd:ee:01"
+    assert out[0]["source"] == "tcp,tr064"
+    assert out[0]["hostname"] == "iot-plug"
+
+
+def test_merge_sources_macless_bekommt_ip_key():
+    from app.scanner.run import merge_sources
+
+    out = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], {})
+    assert out[0]["mac"] == "ip:192.168.179.20"
+    tr = {"aa:bb:cc:dd:ee:02": {"mac": "aa:bb:cc:dd:ee:02", "ip": "192.168.179.20", "hostname": "remote", "active": True, "type": "LAN"}}
+    out2 = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], tr)
+    assert len(out2) == 1
+    assert out2[0]["mac"] == "aa:bb:cc:dd:ee:02"
 
 
 def test_port_list():

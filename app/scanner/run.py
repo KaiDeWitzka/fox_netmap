@@ -45,6 +45,46 @@ def load_oui_table(settings: Settings) -> dict[str, str]:
     return {}
 
 
+def merge_sources(found: list[dict], tr064_hosts: dict[str, dict]) -> list[dict]:
+    by_ip = {d["ip"]: d for d in found if d.get("ip")}
+    by_mac: dict[str, dict] = {}
+    for d in found:
+        if not d.get("ip"):
+            continue
+        if not d.get("mac"):
+            d["mac"] = f"ip:{d['ip']}"
+        by_mac[d["mac"]] = d
+    for mac, h in tr064_hosts.items():
+        if mac in by_mac:
+            d = by_mac[mac]
+        elif h.get("ip") in by_ip:
+            d = by_ip[h["ip"]]
+            old_key = d.get("mac")
+            if old_key and old_key != mac and old_key.startswith("ip:"):
+                by_mac.pop(old_key, None)
+            d["mac"] = mac
+            by_mac[mac] = d
+        else:
+            d = None
+        if d is not None:
+            d["ip"] = d["ip"] or h["ip"]
+            if h.get("hostname"):
+                d["hostname"] = h["hostname"]
+            d["source"] = (d["source"] + ",tr064") if d.get("source") else "tr064"
+            d["tr064_type"] = h.get("type", "")
+            d["tr064_active"] = h.get("active", True)
+        else:
+            by_mac[mac] = {
+                "ip": h["ip"],
+                "mac": mac,
+                "hostname": h.get("hostname", ""),
+                "source": "tr064",
+                "tr064_type": h.get("type", ""),
+                "tr064_active": h.get("active", True),
+            }
+    return list(by_mac.values())
+
+
 def collect_devices(settings: Settings, conn) -> list[dict]:
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
@@ -64,31 +104,8 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         except tr064.TR064Error as exc:
             log.warning("TR-064 nicht erreichbar (%s): %s", base, exc)
 
-    by_mac: dict[str, dict] = {}
-    for d in found:
-        if d.get("mac"):
-            by_mac[d["mac"]] = d
-    for mac, h in tr064_hosts.items():
-        if mac in by_mac:
-            d = by_mac[mac]
-            d["ip"] = d["ip"] or h["ip"]
-            if h.get("hostname"):
-                d["hostname"] = h["hostname"]
-            d["source"] = (d["source"] + ",tr064") if d["source"] else "tr064"
-            d["tr064_type"] = h.get("type", "")
-            d["tr064_active"] = h.get("active", True)
-        else:
-            by_mac[mac] = {
-                "ip": h["ip"],
-                "mac": mac,
-                "hostname": h.get("hostname", ""),
-                "source": "tr064",
-                "tr064_type": h.get("type", ""),
-                "tr064_active": h.get("active", True),
-            }
-
-    devices = list(by_mac.values())
-    live = [d for d in devices if d.get("ip")]
+    devices = merge_sources(found, tr064_hosts)
+    live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
     for d in live:
         d["ports"] = ports.scan_ports(d["ip"], ports.port_list(settings.port_top, settings.ports), settings.scan_timeout)
     hostnames = names.resolve_all([d["ip"] for d in live])
@@ -180,12 +197,14 @@ def run_once(settings: Settings, conn) -> dict:
     conn.commit()
     try:
         devices = collect_devices(settings, conn)
-        n_ping = sum(1 for d in devices if "ping" in d.get("source", "") or "arp" in d.get("source", ""))
+        n_ping = sum(1 for d in devices if "ping" in d.get("source", ""))
+        n_tcp = sum(1 for d in devices if "tcp" in d.get("source", ""))
+        n_arp = sum(1 for d in devices if "arp" in d.get("source", ""))
         n_tr = sum(1 for d in devices if "tr064" in d.get("source", ""))
         n_only_tr = sum(1 for d in devices if d.get("source") == "tr064")
         log.info(
-            "Abgleich: %s Geraete gesamt (%s per Ping/ARP, %s per TR-064, %s nur TR-064/offline)",
-            len(devices), n_ping, n_tr, n_only_tr,
+            "Abgleich: %s Geraete gesamt (%s Ping, %s TCP-Probe, %s davon ARP, %s TR-064, %s nur TR-064/offline)",
+            len(devices), n_ping, n_tcp, n_arp, n_tr, n_only_tr,
         )
         summary = apply_scan(conn, settings, devices)
         notify.notify_new_devices(settings, summary["new_online"])
