@@ -44,6 +44,27 @@ function currentFilters() {
   return p.toString();
 }
 
+function showSidebar(tab) {
+  const aside = document.getElementById("detail");
+  aside.hidden = false;
+  activateTab(tab);
+  if (cy) setTimeout(() => cy.resize(), 30);
+}
+
+function hideSidebar() {
+  document.getElementById("detail").hidden = true;
+  if (cy) setTimeout(() => cy.resize(), 30);
+}
+
+function activateTab(tab) {
+  const isDetail = tab === "detail";
+  document.getElementById("tab-detail").classList.toggle("active", isDetail);
+  document.getElementById("tab-settings").classList.toggle("active", !isDetail);
+  document.getElementById("detail-content").hidden = !isDetail;
+  document.getElementById("settings-content").hidden = isDetail;
+  if (!isDetail) loadSettings();
+}
+
 async function loadCategories() {
   const r = await api("/api/categories");
   categories = r.ok ? await r.json() : Object.keys(CATEGORY_COLORS);
@@ -133,7 +154,7 @@ async function showDetail(mac) {
     cy.getElementById(c.mac).addClass("hl");
     cy.edges().filter((e) => e.data("source") === c.mac).addClass("hl");
   }
-  const el = document.getElementById("detail");
+  const el = document.getElementById("detail-content");
   const rows = [
     ["Hostname", d.hostname], ["IP", d.ip], ["MAC", d.mac], ["Hersteller", d.vendor],
     ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
@@ -146,7 +167,7 @@ async function showDetail(mac) {
     html += `<h3>Angeschlossene Geräte (${children.length})</h3><ul>` + children.map((c) => `<li><span class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</span> (${c.category})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
-    html += `<h3>Bearbeiten</h3><div class="chips"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${c}</option>`).join("") + `</select> <input id="ed-note" type="text" placeholder="Notiz" value="${(d.note || "").replace(/"/g, "&quot;")}"> <button id="ed-save">Speichern</button></div>`;
+    html += `<h3>Bearbeiten</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${c}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="Notiz" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">Speichern</button></div>`;
   }
   html += `<h3>Verlauf (neu zuerst)</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
   html += `<h3>Ereignisse</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
@@ -160,6 +181,7 @@ async function showDetail(mac) {
       showDetail(mac);
     });
   }
+  showSidebar("detail");
 }
 
 const TABLE_COLS = [
@@ -186,8 +208,7 @@ function renderTable() {
   for (const d of rows) {
     const tr = document.createElement("tr");
     const status = `<span class="status-dot status-${d.status}"></span>${d.status}`;
-    const cells = [d.hostname, d.ip, d.mac, d.vendor];
-    for (const c of cells) { const td = document.createElement("td"); td.textContent = c || ""; tr.appendChild(td); }
+    for (const c of [d.hostname, d.ip, d.mac, d.vendor]) { const td = document.createElement("td"); td.textContent = c || ""; tr.appendChild(td); }
     if (EMBED) {
       const td = document.createElement("td"); td.textContent = d.category; tr.appendChild(td);
     } else {
@@ -220,7 +241,6 @@ function bindNav() {
     b.classList.add("active");
     document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.view));
     if (b.dataset.view === "map" && cy) setTimeout(() => { cy.resize(); cy.fit(undefined, 40); }, 50);
-    if (b.dataset.view === "settings") loadSettings();
   }));
 }
 
@@ -234,15 +254,54 @@ function bindFilters() {
     applyTheme(cur === "dark" ? "light" : "dark");
   });
   document.getElementById("btn-print").addEventListener("click", () => {
-    document.getElementById("view-table").hidden = false;
     document.querySelector('[data-view="table"]').click();
     setTimeout(() => window.print(), 100);
   });
 }
 
+function bindSidebar() {
+  document.getElementById("tab-detail").addEventListener("click", () => activateTab("detail"));
+  document.getElementById("tab-settings").addEventListener("click", () => activateTab("settings"));
+  document.getElementById("btn-close-detail").addEventListener("click", hideSidebar);
+  document.getElementById("btn-settings").addEventListener("click", () => showSidebar("settings"));
+  document.getElementById("settings-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = {
+      theme: document.getElementById("st-theme").value,
+      scan_interval: parseInt(document.getElementById("st-interval").value, 10),
+      subnets: document.getElementById("st-subnets").value,
+      port_top: parseInt(document.getElementById("st-porttop").value, 10),
+      history_hours: parseInt(document.getElementById("st-history").value, 10),
+      snmp_enabled: document.getElementById("st-snmp").checked,
+      snmp_switches: document.getElementById("st-switches").value,
+      auth_enabled: document.getElementById("st-auth").checked,
+      auto_export: document.getElementById("st-autoexport").checked,
+    };
+    const r = await api("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
+    document.getElementById("settings-msg").textContent = r.ok ? "Gespeichert." : "Fehler beim Speichern";
+  });
+  document.getElementById("token-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const hours = document.getElementById("tk-hours").value;
+    const r = await api("/api/tokens", {
+      method: "POST",
+      body: JSON.stringify({
+        expires_hours: hours ? parseInt(hours, 10) : null,
+        subnets: document.getElementById("tk-subnets").value,
+        categories: document.getElementById("tk-categories").value,
+      }),
+    });
+    if (r.ok) {
+      const t = await r.json();
+      document.getElementById("token-result").textContent = "Embed-URL: " + location.origin + t.embed_url;
+      loadTokens();
+    }
+  });
+}
+
 function bindScan() {
   const btn = document.getElementById("btn-scan");
-  if (EMBED) { btn.style.display = "none"; return; }
+  if (EMBED) return;
   btn.addEventListener("click", async () => { await api("/api/scan", { method: "POST" }); pollScanStatus(); });
 }
 
@@ -280,43 +339,6 @@ async function loadSettings() {
   loadTokens();
 }
 
-function bindSettings() {
-  document.getElementById("settings-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const body = {
-      theme: document.getElementById("st-theme").value,
-      scan_interval: parseInt(document.getElementById("st-interval").value, 10),
-      subnets: document.getElementById("st-subnets").value,
-      port_top: parseInt(document.getElementById("st-porttop").value, 10),
-      history_hours: parseInt(document.getElementById("st-history").value, 10),
-      snmp_enabled: document.getElementById("st-snmp").checked,
-      snmp_switches: document.getElementById("st-switches").value,
-      auth_enabled: document.getElementById("st-auth").checked,
-      auto_export: document.getElementById("st-autoexport").checked,
-    };
-    const r = await api("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
-    document.getElementById("settings-msg").textContent = r.ok ? "Gespeichert." : "Fehler beim Speichern";
-  });
-  document.getElementById("token-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const hours = document.getElementById("tk-hours").value;
-    const r = await api("/api/tokens", {
-      method: "POST",
-      body: JSON.stringify({
-        expires_hours: hours ? parseInt(hours, 10) : null,
-        subnets: document.getElementById("tk-subnets").value,
-        categories: document.getElementById("tk-categories").value,
-      }),
-    });
-    if (r.ok) {
-      const t = await r.json();
-      const url = location.origin + t.embed_url;
-      document.getElementById("token-result").textContent = "Embed-URL: " + url;
-      loadTokens();
-    }
-  });
-}
-
 async function loadTokens() {
   const r = await api("/api/tokens");
   if (!r.ok) return;
@@ -336,17 +358,23 @@ async function loadTokens() {
 
 async function init() {
   applyTheme();
+  if (!EMBED) {
+    const me = await api("/api/me");
+    if (me.status === 401) return;
+    document.getElementById("btn-logout").addEventListener("click", async () => {
+      await api("/api/logout", { method: "POST" });
+      location.href = "/login";
+    });
+  } else {
+    document.body.classList.add("embed");
+  }
+  await loadCategories();
   bindNav();
   bindFilters();
+  bindSidebar();
   bindScan();
-  bindSettings();
-  document.getElementById("btn-logout").addEventListener("click", async () => {
-    await api("/api/logout", { method: "POST" });
-    location.href = "/login";
-  });
-  await loadCategories();
   await loadDevices();
-  await pollScanStatus();
+  pollScanStatus();
   setInterval(pollScanStatus, 5000);
 }
 

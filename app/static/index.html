@@ -12,7 +12,6 @@
   <nav id="nav">
     <button data-view="map" class="active">Karte</button>
     <button data-view="table">Tabelle</button>
-    <button data-view="settings" id="nav-settings">Einstellungen</button>
   </nav>
   <input id="search" type="search" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
   <select id="filter-category"><option value="">Alle Kategorien</option></select>
@@ -22,60 +21,63 @@
     <option value="offline">offline</option>
   </select>
   <span id="scan-status" title="Scan-Status"></span>
+  <span class="spacer"></span>
+  <a class="hdr-btn" href="/api/export/json" download>JSON</a>
+  <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
   <button id="btn-scan" title="Scan jetzt auslösen">Jetzt scannen</button>
   <button id="btn-print" title="Druckansicht (PDF)">Drucken</button>
   <button id="btn-theme" title="Theme wechseln">🌗</button>
+  <button id="btn-settings" title="Einstellungen öffnen">⚙</button>
   <button id="btn-logout">Logout</button>
 </header>
 <main>
   <section id="view-map" class="view">
     <div id="map"></div>
-    <aside id="detail"><p class="muted">Gerät anklicken für Details.</p></aside>
+    <aside id="detail" hidden>
+      <div class="tabs">
+        <button id="tab-detail" class="active">Details</button>
+        <button id="tab-settings">Einstellungen</button>
+        <button id="btn-close-detail" title="Schließen">✕</button>
+      </div>
+      <div id="detail-content"><p class="muted">Gerät anklicken für Details.</p></div>
+      <div id="settings-content" hidden>
+        <div class="panel">
+          <h2>Einstellungen</h2>
+          <form id="settings-form">
+            <label>Theme
+              <select id="st-theme"><option value="dark">dark</option><option value="light">light</option></select>
+            </label>
+            <label>Scan-Intervall (s) <input id="st-interval" type="number" min="30"></label>
+            <label>Subnetze (kommagetrennt) <input id="st-subnets" type="text"></label>
+            <label>Port-Umfang (Top N, 0 = alle) <input id="st-porttop" type="number" min="0"></label>
+            <label>Historie (Stunden) <input id="st-history" type="number" min="1"></label>
+            <label><input id="st-snmp" type="checkbox"> SNMP-Scan aktiv</label>
+            <label>SNMP-Switches (IPs, kommagetrennt) <input id="st-switches" type="text"></label>
+            <label><input id="st-auth" type="checkbox"> Login aktiv</label>
+            <label><input id="st-autoexport" type="checkbox"> automatische Exporte</label>
+            <button type="submit">Speichern</button>
+          </form>
+          <p id="settings-msg" class="muted"></p>
+        </div>
+        <div class="panel">
+          <h2>Embed-Token</h2>
+          <form id="token-form">
+            <label>Ablauf (Stunden, leer = nie) <input id="tk-hours" type="number" min="1"></label>
+            <label>Subnetze (leer = alle) <input id="tk-subnets" type="text"></label>
+            <label>Kategorien (leer = alle) <input id="tk-categories" type="text"></label>
+            <button type="submit">Token erstellen</button>
+          </form>
+          <p id="token-result" class="muted"></p>
+          <ul id="token-list"></ul>
+        </div>
+      </div>
+    </aside>
   </section>
   <section id="view-table" class="view" hidden>
     <table id="device-table">
       <thead></thead>
       <tbody></tbody>
     </table>
-  </section>
-  <section id="view-settings" class="view" hidden>
-    <div class="panel">
-      <h2>Einstellungen</h2>
-      <form id="settings-form">
-        <label>Theme
-          <select id="st-theme"><option value="dark">dark</option><option value="light">light</option></select>
-        </label>
-        <label>Scan-Intervall (s) <input id="st-interval" type="number" min="30"></label>
-        <label>Subnetze (kommagetrennt) <input id="st-subnets" type="text"></label>
-        <label>Port-Umfang (Top N, 0 = alle) <input id="st-porttop" type="number" min="0"></label>
-        <label>Historie (Stunden) <input id="st-history" type="number" min="1"></label>
-        <label><input id="st-snmp" type="checkbox"> SNMP-Scan aktiv</label>
-        <label>SNMP-Switches (IPs, kommagetrennt) <input id="st-switches" type="text"></label>
-        <label><input id="st-auth" type="checkbox"> Login aktiv</label>
-        <label><input id="st-autoexport" type="checkbox"> automatische Exporte</label>
-        <button type="submit">Speichern</button>
-      </form>
-      <p id="settings-msg" class="muted"></p>
-    </div>
-    <div class="panel">
-      <h2>Export</h2>
-      <p>
-        <a id="exp-json" href="/api/export/json">JSON</a> ·
-        <a id="exp-csv-semi" href="/api/export/csv?sep=semicolon">CSV (Semikolon)</a> ·
-        <a id="exp-csv-comma" href="/api/export/csv?sep=comma">CSV (Komma)</a>
-      </p>
-    </div>
-    <div class="panel">
-      <h2>Embed-Token</h2>
-      <form id="token-form">
-        <label>Ablauf (Stunden, leer = nie) <input id="tk-hours" type="number" min="1"></label>
-        <label>Subnetze (leer = alle) <input id="tk-subnets" type="text"></label>
-        <label>Kategorien (leer = alle) <input id="tk-categories" type="text"></label>
-        <button type="submit">Token erstellen</button>
-      </form>
-      <p id="token-result" class="muted"></p>
-      <ul id="token-list"></ul>
-    </div>
   </section>
 </main>
 <script src="/static/vendor/cytoscape.min.js"></script>
