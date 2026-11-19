@@ -1,0 +1,125 @@
+import fs from "node:fs";
+import path from "node:path";
+import { JSDOM } from "jsdom";
+
+const repo = path.resolve(new URL("..", import.meta.url).pathname);
+const html = fs
+  .readFileSync(path.join(repo, "app/static/index.html"), "utf8")
+  .replace('<script src="/static/vendor/cytoscape.min.js"></script>', "")
+  .replace('<script src="/static/app.js"></script>', "");
+const css = fs.readFileSync(path.join(repo, "app/static/styles.css"), "utf8");
+
+const dom = new JSDOM(html, { url: "http://localhost/", runScripts: "dangerously", pretendToBeVisual: true });
+const w = dom.window;
+const doc = w.document;
+const style = doc.createElement("style");
+style.textContent = css;
+doc.head.appendChild(style);
+
+const calls = [];
+w.fetch = async (url, opts = {}) => {
+  calls.push({ url: String(url), method: opts.method || "GET" });
+  const json = async () => {
+    if (String(url).includes("/api/devices")) return [];
+    if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
+    if (String(url).includes("/api/settings"))
+      return {
+        theme: "dark",
+        scan_interval: 900,
+        subnets: "",
+        port_top: 1000,
+        history_hours: 720,
+        snmp_enabled: true,
+        snmp_switches: "",
+        auth_enabled: true,
+        auto_export: false,
+      };
+    if (String(url).includes("/api/tokens")) return [];
+    if (String(url).includes("/api/scan")) return { last_scan: null, next_scan: null, scanning: 0 };
+    return {};
+  };
+  return { ok: true, status: 200, json, cookies: {} };
+};
+const cyStub = {
+  on() {},
+  elements: () => ({ remove() {} }),
+  add() {},
+  layout: () => ({ run() {} }),
+  fit() {},
+  resize() {},
+  nodes: () => ({ removeClass() {} }),
+  edges: () => ({ removeClass() {}, filter: () => ({ addClass() {} }) }),
+  getElementById: () => ({ addClass() {} }),
+};
+w.cytoscape = () => cyStub;
+w.print = () => calls.push({ url: "window.print", method: "CALL" });
+
+w.eval(fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8"));
+await new Promise((r) => setTimeout(r, 200));
+
+let failures = 0;
+function check(name, cond) {
+  console.log((cond ? "PASS" : "FAIL") + "  " + name);
+  if (!cond) failures++;
+}
+const vis = (el) => el && w.getComputedStyle(el).display !== "none";
+const $ = (s) => doc.querySelector(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+check("init: Karte sichtbar", vis($("#view-map")));
+check("init: Tabelle versteckt", !vis($("#view-table")));
+check("init: Sidebar zu", !vis($("#detail")));
+
+$("#nav [data-view='table']").click();
+check("Tabelle: Tabellenansicht sichtbar", vis($("#view-table")));
+check("Tabelle: Karte versteckt", !vis($("#view-map")));
+
+$("#btn-settings").click();
+await sleep(50);
+check("Tabelle + ⚙: Sidebar sichtbar", vis($("#detail")));
+check("Tabelle + ⚙: Settings-Tab aktiv", $("#settings-content").hidden === false && $("#detail-content").hidden === true);
+
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Tabelle: Settings speichern -> PATCH /api/settings", calls.some((c) => c.url.includes("/api/settings") && c.method === "PATCH"));
+
+$("#tab-detail").click();
+check("Tab Details: Detail-Content sichtbar", $("#detail-content").hidden === false && $("#settings-content").hidden === true);
+
+$("#btn-close-detail").click();
+check("✕: Sidebar wieder zu", !vis($("#detail")));
+
+$("#nav [data-view='map']").click();
+check("Karte: Kartenansicht sichtbar", vis($("#view-map")) && !vis($("#view-table")));
+
+$("#btn-settings").click();
+await sleep(50);
+check("Karte + ⚙: Sidebar sichtbar", vis($("#detail")));
+$("#btn-close-detail").click();
+check("Karte + ✕: Sidebar zu", !vis($("#detail")));
+
+const scanPostsBefore = calls.filter((c) => c.url.includes("/api/scan") && c.method === "POST").length;
+$("#btn-scan").click();
+await sleep(50);
+check("Beide Sichten: Jetzt scannen -> POST /api/scan", calls.filter((c) => c.url.includes("/api/scan") && c.method === "POST").length === scanPostsBefore + 1);
+
+$("#btn-theme").click();
+check("Theme-Toggle: dark -> light", doc.documentElement.dataset.theme === "light");
+$("#btn-theme").click();
+check("Theme-Toggle: light -> dark", doc.documentElement.dataset.theme === "dark");
+
+$("#btn-print").click();
+await sleep(250);
+check("Drucken: wechselt auf Tabelle + window.print", vis($("#view-table")) && calls.some((c) => c.url === "window.print"));
+
+check("Header: Export-Link JSON", doc.querySelector("a[href='/api/export/json']") !== null);
+check("Header: Export-Link CSV", doc.querySelector("a[href*='/api/export/csv']") !== null);
+check("Header: Suche + 2 Filter vorhanden", $("#search") && $("#filter-category") && $("#filter-status"));
+
+$("#search").value = "nas";
+$("#search").dispatchEvent(new w.Event("input"));
+await sleep(400);
+check("Suche: GET /api/devices?q=nas", calls.some((c) => c.url.includes("/api/devices") && c.url.includes("q=nas")));
+
+console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
+process.exit(failures === 0 ? 0 : 1);

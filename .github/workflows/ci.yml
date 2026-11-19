@@ -22,3 +22,7 @@ jobs:
         run: ruff check .
       - name: Tests
         run: python -m pytest -q
+      - name: UI DOM-Test (Knopf-Audit)
+        run: |
+          npm install --no-audit --no-fund
+          node tests/ui_dom_check.mjs
