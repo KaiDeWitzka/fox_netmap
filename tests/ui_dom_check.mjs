@@ -164,7 +164,7 @@ check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && save
 const bodyRow = doc.querySelector("#device-table tbody tr");
 check(
   "Spalten-Drag: Body-Zellen folgen der neuen Reihenfolge (ip, mac, hostname, vendor, …)",
-  !!bodyRow && bodyRow.children[0].textContent.includes("10.0.0.5") && bodyRow.children[2].textContent === "nas"
+  !!bodyRow && bodyRow.children[0].textContent.includes("10.0.0.5") && bodyRow.children[2].textContent.startsWith("nas")
 );
 check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
 
@@ -181,16 +181,24 @@ check("Spalten-Resize: col-Breite live gesetzt", !!colEl && colEl.style.width.en
 
 const ipThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "ip");
 const ipCell = doc.querySelector("#device-table tbody tr").children[ipThIdx];
+check("Web-Links: IP-Zelle bleibt pur (keine Links)", ipCell.querySelector("a") === null && ipCell.textContent.trim() === "10.0.0.5");
+
+const hnThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "hostname");
+const hnCell = doc.querySelector("#device-table tbody tr").children[hnThIdx];
 check(
-  "Web-Links: IP-Zelle mit http://10.0.0.5 und https://10.0.0.5",
-  ipCell.querySelector('a[href="http://10.0.0.5"]') !== null && ipCell.querySelector('a[href="https://10.0.0.5"]') !== null
+  "Web-Links: Hostname-Zelle mit (http, https) als Links",
+  hnCell.querySelector('a[href="http://10.0.0.5"]') !== null &&
+    hnCell.querySelector('a[href="https://10.0.0.5"]') !== null &&
+    hnCell.textContent.includes("(http, https)")
 );
 
 doc.querySelector("#device-table tbody tr").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
 await sleep(80);
 check(
-  "Web-Links: Detail-Panel enthaelt beide Links",
-  $("#detail-content").innerHTML.includes('href="http://10.0.0.5"') && $("#detail-content").innerHTML.includes('href="https://10.0.0.5"')
+  "Web-Links: Detail-Panel Hostname mit beiden Links, genau 2 Links gesamt (IP pur)",
+  $("#detail-content").innerHTML.includes('href="http://10.0.0.5"') &&
+    $("#detail-content").innerHTML.includes('href="https://10.0.0.5"') &&
+    doc.querySelectorAll("#detail-content a").length === 2
 );
 check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
 
