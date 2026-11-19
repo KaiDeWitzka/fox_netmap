@@ -1,0 +1,31 @@
+00:04:0E	(hex)	AVM GmbH
+00:0C:43	(hex)	TP-LINK TECHNOLOGIES CO., LTD.
+00:1D:0F	(hex)	TP-LINK TECHNOLOGIES CO., LTD.
+F0:9F:C2	(hex)	TP-LINK TECHNOLOGIES CO., LTD.
+B8:27:EB	(hex)	Raspberry Pi Foundation
+00:17:88	(hex)	Philips Lighting BV
+00:1A:11	(hex)	Google, Inc.
+00:0C:29	(hex)	VMware, Inc.
+00:50:56	(hex)	VMware, Inc.
+00:15:5D	(hex)	Microsoft Corporation
+00:1B:44	(hex)	Apple, Inc.
+AC:DE:48	(hex)	Apple, Inc.
+00:25:00	(hex)	Apple, Inc.
+18:65:90	(hex)	SAMSUNG ELECTRO-MECHANICS(THAILAND)
+50:65:F3	(hex)	Xiaomi Communications Co Ltd
+5C:CF:7F	(hex)	Xiaomi Communications Co Ltd
+00:62:6E	(hex)	Cisco Systems, Inc
+00:1C:F9	(hex)	Cisco Systems, Inc
+00:1E:14	(hex)	Cisco Systems, Inc
+00:0B:82	(hex)	HP Networking
+00:17:08	(hex)	Hewlett Packard
+00:1F:29	(hex)	Hewlett Packard Enterprise
+3C:D9:2B	(hex)	Dell Inc.
+00:14:22	(hex)	Dell Inc.
+00:0D:56	(hex)	Dell Inc.
+00:24:E8	(hex)	Dell Inc.
+D4:BE:D9	(hex)	Dell Inc.
+00:1A:A0	(hex)	D-Link Corporation
+00:0C:41	(hex)	D-Link Corporation
+00:1B:11	(hex)	D-Link Corporation
+00:26:5A	(hex)	D-Link Corporation
