@@ -247,6 +247,7 @@ function bindScan() {
 }
 
 let lastScanSeen = null;
+let wasScanning = false;
 
 async function pollScanStatus() {
   const r = await api("/api/scan/status");
@@ -258,7 +259,8 @@ async function pollScanStatus() {
     (s.scanning ? "Scan läuft… " : "") +
     (s.last_scan ? "letzter Scan: " + s.last_scan : "noch kein Scan") +
     (s.next_scan ? " · nächster Scan: " + s.next_scan : "");
-  if (lastScanSeen !== null && s.last_scan !== lastScanSeen && !s.scanning) loadDevices();
+  if (!s.scanning && (wasScanning || (s.last_scan && s.last_scan !== lastScanSeen))) loadDevices();
+  wasScanning = !!s.scanning;
   if (s.last_scan) lastScanSeen = s.last_scan;
 }
 
