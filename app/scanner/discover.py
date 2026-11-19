@@ -1,7 +1,10 @@
 import ipaddress
+import logging
 import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
+
+log = logging.getLogger("fox_netmap")
 
 
 def parse_ip_addr(text: str) -> list[str]:
@@ -74,15 +77,20 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
     arp = arp_table()
     live: set[str] = set()
     for subnet in subnets:
-        live |= ping_sweep(subnet, timeout)
+        found = ping_sweep(subnet, timeout)
+        log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(found))
+        live |= found
     devices: list[dict] = []
     for ip in sorted(live, key=lambda s: ipaddress.ip_address(s)):
         devices.append({"ip": ip, "mac": arp.get(ip), "source": "ping+arp" if arp.get(ip) else "ping"})
+    arp_only = 0
     for ip, mac in arp.items():
         try:
             in_scope = any(ipaddress.ip_address(ip) in ipaddress.ip_network(sn, strict=False) for sn in subnets)
         except ValueError:
             in_scope = False
         if in_scope and ip not in live:
+            arp_only += 1
             devices.append({"ip": ip, "mac": mac, "source": "arp"})
+    log.info("ARP: %s Eintraege im Subnetz-Umfang (nur gleiche L2-Schicht sichtbar)", arp_only)
     return devices

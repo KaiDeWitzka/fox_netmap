@@ -108,6 +108,23 @@ def test_discover_parsers():
     assert discover.parse_arp(arp_sample) == {"192.168.178.1": "3c:37:86:ab:cd:ef"}
 
 
+def test_discover_loggt_pro_subnetz(monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setattr(
+        discover,
+        "ping_sweep",
+        lambda subnet, timeout=1.0: {"192.168.178.0/24": {"192.168.178.1"}, "192.168.179.0/24": set()}[subnet],
+    )
+    monkeypatch.setattr(discover, "arp_table", lambda: {"192.168.178.1": "aa:bb:cc:dd:ee:ff"})
+    with caplog.at_level(logging.INFO, logger="fox_netmap"):
+        devices = discover.discover(["192.168.178.0/24", "192.168.179.0/24"])
+    assert len(devices) == 1
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("192.168.178.0/24: 1 Hosts" in m for m in messages)
+    assert any("192.168.179.0/24: 0 Hosts" in m for m in messages)
+
+
 def test_port_list():
     assert ports.port_list(10) == list(range(1, 11))
     assert ports.port_list(0)[-1] == 65535
