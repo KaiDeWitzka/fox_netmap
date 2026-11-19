@@ -2,6 +2,7 @@ import ipaddress
 import os
 import sys
 import time
+from datetime import datetime, timezone
 
 from .. import db
 from ..config import Settings, get_settings
@@ -198,6 +199,8 @@ def main() -> None:
         except Exception as exc:
             print(f"[fox_netmap] Scan-Fehler: {exc}", file=sys.stderr)
         deadline = time.time() + eff.scan_interval
+        db.set_scan_state(conn, next_scan=datetime.fromtimestamp(deadline, timezone.utc).isoformat(timespec="seconds"))
+        conn.commit()
         while time.time() < deadline:
             if db.get_setting(conn, "scan_requested"):
                 break
