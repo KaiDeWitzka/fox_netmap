@@ -55,8 +55,13 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     base = settings.fritz_url or (f"http://{gateway}:49000" if gateway else "")
     if base and settings.fritz_user and settings.fritz_pass:
         try:
-            tr064_hosts = {h["mac"]: h for h in tr064.fetch_hosts(base, settings.fritz_user, settings.fritz_pass) if h.get("mac")}
-        except Exception as exc:
+            hosts = tr064.fetch_hosts_with_fallback(base, settings.fritz_user, settings.fritz_pass)
+            tr064_hosts = {h["mac"]: h for h in hosts if h.get("mac")}
+            log.info("TR-064: %s Hosts von %s gelesen", len(tr064_hosts), base)
+            wan = tr064.fetch_wan(base, settings.fritz_user, settings.fritz_pass)
+            if wan:
+                log.info("TR-064 WAN (%s): externe IP %s, Status %s", wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
+        except tr064.TR064Error as exc:
             log.warning("TR-064 nicht erreichbar (%s): %s", base, exc)
 
     by_mac: dict[str, dict] = {}
