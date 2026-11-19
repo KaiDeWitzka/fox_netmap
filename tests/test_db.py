@@ -1,0 +1,103 @@
+from app import db
+
+
+def make_conn(tmp_path):
+    conn = db.connect(str(tmp_path / "test.db"))
+    db.init_db(conn)
+    return conn
+
+
+def test_scan_state_singleton(tmp_path):
+    conn = make_conn(tmp_path)
+    state = db.get_scan_state(conn)
+    assert state["scanning"] == 0
+    assert state["last_scan"] is None
+
+
+def test_upsert_list_ports(tmp_path):
+    conn = make_conn(tmp_path)
+    now = db.utcnow()
+    db.upsert_device(
+        conn,
+        {
+            "mac": "aa:bb:cc:dd:ee:ff",
+            "ip": "192.168.1.10",
+            "hostname": "nas",
+            "vendor": "Synology",
+            "category": "Server/NAS",
+            "status": "online",
+            "subnet": "192.168.1.0/24",
+            "source": "ping+arp",
+        },
+        now,
+    )
+    conn.commit()
+    db.replace_ports(conn, "aa:bb:cc:dd:ee:ff", [{"port": 443, "service": "https"}, {"port": 80, "service": "http"}], now)
+    conn.commit()
+    rows = db.list_devices(conn)
+    assert len(rows) == 1
+    assert rows[0]["ports_str"] == "80;443"
+    assert rows[0]["port_count"] == 2
+    assert len(db.list_devices(conn, q="nas")) == 1
+    assert len(db.list_devices(conn, q="synology")) == 1
+    assert len(db.list_devices(conn, category="Server/NAS")) == 1
+    assert db.list_devices(conn, category="Drucker") == []
+    assert db.list_devices(conn, status="offline") == []
+    dev = db.get_device(conn, "aa:bb:cc:dd:ee:ff")
+    assert dev["ports"][0]["port"] == 80
+    assert db.get_device(conn, "00:00:00:00:00:00") is None
+
+
+def test_category_override_kept_on_rescan(tmp_path):
+    conn = make_conn(tmp_path)
+    now = db.utcnow()
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Unbekannt", "status": "online"}, now)
+    conn.execute("UPDATE devices SET category_override='Drucker', category='Drucker' WHERE mac='aa:bb:cc:dd:ee:ff'")
+    conn.commit()
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Client", "status": "online"}, now)
+    conn.commit()
+    assert db.list_devices(conn)[0]["category"] == "Drucker"
+
+
+def test_layout_roundtrip(tmp_path):
+    conn = make_conn(tmp_path)
+    db.set_layout(conn, "aa:bb:cc:dd:ee:ff", x=10.0, y=20.0, connected_to="11:22:33:44:55:66", connected_manual=1)
+    conn.commit()
+    lay = db.get_layout(conn, "aa:bb:cc:dd:ee:ff")
+    assert lay["x"] == 10.0 and lay["connected_to"] == "11:22:33:44:55:66" and lay["connected_manual"] == 1
+    db.set_layout(conn, "aa:bb:cc:dd:ee:ff", x=99.0)
+    conn.commit()
+    lay = db.get_layout(conn, "aa:bb:cc:dd:ee:ff")
+    assert lay["x"] == 99.0 and lay["y"] == 20.0 and lay["connected_to"] == "11:22:33:44:55:66"
+
+
+def test_tokens(tmp_path):
+    conn = make_conn(tmp_path)
+    now = db.utcnow()
+    db.create_token(conn, "tok1", "", "", "", now)
+    db.create_token(conn, "tok2", "2000-01-01T00:00:00+00:00", "", "", now)
+    conn.commit()
+    assert db.get_valid_token(conn, "tok1") is not None
+    assert db.get_valid_token(conn, "tok2") is None
+    assert db.get_valid_token(conn, "nope") is None
+    assert len(db.list_tokens(conn)) == 2
+    db.delete_token(conn, "tok1")
+    conn.commit()
+    assert db.get_valid_token(conn, "tok1") is None
+
+
+def test_trim_history(tmp_path):
+    conn = make_conn(tmp_path)
+    conn.execute("INSERT INTO device_history (mac, ts, status) VALUES ('m', '2000-01-01T00:00:00+00:00', 'online')")
+    conn.execute("INSERT INTO device_history (mac, ts, status) VALUES ('m', ?, 'online')", (db.utcnow(),))
+    conn.commit()
+    db.trim_history(conn, 1, db.utcnow())
+    assert len(conn.execute("SELECT ts FROM device_history").fetchall()) == 1
+
+
+def test_settings_kv(tmp_path):
+    conn = make_conn(tmp_path)
+    assert db.get_setting(conn, "scan_interval") is None
+    db.set_setting(conn, "scan_interval", "300")
+    conn.commit()
+    assert db.get_setting(conn, "scan_interval") == "300"
