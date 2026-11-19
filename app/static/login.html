@@ -20,9 +20,12 @@
       const r = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: login-user.value, password: login-pass.value })
+        body: JSON.stringify({
+          username: document.getElementById("login-user").value,
+          password: document.getElementById("login-pass").value
+        })
       });
-      if (r.ok) { location.href = "/"; } else { login-err.textContent = "Login fehlgeschlagen"; }
+      if (r.ok) { location.href = "/"; } else { document.getElementById("login-err").textContent = "Login fehlgeschlagen"; }
     });
   </script>
 </body>
