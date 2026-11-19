@@ -154,6 +154,17 @@ def test_merge_sources_by_ip():
     assert out[0]["hostname"] == "iot-plug"
 
 
+def test_merge_sources_macless_bekommt_ip_key():
+    from app.scanner.run import merge_sources
+
+    out = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], {})
+    assert out[0]["mac"] == "ip:192.168.179.20"
+    tr = {"aa:bb:cc:dd:ee:02": {"mac": "aa:bb:cc:dd:ee:02", "ip": "192.168.179.20", "hostname": "remote", "active": True, "type": "LAN"}}
+    out2 = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], tr)
+    assert len(out2) == 1
+    assert out2[0]["mac"] == "aa:bb:cc:dd:ee:02"
+
+
 def test_port_list():
     assert ports.port_list(10) == list(range(1, 11))
     assert ports.port_list(0)[-1] == 65535

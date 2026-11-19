@@ -49,13 +49,19 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict]) -> list[dict]
     by_ip = {d["ip"]: d for d in found if d.get("ip")}
     by_mac: dict[str, dict] = {}
     for d in found:
-        if d.get("mac"):
-            by_mac[d["mac"]] = d
+        if not d.get("ip"):
+            continue
+        if not d.get("mac"):
+            d["mac"] = f"ip:{d['ip']}"
+        by_mac[d["mac"]] = d
     for mac, h in tr064_hosts.items():
         if mac in by_mac:
             d = by_mac[mac]
         elif h.get("ip") in by_ip:
             d = by_ip[h["ip"]]
+            old_key = d.get("mac")
+            if old_key and old_key != mac and old_key.startswith("ip:"):
+                by_mac.pop(old_key, None)
             d["mac"] = mac
             by_mac[mac] = d
         else:
