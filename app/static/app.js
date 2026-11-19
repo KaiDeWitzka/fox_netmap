@@ -300,6 +300,16 @@ function bindNav() {
 
 let logTimer = null;
 
+function startLogTimer() {
+  if (logTimer) clearInterval(logTimer);
+  logTimer = null;
+  if (document.getElementById("log-auto").checked) {
+    logTimer = setInterval(() => {
+      if (!document.getElementById("view-log").hidden) loadLogs();
+    }, 5000);
+  }
+}
+
 async function loadLogs() {
   const lines = document.getElementById("log-lines").value;
   const level = document.getElementById("log-level").value;
@@ -314,10 +324,7 @@ function bindLog() {
   document.getElementById("btn-log-refresh").addEventListener("click", loadLogs);
   document.getElementById("log-level").addEventListener("change", loadLogs);
   document.getElementById("log-lines").addEventListener("change", loadLogs);
-  document.getElementById("log-auto").addEventListener("change", (e) => {
-    if (logTimer) clearInterval(logTimer);
-    logTimer = e.target.checked ? setInterval(loadLogs, 5000) : null;
-  });
+  document.getElementById("log-auto").addEventListener("change", startLogTimer);
 }
 
 function bindFilters() {
@@ -342,6 +349,7 @@ function bindSidebar() {
   document.getElementById("btn-settings").addEventListener("click", () => showSidebar("settings"));
   document.getElementById("settings-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const msg = document.getElementById("settings-msg");
     const body = {
       theme: document.getElementById("st-theme").value,
       scan_interval: parseInt(document.getElementById("st-interval").value, 10),
@@ -353,8 +361,19 @@ function bindSidebar() {
       auth_enabled: document.getElementById("st-auth").checked,
       auto_export: document.getElementById("st-autoexport").checked,
     };
+    const errs = validateSettings(body);
+    if (errs.length) {
+      msg.textContent = "Plausibilitätsprüfung: " + errs.join("; ");
+      return;
+    }
     const r = await api("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
-    document.getElementById("settings-msg").textContent = r.ok ? "Gespeichert." : "Fehler beim Speichern";
+    if (r.ok) {
+      msg.textContent = "Gespeichert.";
+    } else {
+      let detail = "Fehler beim Speichern";
+      try { detail = (await r.json()).detail || detail; } catch (err) { /* ignorieren */ }
+      msg.textContent = "Abgelehnt: " + detail;
+    }
   });
   document.getElementById("token-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -373,6 +392,32 @@ function bindSidebar() {
       loadTokens();
     }
   });
+}
+
+function validIp(s) {
+  const m = s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  return !!m && m.slice(1).map(Number).every((o) => o <= 255);
+}
+
+function validCidr(s) {
+  const m = s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/);
+  return !!m && m.slice(1, 5).map(Number).every((o) => o <= 255) && Number(m[5]) <= 32;
+}
+
+function validateSettings(v) {
+  const errs = [];
+  if (!Number.isInteger(v.scan_interval) || v.scan_interval < 30 || v.scan_interval > 86400)
+    errs.push("Scan-Intervall: 30–86400 s");
+  if (!Number.isInteger(v.port_top) || v.port_top < 0 || v.port_top > 65535)
+    errs.push("Port-Umfang: 0 (alle) bis 65535");
+  if (!Number.isInteger(v.history_hours) || v.history_hours < 1 || v.history_hours > 87600)
+    errs.push("Historie: 1–87600 Stunden");
+  if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
+  for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
+    if (!validCidr(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
+  for (const ip of v.snmp_switches.split(",").map((s) => s.trim()).filter(Boolean))
+    if (!validIp(ip)) errs.push(`SNMP-Switch-IP ungültig: ${ip}`);
+  return errs;
 }
 
 function bindScan() {
@@ -451,6 +496,7 @@ async function init() {
   bindScan();
   bindTableDrag();
   bindLog();
+  startLogTimer();
   await loadDevices();
   pollScanStatus();
   setInterval(pollScanStatus, 5000);

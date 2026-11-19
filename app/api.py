@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -202,8 +203,39 @@ class SettingsPatch(BaseModel):
     auth_enabled: bool | None = None
 
 
+def validate_settings(body: SettingsPatch) -> str | None:
+    if body.scan_interval is not None and not 30 <= body.scan_interval <= 86400:
+        return "scan_interval muss zwischen 30 und 86400 Sekunden liegen"
+    if body.port_top is not None and not 0 <= body.port_top <= 65535:
+        return "port_top muss zwischen 0 (alle Ports) und 65535 liegen"
+    if body.history_hours is not None and not 1 <= body.history_hours <= 87600:
+        return "history_hours muss zwischen 1 und 87600 liegen"
+    if body.theme is not None and body.theme not in ("dark", "light"):
+        return "theme muss 'dark' oder 'light' sein"
+    if body.subnets is not None and body.subnets.strip():
+        for sn in body.subnets.split(","):
+            try:
+                ipaddress.ip_network(sn.strip(), strict=False)
+            except ValueError:
+                return f"ungültiges Subnetz: {sn.strip()!r} (CIDR erwartet, z. B. 192.168.178.0/24)"
+    if body.snmp_switches is not None and body.snmp_switches.strip():
+        for ip in body.snmp_switches.split(","):
+            try:
+                ipaddress.ip_address(ip.strip())
+            except ValueError:
+                return f"ungültige IP für SNMP-Switch: {ip.strip()!r}"
+    if body.auto_export_dir is not None:
+        d = body.auto_export_dir.strip()
+        if not d or d.startswith("/") or ".." in d.split("/"):
+            return "auto_export_dir muss ein relativer Ordnername innerhalb des Daten-Volumes sein"
+    return None
+
+
 @router.patch("/api/settings")
 def patch_settings(body: SettingsPatch, request: Request, conn=Depends(get_conn), _=Depends(require_auth)):
+    error = validate_settings(body)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
     settings = request.app.state.settings
     for key, value in body.model_dump(exclude_none=True).items():
         db.set_setting(conn, key, str(value).lower() if isinstance(value, bool) else str(value))
