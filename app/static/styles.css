@@ -162,7 +162,8 @@ body.embed header #btn-scan,
 body.embed header #btn-print,
 body.embed header #exp-json,
 body.embed header #exp-csv,
-body.embed #tab-settings { display: none; }
+body.embed #tab-settings,
+body.embed #nav [data-view="log"] { display: none; }
 .login-page { display: flex; align-items: center; justify-content: center; }
 .login-page .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;

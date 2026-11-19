@@ -142,6 +142,26 @@ def test_logs_endpoint(auth_client, app):
     assert TestClient(app).get("/api/logs").status_code == 401
 
 
+def test_settings_validation(auth_client, app):
+    assert auth_client.patch("/api/settings", json={"scan_interval": 5}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"scan_interval": 100000}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"port_top": 70000}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"port_top": -1}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"history_hours": 0}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"subnets": "keine-ip"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"subnets": "192.168.1.0/24,10.0.0.0/8"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"snmp_switches": "999.1.1.1"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"snmp_switches": "192.168.1.20, 10.0.0.5"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"theme": "blue"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"auto_export_dir": "/abs"}).status_code == 422
+    r = auth_client.patch("/api/settings", json={"scan_interval": 600})
+    assert r.status_code == 200
+    conn = db.connect(app.state.db_path)
+    assert db.get_setting(conn, "scan_interval") == "600"
+    conn.close()
+
+
 def test_settings_get_patch(auth_client, app):
     r = auth_client.get("/api/settings")
     assert r.status_code == 200

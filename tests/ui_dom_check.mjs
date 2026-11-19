@@ -175,5 +175,30 @@ $("#log-level").dispatchEvent(new w.Event("change"));
 await sleep(50);
 check("Log: Level-Filter -> GET /api/logs?...level=ERROR", calls.some((c) => c.url.includes("/api/logs") && c.url.includes("level=ERROR")));
 
+const logCallCount = () => calls.filter((c) => c.url.includes("/api/logs")).length;
+const logCallsBeforeAuto = logCallCount();
+await sleep(5600);
+check("Log: Auto-Refresh aktualisiert automatisch, solange Log-Ansicht sichtbar", logCallCount() > logCallsBeforeAuto);
+
+$("#nav [data-view='map']").click();
+await sleep(50);
+$("#btn-settings").click();
+await sleep(50);
+const patchCount = () => calls.filter((c) => c.url.includes("/api/settings") && c.method === "PATCH").length;
+const patchBase = patchCount();
+$("#st-interval").value = "5";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Intervall 5 -> kein PATCH, Fehlermeldung sichtbar", patchCount() === patchBase && $("#settings-msg").textContent.includes("Intervall"));
+$("#st-subnets").value = "keine-ip";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Subnetz 'keine-ip' -> kein PATCH, Fehlermeldung", patchCount() === patchBase && $("#settings-msg").textContent.includes("Subnetz"));
+$("#st-interval").value = "600";
+$("#st-subnets").value = "";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: gueltige Werte -> PATCH /api/settings", patchCount() === patchBase + 1);
+
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);
