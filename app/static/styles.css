@@ -15,6 +15,7 @@ html[data-theme="light"] {
   --muted: #64748b;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--bg);
