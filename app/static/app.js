@@ -184,8 +184,9 @@ async function showDetail(mac) {
     cy.edges().filter((e) => e.data("source") === c.mac).addClass("hl");
   }
   const el = document.getElementById("detail-content");
+  const ipLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.url}</a>`).join(" ");
   const rows = [
-    ["Hostname", d.hostname], ["IP", d.ip], ["MAC", d.mac], ["Hersteller", d.vendor],
+    ["Hostname", d.hostname], ["IP", (d.ip || "") + (ipLinks ? " " + ipLinks : "")], ["MAC", d.mac], ["Hersteller", d.vendor],
     ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
     ["Verbunden mit", d.layout.connected_to || ""], ["Notiz", d.note],
     ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
@@ -244,10 +245,45 @@ function renderTable() {
   }
 }
 
+const WEB_PORTS = { 80: "http", 8080: "http", 443: "https", 8443: "https" };
+
+function webLinks(d) {
+  let ports;
+  if (Array.isArray(d.ports) && d.ports.length) {
+    ports = d.ports.map((p) => (typeof p === "object" ? p.port : p));
+  } else {
+    ports = String(d.ports_str || "").split(";").map((s) => parseInt(s, 10));
+  }
+  const links = [];
+  if (d.ip) {
+    for (const p of ports) {
+      const scheme = WEB_PORTS[p];
+      if (scheme) {
+        links.push({ url: `${scheme}://${d.ip}${p === 80 || p === 443 ? "" : ":" + p}`, port: p });
+      }
+    }
+  }
+  return links;
+}
+
 function buildCell(d, key) {
   const td = document.createElement("td");
   if (key === "status") {
     td.innerHTML = `<span class="status-dot status-${d.status}"></span>${d.status}`;
+  } else if (key === "ip") {
+    td.textContent = d.ip || "";
+    td.title = d.ip || "";
+    for (const l of webLinks(d)) {
+      const a = document.createElement("a");
+      a.href = l.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = l.url.replace(/^https?:\/\//, "");
+      a.title = l.url;
+      a.style.cssText = "margin-left:6px;color:var(--accent)";
+      td.appendChild(document.createTextNode(" "));
+      td.appendChild(a);
+    }
   } else if (key === "category" && !EMBED) {
     const sel = document.createElement("select");
     for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = c; if (c === d.category) o.selected = true; sel.appendChild(o); }

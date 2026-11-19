@@ -30,6 +30,14 @@ w.fetch = async (url, opts = {}) => {
         },
       ];
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
+    if (String(url).includes("/api/device/"))
+      return {
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
+        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064", note: "",
+        first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
+        ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
+        layout: {}, history: [], events: [],
+      };
     if (String(url).includes("/api/settings"))
       return {
         theme: "dark",
@@ -156,7 +164,7 @@ check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && save
 const bodyRow = doc.querySelector("#device-table tbody tr");
 check(
   "Spalten-Drag: Body-Zellen folgen der neuen Reihenfolge (ip, mac, hostname, vendor, …)",
-  !!bodyRow && bodyRow.children[0].textContent === "10.0.0.5" && bodyRow.children[2].textContent === "nas"
+  !!bodyRow && bodyRow.children[0].textContent.includes("10.0.0.5") && bodyRow.children[2].textContent === "nas"
 );
 check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
 
@@ -170,6 +178,21 @@ const savedWidths = JSON.parse(w.localStorage.getItem("fox_table_widths") || "{}
 const colEl = doc.querySelector(`#device-table colgroup col[data-key="${rKey}"]`);
 check("Spalten-Resize: Breite >= 60px in localStorage gespeichert", typeof savedWidths[rKey] === "number" && savedWidths[rKey] >= 60);
 check("Spalten-Resize: col-Breite live gesetzt", !!colEl && colEl.style.width.endsWith("px"));
+
+const ipThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "ip");
+const ipCell = doc.querySelector("#device-table tbody tr").children[ipThIdx];
+check(
+  "Web-Links: IP-Zelle mit http://10.0.0.5 und https://10.0.0.5",
+  ipCell.querySelector('a[href="http://10.0.0.5"]') !== null && ipCell.querySelector('a[href="https://10.0.0.5"]') !== null
+);
+
+doc.querySelector("#device-table tbody tr").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
+await sleep(80);
+check(
+  "Web-Links: Detail-Panel enthaelt beide Links",
+  $("#detail-content").innerHTML.includes('href="http://10.0.0.5"') && $("#detail-content").innerHTML.includes('href="https://10.0.0.5"')
+);
+check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
 
 $("#nav [data-view='log']").click();
 await sleep(100);
