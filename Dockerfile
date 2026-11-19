@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends iputils-ping iproute2 net-snmp snmp \
+    && apt-get install -y --no-install-recommends iputils-ping iproute2 snmp \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
