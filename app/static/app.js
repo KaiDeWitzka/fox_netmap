@@ -294,7 +294,30 @@ function bindNav() {
     b.classList.add("active");
     document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.view));
     if (b.dataset.view === "map" && cy) setTimeout(() => { cy.resize(); cy.fit(undefined, 40); }, 50);
+    if (b.dataset.view === "log") loadLogs();
   }));
+}
+
+let logTimer = null;
+
+async function loadLogs() {
+  const lines = document.getElementById("log-lines").value;
+  const level = document.getElementById("log-level").value;
+  const r = await api(`/api/logs?lines=${lines}&level=${level}`);
+  if (!r.ok) return;
+  const data = await r.json();
+  document.getElementById("log-view").textContent = data.lines.join("\n") || "(noch keine Log-Eintraege)";
+  document.getElementById("log-status").textContent = `${data.returned}/${data.total} Zeilen · ${data.file}`;
+}
+
+function bindLog() {
+  document.getElementById("btn-log-refresh").addEventListener("click", loadLogs);
+  document.getElementById("log-level").addEventListener("change", loadLogs);
+  document.getElementById("log-lines").addEventListener("change", loadLogs);
+  document.getElementById("log-auto").addEventListener("change", (e) => {
+    if (logTimer) clearInterval(logTimer);
+    logTimer = e.target.checked ? setInterval(loadLogs, 5000) : null;
+  });
 }
 
 function bindFilters() {
@@ -427,6 +450,7 @@ async function init() {
   bindSidebar();
   bindScan();
   bindTableDrag();
+  bindLog();
   await loadDevices();
   pollScanStatus();
   setInterval(pollScanStatus, 5000);

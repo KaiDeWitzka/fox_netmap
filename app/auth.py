@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import secrets
 import time
 
@@ -11,6 +12,8 @@ from . import db
 
 SESSIONS: dict[str, tuple[str, float]] = {}
 SESSION_TTL = 12 * 3600
+
+log = logging.getLogger("fox_netmap")
 
 router = APIRouter()
 
@@ -59,7 +62,9 @@ def login(body: LoginRequest, request: Request, response: Response):
     finally:
         conn.close()
     if not user or not verify_password(body.password, user["pass_hash"]):
+        log.warning("Login fehlgeschlagen fuer Benutzer '%s'", body.username)
         return JSONResponse({"detail": "invalid credentials"}, status_code=401)
+    log.info("Login ok: %s", body.username)
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = (body.username, time.time() + SESSION_TTL)
     response.set_cookie("fox_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL)

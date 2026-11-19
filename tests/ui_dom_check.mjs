@@ -35,6 +35,13 @@ w.fetch = async (url, opts = {}) => {
         auto_export: false,
       };
     if (String(url).includes("/api/tokens")) return [];
+    if (String(url).includes("/api/logs"))
+      return {
+        file: "/data/netmap.log",
+        total: 2,
+        returned: 2,
+        lines: ["2026-01-01 10:00:00 INFO fox_netmap: Scan fertig: 3 Geraete, 0 neu", "2026-01-01 10:00:01 ERROR fox_netmap scanner: Scan-Fehler: boom"],
+      };
     if (String(url).includes("/api/scan")) return { last_scan: null, next_scan: null, scanning: 0 };
     return {};
   };
@@ -137,6 +144,22 @@ const afterCols = thKeys();
 check("Spalten-Drag: Reihenfolge geaendert (th0 vor th3 eingefuegt)", afterCols[0] === beforeCols[1] && afterCols[2] === beforeCols[0]);
 const savedCols = JSON.parse(w.localStorage.getItem("fox_table_cols") || "null");
 check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && savedCols[2] === beforeCols[0]);
+
+$("#nav [data-view='log']").click();
+await sleep(100);
+check("Log: Log-Ansicht sichtbar, Karte versteckt", vis($("#view-log")) && !vis($("#view-map")));
+check("Log: GET /api/logs wurde abgesetzt", calls.some((c) => c.url.includes("/api/logs")));
+check("Log: Inhalt gerendert (ERROR-Zeile sichtbar)", $("#log-view").textContent.includes("Scan-Fehler"));
+
+const logCallsBefore = calls.filter((c) => c.url.includes("/api/logs")).length;
+$("#btn-log-refresh").click();
+await sleep(50);
+check("Log: Aktualisieren -> erneuter GET /api/logs", calls.filter((c) => c.url.includes("/api/logs")).length === logCallsBefore + 1);
+
+$("#log-level").value = "ERROR";
+$("#log-level").dispatchEvent(new w.Event("change"));
+await sleep(50);
+check("Log: Level-Filter -> GET /api/logs?...level=ERROR", calls.some((c) => c.url.includes("/api/logs") && c.url.includes("level=ERROR")));
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

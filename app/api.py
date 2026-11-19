@@ -1,8 +1,9 @@
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from . import db, exporters
@@ -238,3 +239,25 @@ def delete_token(token: str, conn=Depends(get_conn), _=Depends(require_auth)):
     db.delete_token(conn, token)
     conn.commit()
     return {"ok": True}
+
+
+@router.get("/api/logs")
+def get_logs(request: Request, lines: int = 300, level: str = "", _=Depends(require_auth)):
+    path = os.path.join(request.app.state.settings.data_dir, "netmap.log")
+    all_lines: list[str] = []
+    if os.path.exists(path):
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            all_lines = fh.read().splitlines()
+    out = all_lines[-lines:] if lines > 0 else all_lines
+    if level:
+        marker = f" {level.upper()} "
+        out = [line for line in out if marker in line]
+    return {"file": path, "total": len(all_lines), "returned": len(out), "lines": out}
+
+
+@router.get("/api/logs/download")
+def download_logs(request: Request, _=Depends(require_auth)):
+    path = os.path.join(request.app.state.settings.data_dir, "netmap.log")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="noch keine Log-Datei vorhanden")
+    return FileResponse(path, media_type="text/plain", filename="netmap.log")
