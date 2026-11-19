@@ -74,7 +74,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             d["ip"] = d["ip"] or h["ip"]
             if h.get("hostname"):
                 d["hostname"] = h["hostname"]
-            d["source"] = "tr064+" + d["source"] if d["source"] else "tr064"
+            d["source"] = (d["source"] + ",tr064") if d["source"] else "tr064"
             d["tr064_type"] = h.get("type", "")
             d["tr064_active"] = h.get("active", True)
         else:
@@ -170,7 +170,8 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
     db.set_scan_state(conn, last_scan=now, scanning=0)
     conn.commit()
     db.trim_history(conn, settings.history_hours, now)
-    return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices}
+    new_online = [d for d in new_devices if d.get("status") == "online"]
+    return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices, "new_online": new_online}
 
 
 def run_once(settings: Settings, conn) -> dict:
@@ -179,8 +180,15 @@ def run_once(settings: Settings, conn) -> dict:
     conn.commit()
     try:
         devices = collect_devices(settings, conn)
+        n_ping = sum(1 for d in devices if "ping" in d.get("source", "") or "arp" in d.get("source", ""))
+        n_tr = sum(1 for d in devices if "tr064" in d.get("source", ""))
+        n_only_tr = sum(1 for d in devices if d.get("source") == "tr064")
+        log.info(
+            "Abgleich: %s Geraete gesamt (%s per Ping/ARP, %s per TR-064, %s nur TR-064/offline)",
+            len(devices), n_ping, n_tr, n_only_tr,
+        )
         summary = apply_scan(conn, settings, devices)
-        notify.notify_new_devices(settings, summary["new_devices"])
+        notify.notify_new_devices(settings, summary["new_online"])
         if settings.auto_export:
             auto_export(settings, conn)
         return summary

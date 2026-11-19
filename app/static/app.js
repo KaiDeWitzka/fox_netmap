@@ -20,7 +20,7 @@ let sortKey = "hostname";
 let sortDir = 1;
 
 const TABLE_COLS = [
-  ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"],
+  ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"], ["source", "Quelle"],
   ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"],
   ["ports_str", "Ports"], ["connected_to", "Verbunden mit"], ["note", "Notiz"], ["last_seen", "Zuletzt gesehen"],
 ];
@@ -37,6 +37,18 @@ function loadColOrder() {
 }
 
 let colOrder = loadColOrder();
+
+function loadColWidths() {
+  try {
+    const s = JSON.parse(localStorage.getItem("fox_table_widths") || "{}");
+    return s && typeof s === "object" ? s : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+let colWidths = loadColWidths();
+let suppressSortClick = false;
 
 function api(path, opts = {}) {
   const url = TOKEN ? path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN) : path;
@@ -205,8 +217,13 @@ function renderTable() {
   const thead = document.querySelector("#device-table thead");
   const tbody = document.querySelector("#device-table tbody");
   const cols = colOrder.map((k) => TABLE_COLS.find(([key]) => key === k));
-  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "</tr>";
+  const colgroup = document.querySelector("#device-table colgroup");
+  if (colgroup) {
+    colgroup.innerHTML = colOrder.map((k) => `<col data-key="${k}"${colWidths[k] ? ` style="width:${colWidths[k]}px"` : ""}>`).join("");
+  }
+  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
   thead.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
+    if (suppressSortClick) { suppressSortClick = false; return; }
     const k = th.dataset.key;
     if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
     renderTable();
@@ -243,6 +260,7 @@ function buildCell(d, key) {
     td.appendChild(inp);
   } else {
     td.textContent = d[key] ?? "";
+    td.title = String(d[key] ?? "");
   }
   return td;
 }
@@ -285,6 +303,34 @@ function bindTableDrag() {
   thead.addEventListener("dragend", () => {
     dragKey = null;
     thead.querySelectorAll("th.drag-over").forEach((t) => t.classList.remove("drag-over"));
+  });
+  thead.addEventListener("mousedown", (e) => {
+    const handle = e.target.closest(".resizer");
+    if (!handle) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const th = handle.closest("th");
+    const key = th.dataset.key;
+    th.draggable = false;
+    const startX = e.clientX;
+    const startW = colWidths[key] || th.getBoundingClientRect().width || 120;
+    let moved = false;
+    const onMove = (ev) => {
+      const w = Math.max(60, Math.round(startW + (ev.clientX - startX)));
+      if (Math.abs(ev.clientX - startX) > 3) moved = true;
+      colWidths[key] = w;
+      const col = document.querySelector(`#device-table colgroup col[data-key="${key}"]`);
+      if (col) col.style.width = w + "px";
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      th.draggable = true;
+      if (moved) suppressSortClick = true;
+      localStorage.setItem("fox_table_widths", JSON.stringify(colWidths));
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   });
 }
 
