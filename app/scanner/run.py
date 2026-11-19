@@ -1,15 +1,18 @@
 import ipaddress
+import logging
 import os
-import sys
 import time
 from datetime import datetime, timezone
 
 from .. import db
 from ..config import Settings, get_settings
 from ..exporters import auto_export
+from ..logsetup import get_logger
 from . import categorize, discover, names, notify, oui, ports, snmp, topology, tr064
 
 SEED_OUI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "oui_seed.txt")
+
+log = logging.getLogger("fox_netmap")
 
 OVERRIDABLE = {
     "scan_interval": int,
@@ -54,7 +57,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         try:
             tr064_hosts = {h["mac"]: h for h in tr064.fetch_hosts(base, settings.fritz_user, settings.fritz_pass) if h.get("mac")}
         except Exception as exc:
-            print(f"[fox_netmap] TR-064 nicht erreichbar ({base}): {exc}", file=sys.stderr)
+            log.warning("TR-064 nicht erreichbar (%s): %s", base, exc)
 
     by_mac: dict[str, dict] = {}
     for d in found:
@@ -166,6 +169,7 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
 
 
 def run_once(settings: Settings, conn) -> dict:
+    log.info("Scan gestartet (Subnetze: %s)", ", ".join(settings.subnet_list) or "auto")
     db.set_scan_state(conn, scanning=1)
     conn.commit()
     try:
@@ -186,18 +190,22 @@ def main() -> None:
     os.makedirs(settings.data_dir, exist_ok=True)
     conn = db.connect(db.db_path(settings.data_dir))
     db.init_db(conn)
-    print(f"[fox_netmap] Scanner startet, Intervall {settings.scan_interval}s, Daten: {settings.data_dir}")
+    log = get_logger(data_dir=settings.data_dir)
+    log.info("Scanner startet: Intervall %ss, Daten: %s", settings.scan_interval, settings.data_dir)
     while True:
         eff = effective_settings(conn, settings)
         if db.get_setting(conn, "scan_requested"):
             db.set_setting(conn, "scan_requested", "")
             conn.commit()
-            print("[fox_netmap] manueller Scan angefordert")
+            log.info("manueller Scan angefordert")
+        started = time.perf_counter()
         try:
             summary = run_once(eff, conn)
-            print(f"[fox_netmap] Scan fertig: {summary['seen']} Geraete, {summary['new']} neu")
-        except Exception as exc:
-            print(f"[fox_netmap] Scan-Fehler: {exc}", file=sys.stderr)
+            log.info("Scan fertig in %.1fs: %s Geraete gesehen, %s neu", time.perf_counter() - started, summary["seen"], summary["new"])
+            for d in summary["new_devices"]:
+                log.info("neues Geraet: %s %s %s %s", d.get("mac"), d.get("ip"), d.get("hostname") or "-", d.get("vendor") or "-")
+        except Exception:
+            log.exception("Scan-Fehler")
         deadline = time.time() + eff.scan_interval
         db.set_scan_state(conn, next_scan=datetime.fromtimestamp(deadline, timezone.utc).isoformat(timespec="seconds"))
         conn.commit()

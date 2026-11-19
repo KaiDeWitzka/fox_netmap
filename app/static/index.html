@@ -12,6 +12,7 @@
   <nav id="nav">
     <button data-view="map" class="active">Karte</button>
     <button data-view="table">Tabelle</button>
+    <button data-view="log">Log</button>
   </nav>
   <input id="search" type="search" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
   <select id="filter-category"><option value="">Alle Kategorien</option></select>
@@ -78,6 +79,17 @@
       <thead></thead>
       <tbody></tbody>
     </table>
+  </section>
+  <section id="view-log" class="view" hidden>
+    <div class="log-toolbar">
+      <button id="btn-log-refresh">Aktualisieren</button>
+      <label class="chk"><input type="checkbox" id="log-auto" checked> auto-refresh</label>
+      <select id="log-level"><option value="">alle Level</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select>
+      <select id="log-lines"><option value="100">100</option><option value="300" selected>300</option><option value="1000">1000</option></select>
+      <a class="hdr-btn" href="/api/logs/download" download>Log-Datei</a>
+      <span id="log-status" class="muted"></span>
+    </div>
+    <pre id="log-view"></pre>
   </section>
 </main>
 <script src="/static/vendor/cytoscape.min.js"></script>

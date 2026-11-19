@@ -119,6 +119,29 @@ def test_embed_token_flow(auth_client, app):
     assert anon.get(f"/api/devices?token={token}").status_code == 403
 
 
+def test_logs_endpoint(auth_client, app):
+    from fastapi.testclient import TestClient
+
+    logfile = app.state.settings.data_dir + "/netmap.log"
+    with open(logfile, "w", encoding="utf-8") as fh:
+        fh.write("2026-01-01 10:00:00 INFO fox_netmap: Scan fertig: 3 Geraete, 0 neu\n")
+        fh.write("2026-01-01 10:00:01 ERROR fox_netmap scanner: Scan-Fehler: boom\n")
+    r = auth_client.get("/api/logs")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 2 and body["returned"] == 2
+    assert any("ERROR" in line for line in body["lines"])
+    r = auth_client.get("/api/logs?level=ERROR")
+    assert r.json()["returned"] == 1
+    assert "Scan-Fehler" in r.json()["lines"][0]
+    r = auth_client.get("/api/logs?lines=1")
+    assert r.json()["returned"] == 1
+    r = auth_client.get("/api/logs/download")
+    assert r.status_code == 200
+    assert "Scan-Fehler" in r.text
+    assert TestClient(app).get("/api/logs").status_code == 401
+
+
 def test_settings_get_patch(auth_client, app):
     r = auth_client.get("/api/settings")
     assert r.status_code == 200
