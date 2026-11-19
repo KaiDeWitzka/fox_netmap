@@ -8,6 +8,14 @@ from . import api, db
 from .auth import ensure_default_user, is_valid_session
 from .config import Settings, get_settings
 
+
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 PUBLIC_PATHS = ("/api/health", "/api/login", "/api/categories", "/api/scan/status", "/static/", "/login", "/favicon.ico", "/embed")
 TOKEN_PATHS = ("/api/devices", "/api/device/", "/api/export/")
 
@@ -60,5 +68,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def login_page():
         return FileResponse(os.path.join(static_dir, "login.html"))
 
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/static", NoCacheStaticFiles(directory=static_dir), name="static")
     return app
