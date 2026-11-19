@@ -246,12 +246,20 @@ function bindScan() {
   btn.addEventListener("click", async () => { await api("/api/scan", { method: "POST" }); pollScanStatus(); });
 }
 
+let lastScanSeen = null;
+
 async function pollScanStatus() {
   const r = await api("/api/scan/status");
   if (!r.ok) return;
   const s = await r.json();
-  document.getElementById("scan-status").textContent =
-    (s.scanning ? "Scan läuft… " : "") + (s.last_scan ? "letzter Scan: " + s.last_scan : "noch kein Scan");
+  const el = document.getElementById("scan-status");
+  el.classList.toggle("running", !!s.scanning);
+  el.textContent =
+    (s.scanning ? "Scan läuft… " : "") +
+    (s.last_scan ? "letzter Scan: " + s.last_scan : "noch kein Scan") +
+    (s.next_scan ? " · nächster Scan: " + s.next_scan : "");
+  if (lastScanSeen !== null && s.last_scan !== lastScanSeen && !s.scanning) loadDevices();
+  if (s.last_scan) lastScanSeen = s.last_scan;
 }
 
 async function loadSettings() {
@@ -322,6 +330,22 @@ async function loadTokens() {
     li.appendChild(del);
     ul.appendChild(li);
   }
+}
+
+async function init() {
+  applyTheme();
+  bindNav();
+  bindFilters();
+  bindScan();
+  bindSettings();
+  document.getElementById("btn-logout").addEventListener("click", async () => {
+    await api("/api/logout", { method: "POST" });
+    location.href = "/login";
+  });
+  await loadCategories();
+  await loadDevices();
+  await pollScanStatus();
+  setInterval(pollScanStatus, 5000);
 }
 
 init();

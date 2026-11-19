@@ -23,7 +23,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | Hostname | Kombination aus DNS-Reverse, NetBIOS, mDNS, TR-064 |
 | Kategorie | Heuristik-Vorschlag (Ports, Hostname, OUI, TR-064-Typ) + manueller Override; Kategorien: Router, Switch, Server/NAS, Client, Drucker, Smart-Home/IoT, Unbekannt |
 | Persistenz | SQLite (WAL) im Daten-Volume; gespeichert: Snapshot, Online/Offline-Historie, Änderungsereignisse; Aufbewahrung konfigurierbar (Default 30 Tage, dann Trim) |
-| Update-Zyklen | Intervall Default 900 s, konfigurierbar + „Jetzt scannen“-Button; Scans im Hintergrund, UI zeigt letzter/nächster Scan + Fortschritt; Änderungserkennung mit Alarm (Webhook/Gotify/Ntfy) + Whitelist bekannter Geräte |
+| Update-Zyklen | Intervall Default 900 s, konfigurierbar + „Jetzt scannen“-Button; Scans im Hintergrund, UI zeigt letzter/nächster Scan + Fortschritt; während eines Scans sichtbarer „Scan läuft…“-Indikator (pulsierender Punkt im Header), Geräteliste aktualisiert sich automatisch nach Scan-Ende; Änderungserkennung mit Alarm (Webhook/Gotify/Ntfy) + Whitelist bekannter Geräte |
 | Tech-Stack | Python (FastAPI) + SQLite Backend; Vanilla JS + Cytoscape.js Frontend; REST-API dazwischen; eine Sprache, ein Image |
 | Layout | Hierarchisches Auto-Layout nach Topologie (alternativ Force-Directed); Drag-&-Drop-Positionen werden in der DB gespeichert |
 | Editieren in der Karte | Geräte verschieben, manuelles „Verbunden mit“, Notiz/Label, Icon+Farbe je Kategorie; Gruppieren nach Räumen → Backlog |

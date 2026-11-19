@@ -52,6 +52,18 @@ header input[type="search"], header select {
 }
 #search { min-width: 260px; }
 #scan-status { color: var(--muted); font-size: 12px; }
+#scan-status.running { color: var(--accent); font-weight: 600; }
+#scan-status.running::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: fox-scan-pulse 1s ease-in-out infinite;
+}
+@keyframes fox-scan-pulse { 50% { opacity: 0.25; } }
 main { flex: 1; min-height: 0; }
 .view { height: 100%; }
 #view-map { display: flex; }
