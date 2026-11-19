@@ -26,6 +26,7 @@ def test_apply_scan_new_offline_events(tmp_path):
     d1 = dev("aa:aa:aa:aa:aa:01", "10.0.0.2", hostname="pc", category="Client", ports=[{"port": 80}], layout={"connected_to": "10.0.0.1"})
     summary = apply_scan(conn, settings, [d1])
     assert summary["new"] == 1 and summary["seen"] == 1
+    assert len(summary["new_online"]) == 1
     stored = db.get_device(conn, d1["mac"])
     assert stored["status"] == "online"
     assert stored["layout"]["connected_to"] == "10.0.0.1"
@@ -37,6 +38,15 @@ def test_apply_scan_new_offline_events(tmp_path):
     stored2 = db.get_device(conn, d1["mac"])
     assert stored2["status"] == "offline"
     assert any(e["type"] == "offline" for e in stored2["events"])
+
+
+def test_apply_scan_tr064_only_offline_kein_alarm(tmp_path):
+    conn, settings = make(tmp_path)
+    stale = dev("aa:aa:aa:aa:aa:09", "10.0.0.99", category="Unbekannt", status="offline", source="tr064")
+    summary = apply_scan(conn, settings, [stale])
+    assert summary["new"] == 1
+    assert summary["new_online"] == []
+    assert db.get_device(conn, stale["mac"])["status"] == "offline"
 
 
 def test_apply_scan_ports_changed_and_manual_layout_kept(tmp_path):

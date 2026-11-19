@@ -24,7 +24,7 @@ w.fetch = async (url, opts = {}) => {
       return [
         {
           mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
-          category: "Server/NAS", status: "online", subnet: "10.0.0.0/24",
+          category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064",
           ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
           port_count: 2, x: null, y: null,
         },
@@ -158,6 +158,18 @@ check(
   "Spalten-Drag: Body-Zellen folgen der neuen Reihenfolge (ip, mac, hostname, vendor, …)",
   !!bodyRow && bodyRow.children[0].textContent === "10.0.0.5" && bodyRow.children[2].textContent === "nas"
 );
+check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
+
+const resizer = doc.querySelector("#device-table thead th .resizer");
+const rKey = resizer.closest("th").dataset.key;
+resizer.dispatchEvent(new w.MouseEvent("mousedown", { bubbles: true, clientX: 100 }));
+doc.dispatchEvent(new w.MouseEvent("mousemove", { bubbles: true, clientX: 170 }));
+doc.dispatchEvent(new w.MouseEvent("mouseup", { bubbles: true, clientX: 170 }));
+await sleep(20);
+const savedWidths = JSON.parse(w.localStorage.getItem("fox_table_widths") || "{}");
+const colEl = doc.querySelector(`#device-table colgroup col[data-key="${rKey}"]`);
+check("Spalten-Resize: Breite >= 60px in localStorage gespeichert", typeof savedWidths[rKey] === "number" && savedWidths[rKey] >= 60);
+check("Spalten-Resize: col-Breite live gesetzt", !!colEl && colEl.style.width.endsWith("px"));
 
 $("#nav [data-view='log']").click();
 await sleep(100);
