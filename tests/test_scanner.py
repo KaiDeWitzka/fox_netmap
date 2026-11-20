@@ -61,6 +61,41 @@ def test_apply_scan_ports_changed_and_manual_layout_kept(tmp_path):
     assert stored["layout"]["connected_to"] == "manual-parent"
 
 
+def test_retention_removes_old_offline(tmp_path):
+    conn, settings = make(tmp_path)
+    settings = settings.model_copy(update={"device_retention_days": 30})
+    d = dev("aa:aa:aa:aa:aa:10", "10.0.0.10")
+    apply_scan(conn, settings, [d])
+    conn.execute("UPDATE devices SET status='offline', last_seen='2020-01-01T00:00:00+00:00' WHERE mac=?", (d["mac"],))
+    conn.commit()
+    summary = apply_scan(conn, settings, [])
+    assert summary["removed"] == 1
+    assert db.get_device(conn, d["mac"]) is None
+
+
+def test_retention_disabled_keeps(tmp_path):
+    conn, settings = make(tmp_path)
+    settings = settings.model_copy(update={"device_retention_days": 0})
+    d = dev("aa:aa:aa:aa:aa:11", "10.0.0.11")
+    apply_scan(conn, settings, [d])
+    conn.execute("UPDATE devices SET status='offline', last_seen='2020-01-01T00:00:00+00:00' WHERE mac=?", (d["mac"],))
+    conn.commit()
+    summary = apply_scan(conn, settings, [])
+    assert summary["removed"] == 0
+    assert db.get_device(conn, d["mac"]) is not None
+
+
+def test_offline_does_not_bump_last_seen(tmp_path):
+    conn, settings = make(tmp_path)
+    d = dev("aa:aa:aa:aa:aa:12", "10.0.0.12")
+    apply_scan(conn, settings, [d])
+    before = db.get_device(conn, d["mac"])["last_seen"]
+    apply_scan(conn, settings, [])
+    after = db.get_device(conn, d["mac"])
+    assert after["status"] == "offline"
+    assert after["last_seen"] == before
+
+
 def test_effective_settings_override(tmp_path):
     conn, settings = make(tmp_path)
     db.set_setting(conn, "scan_interval", "300")

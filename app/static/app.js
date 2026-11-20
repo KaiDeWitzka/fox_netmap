@@ -453,6 +453,7 @@ function bindSidebar() {
       subnets: document.getElementById("st-subnets").value,
       port_top: parseInt(document.getElementById("st-porttop").value, 10),
       history_hours: parseInt(document.getElementById("st-history").value, 10),
+      device_retention_days: parseInt(document.getElementById("st-retention").value, 10),
       snmp_enabled: document.getElementById("st-snmp").checked,
       snmp_switches: document.getElementById("st-switches").value,
       auth_enabled: document.getElementById("st-auth").checked,
@@ -509,6 +510,8 @@ function validateSettings(v) {
     errs.push("Port-Umfang: 0 (alle) bis 65535");
   if (!Number.isInteger(v.history_hours) || v.history_hours < 1 || v.history_hours > 87600)
     errs.push("Historie: 1–87600 Stunden");
+  if (!Number.isInteger(v.device_retention_days) || v.device_retention_days < 0 || v.device_retention_days > 3650)
+    errs.push("Retention: 0–3650 Tage (0 = nie löschen)");
   if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
     if (!validCidr(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
@@ -550,6 +553,7 @@ async function loadSettings() {
   document.getElementById("st-subnets").value = s.subnets;
   document.getElementById("st-porttop").value = s.port_top;
   document.getElementById("st-history").value = s.history_hours;
+  document.getElementById("st-retention").value = s.device_retention_days;
   document.getElementById("st-snmp").checked = String(s.snmp_enabled) === "true" || s.snmp_enabled === true;
   document.getElementById("st-switches").value = s.snmp_switches;
   document.getElementById("st-auth").checked = String(s.auth_enabled) === "true" || s.auth_enabled === true;

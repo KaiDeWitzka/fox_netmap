@@ -2,7 +2,7 @@ import ipaddress
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .. import db
 from ..config import Settings, get_settings
@@ -20,6 +20,7 @@ OVERRIDABLE = {
     "port_top": int,
     "snmp_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
     "history_hours": int,
+    "device_retention_days": int,
     "theme": str,
     "auto_export": lambda v: str(v).lower() in ("1", "true", "yes"),
 }
@@ -181,14 +182,30 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
                 db.set_layout(conn, mac, connected_to=layout["connected_to"])
     for mac, row in existing.items():
         if mac not in seen and row["status"] == "online":
-            conn.execute("UPDATE devices SET status = 'offline', last_seen = ? WHERE mac = ?", (now, mac))
+            conn.execute("UPDATE devices SET status = 'offline' WHERE mac = ?", (mac,))
             db.add_history(conn, mac, "offline", now)
             db.add_event(conn, mac, "offline", "", now)
+    removed = apply_retention(conn, settings, now)
     db.set_scan_state(conn, last_scan=now, scanning=0)
     conn.commit()
     db.trim_history(conn, settings.history_hours, now)
     new_online = [d for d in new_devices if d.get("status") == "online"]
-    return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices, "new_online": new_online}
+    return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices, "new_online": new_online, "removed": removed}
+
+
+def apply_retention(conn, settings: Settings, now: str) -> int:
+    days = getattr(settings, "device_retention_days", 0)
+    if days <= 0:
+        return 0
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    rows = conn.execute("SELECT mac FROM devices WHERE status = 'offline' AND last_seen < ?", (cutoff,)).fetchall()
+    for r in rows:
+        mac = r["mac"]
+        for table in ("device_ports", "device_layout", "device_history", "device_events", "devices"):
+            conn.execute(f"DELETE FROM {table} WHERE mac = ?", (mac,))
+    if rows:
+        log.info("Retention: %s Geraete entfernt (offline seit > %s Tagen)", len(rows), days)
+    return len(rows)
 
 
 def run_once(settings: Settings, conn) -> dict:
