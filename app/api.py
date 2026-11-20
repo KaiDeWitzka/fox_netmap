@@ -32,6 +32,7 @@ SAFE_SETTINGS = [
     "auto_export_interval_hours",
     "mdns_enabled",
     "alarm_whitelist",
+    "sites",
 ]
 
 
@@ -65,9 +66,21 @@ def _token_filters(conn, token: str | None, subnet: str, category: str) -> tuple
     return subnet, category
 
 
-def _filtered_devices(request: Request, conn, q: str, category: str, status: str, subnet: str, token: str | None):
+def _site_of(subnet: str, settings) -> str:
+    if not subnet:
+        return ""
+    return settings.site_map.get(subnet, "")
+
+
+def _filtered_devices(request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, token: str | None):
     subnet, category = _token_filters(conn, token, subnet, category)
-    return db.list_devices(conn, q=q, category=category, status=status, subnet=subnet)
+    rows = db.list_devices(conn, q=q, category=category, status=status, subnet=subnet)
+    settings = request.app.state.settings
+    for r in rows:
+        r["site"] = _site_of(r.get("subnet", ""), settings)
+    if site:
+        rows = [r for r in rows if r["site"] == site]
+    return rows
 
 
 @router.get("/api/health")
@@ -97,10 +110,11 @@ def devices(
     category: str = "",
     status: str = "",
     subnet: str = "",
+    site: str = "",
     token: str = "",
     conn=Depends(get_conn),
 ):
-    return _filtered_devices(request, conn, q, category, status, subnet, token or None)
+    return _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
 
 
 @router.get("/api/device/{mac}")
@@ -110,6 +124,7 @@ def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_
     dev = db.get_device(conn, mac)
     if dev is None:
         raise HTTPException(status_code=404, detail="device not found")
+    dev["site"] = _site_of(dev.get("subnet", ""), request.app.state.settings)
     return dev
 
 
@@ -158,15 +173,15 @@ def scan_status(conn=Depends(get_conn)):
 
 
 @router.get("/api/export/json")
-def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", token: str = "", conn=Depends(get_conn)):
-    rows = _filtered_devices(request, conn, q, category, status, subnet, token or None)
+def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", token: str = "", conn=Depends(get_conn)):
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
     return exporters.devices_payload(request.app.state.settings, rows, conn)
 
 
 @router.get("/api/export/csv")
-def export_csv(request: Request, sep: str = "semicolon", q: str = "", category: str = "", status: str = "", subnet: str = "", token: str = "", conn=Depends(get_conn)):
+def export_csv(request: Request, sep: str = "semicolon", q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", token: str = "", conn=Depends(get_conn)):
     delimiter = ";" if sep == "semicolon" else ","
-    rows = _filtered_devices(request, conn, q, category, status, subnet, token or None)
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
     return PlainTextResponse(
         exporters.to_csv(rows, delimiter),
         media_type="text/csv",
@@ -206,6 +221,7 @@ class SettingsPatch(BaseModel):
     auto_export_interval_hours: int | None = None
     mdns_enabled: bool | None = None
     alarm_whitelist: str | None = None
+    sites: str | None = None
     auth_enabled: bool | None = None
 
 
@@ -252,6 +268,24 @@ def validate_settings(body: SettingsPatch) -> str | None:
             is_mac = len(parts) == 6 and all(len(p) in (1, 2) and all(c in "0123456789abcdefABCDEF" for c in p) for p in parts)
             if not is_mac:
                 return f"ungueltiger Whitelist-Eintrag: {e!r} (MAC oder IP erwartet)"
+    if body.sites is not None and body.sites.strip():
+        for part in body.sites.split(";"):
+            part = part.strip()
+            if not part:
+                continue
+            if ":" not in part:
+                return f"ungueltiger Standort-Eintrag: {part!r} (Format: Name:Subnetz[,Subnetz]; ...)"
+            name, _, subs = part.partition(":")
+            if not name.strip():
+                return f"Standort ohne Namen: {part!r}"
+            for sn in subs.split(","):
+                sn = sn.strip()
+                if not sn:
+                    continue
+                try:
+                    ipaddress.ip_network(sn, strict=False)
+                except ValueError:
+                    return f"ungueltiges Subnetz im Standort {name.strip()!r}: {sn!r}"
     return None
 
 
@@ -295,6 +329,12 @@ def delete_token(token: str, conn=Depends(get_conn), _=Depends(require_auth)):
     db.delete_token(conn, token)
     conn.commit()
     return {"ok": True}
+
+
+@router.get("/api/sites")
+def sites_api(request: Request):
+    s = request.app.state.settings
+    return {"names": s.site_names, "map": s.site_map}
 
 
 @router.get("/api/meta")

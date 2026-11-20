@@ -14,6 +14,7 @@ CSV_FIELDS = [
     "category",
     "status",
     "subnet",
+    "site",
     "connected_to",
     "ports",
     "note",
@@ -37,6 +38,7 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
                 "category": r["category"],
                 "status": r["status"],
                 "subnet": r["subnet"],
+                "site": (settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""),
                 "source": r["source"],
                 "connection": r.get("connection", ""),
                 "connected_to": r.get("connected_to") or "",
@@ -69,6 +71,7 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
                 r["category"],
                 r["status"],
                 r["subnet"],
+                r.get("site", ""),
                 r.get("connected_to") or "",
                 r.get("ports_str") or "",
                 r["note"],
@@ -98,6 +101,8 @@ def auto_export(settings, conn) -> list[str]:
     out_dir = os.path.join(settings.data_dir, settings.auto_export_dir)
     os.makedirs(out_dir, exist_ok=True)
     rows = db.list_devices(conn)
+    for r in rows:
+        r["site"] = settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""
     stamp = db.utcnow().replace(":", "-")
     written = []
     json_path = os.path.join(out_dir, f"netmap-{stamp}.json")

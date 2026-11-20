@@ -20,25 +20,25 @@ const calls = [];
 const DEVS = [
       {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
-        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064",
+        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064",
         ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 2, x: null, y: null, connection: "lan",
       },
       {
         mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
-        category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", source: "tcp",
+        category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", site: "Remote", source: "tcp",
         ports_str: "", connected_to: "d8:47:32:8e:ee:06", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "",
       },
       {
         mac: "d8:47:32:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
-        category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp",
+        category: "Switch", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "ping+arp",
         ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 1, x: null, y: null, connection: "lan",
       },
       {
         mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
-        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", source: "tr064",
+        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "tr064",
         ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "wlan",
       },
@@ -53,6 +53,8 @@ w.fetch = async (url, opts = {}) => {
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/meta")) return { gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
+    if (String(url).includes("/api/sites"))
+      return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
       const mac = String(url).split("/api/device/")[1];
       if (mac === "d8:47:32:8e:ee:06")
@@ -65,7 +67,7 @@ w.fetch = async (url, opts = {}) => {
         };
       return {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
-        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064", note: "",
+        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", note: "",
         first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
         ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
         connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
@@ -86,6 +88,7 @@ w.fetch = async (url, opts = {}) => {
         auto_export_interval_hours: 24,
         mdns_enabled: true,
         alarm_whitelist: "",
+        sites: "",
       };
     if (String(url).includes("/api/tokens")) return [];
     if (String(url).includes("/api/logs"))
@@ -196,6 +199,16 @@ $("#search").value = "nas";
 $("#search").dispatchEvent(new w.Event("input"));
 await sleep(400);
 check("Suche: GET /api/devices?q=nas", calls.some((c) => c.url.includes("/api/devices") && c.url.includes("q=nas")));
+
+check("Standorte: /api/sites geladen + Filter befuellt", calls.some((c) => c.url.includes("/api/sites")) && $("#filter-site") && $("#filter-site").options.length === 3);
+check("Standorte: Spalte 'Standort' in Tabelle", !!doc.querySelector('#device-table th[data-key="site"]'));
+$("#filter-site").value = "Remote";
+$("#filter-site").dispatchEvent(new w.Event("change"));
+await sleep(80);
+check("Standorte: Filter -> GET /api/devices mit site=Remote", [...calls].reverse().some((c) => c.url.includes("/api/devices") && c.url.includes("site=Remote")));
+$("#filter-site").value = "";
+$("#filter-site").dispatchEvent(new w.Event("change"));
+await sleep(80);
 
 const thKeys = () => [...doc.querySelectorAll("#device-table thead th")].map((t) => t.dataset.key);
 const beforeCols = thKeys();
@@ -360,6 +373,15 @@ check(
   "Settings: PATCH enthaelt alarm_whitelist + auto_export_interval_hours + mdns_enabled",
   !!lastSettingsPatch && lastSettingsPatch.body.includes("alarm_whitelist") && lastSettingsPatch.body.includes('"auto_export_interval_hours":12') && lastSettingsPatch.body.includes("mdns_enabled")
 );
+const patchBase4 = patchCount();
+$("#st-sites").value = "Kaputt";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Standorte 'Kaputt' -> kein PATCH, Fehlermeldung", patchCount() === patchBase4 && $("#settings-msg").textContent.includes("Standorte"));
+$("#st-sites").value = "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Standorte gueltig -> PATCH mit sites", patchCount() === patchBase4 + 1 && [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH").body.includes('"sites"'));
 
 check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
 $("#layout-select").value = "grid";
@@ -415,6 +437,10 @@ check(
 check(
   "Gruppen an: Cross-Subnetz-Kante auf Gruppen gemappt (179 -> 178)",
   cyInstance._els.some((e) => e.data && e.data.source === "subnet:192.168.179.0/24" && e.data.target === "subnet:192.168.178.0/24")
+);
+check(
+  "Standorte: Gruppen-Label mit Standortname (Remote · 192.168.179.0/24)",
+  cyInstance._els.some((e) => e.data && e.data.id === "subnet:192.168.179.0/24" && e.data.label.includes("Remote · 192.168.179.0/24"))
 );
 check("Gruppen an: localStorage fox_groups=subnet", w.localStorage.getItem("fox_groups") === "subnet");
 $("#chk-groups").checked = false;

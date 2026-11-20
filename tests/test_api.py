@@ -227,3 +227,40 @@ def test_settings_get_patch(auth_client, app):
     assert db.get_setting(conn, "theme") == "light"
     assert db.get_setting(conn, "scan_interval") == "120"
     conn.close()
+
+
+def test_sites_api_filter_export(auth_client, app):
+    r = auth_client.get("/api/sites")
+    assert r.status_code == 200
+    assert r.json() == {"names": [], "map": {}}
+    assert auth_client.patch("/api/settings", json={"sites": "Kaputt"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"sites": ":192.168.1.0/24"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"sites": "X:keine-ip"}).status_code == 422
+    r = auth_client.patch("/api/settings", json={"sites": "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24, 10.9.0.0/16"})
+    assert r.status_code == 200
+    body = auth_client.get("/api/sites").json()
+    assert body["names"] == ["Remote", "Zuhause"]
+    assert body["map"]["192.168.179.0/24"] == "Remote"
+    assert body["map"]["10.9.0.0/16"] == "Remote"
+
+    conn = db.connect(app.state.db_path)
+    now = db.utcnow()
+    for mac, ip, subnet in [
+        ("aa:bb:cc:00:00:01", "192.168.178.10", "192.168.178.0/24"),
+        ("aa:bb:cc:00:00:02", "192.168.179.20", "192.168.179.0/24"),
+    ]:
+        db.upsert_device(conn, {"mac": mac, "ip": ip, "hostname": "h-" + ip, "vendor": "", "category": "Client", "status": "online", "subnet": subnet, "source": "ping", "ports": [], "layout": {}}, now)
+    conn.commit()
+    conn.close()
+
+    rows = {r["mac"]: r for r in auth_client.get("/api/devices").json()}
+    assert rows["aa:bb:cc:00:00:01"]["site"] == "Zuhause"
+    assert rows["aa:bb:cc:00:00:02"]["site"] == "Remote"
+    only_remote = auth_client.get("/api/devices?site=Remote").json()
+    assert [r["mac"] for r in only_remote] == ["aa:bb:cc:00:00:02"]
+    assert auth_client.get("/api/device/aa:bb:cc:00:00:01").json()["site"] == "Zuhause"
+    payload = auth_client.get("/api/export/json").json()
+    sites = {d["mac"]: d["site"] for d in payload["devices"]}
+    assert sites["aa:bb:cc:00:00:01"] == "Zuhause"
+    csv_text = auth_client.get("/api/export/csv?sep=semicolon").text
+    assert "site" in csv_text.splitlines()[0]

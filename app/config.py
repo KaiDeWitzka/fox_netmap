@@ -1,3 +1,4 @@
+import ipaddress
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,6 +12,7 @@ class Settings(BaseSettings):
     port: int = 8399
     subnets: str = ""
     subnet: str = ""
+    sites: str = ""
     scan_interval: int = 900
     scan_timeout: float = 1.0
     port_top: int = 1000
@@ -44,6 +46,32 @@ class Settings(BaseSettings):
     def subnet_list(self) -> list[str]:
         raw = self.subnets or self.subnet
         return [s.strip() for s in raw.split(",") if s.strip()]
+
+    @property
+    def site_map(self) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for part in self.sites.split(";"):
+            part = part.strip()
+            if not part or ":" not in part:
+                continue
+            name, _, subs = part.partition(":")
+            name = name.strip()
+            if not name:
+                continue
+            for sn in subs.split(","):
+                sn = sn.strip()
+                if not sn:
+                    continue
+                out[sn] = name
+                try:
+                    out[str(ipaddress.ip_network(sn, strict=False))] = name
+                except ValueError:
+                    continue
+        return out
+
+    @property
+    def site_names(self) -> list[str]:
+        return sorted(set(self.site_map.values()))
 
 
 @lru_cache

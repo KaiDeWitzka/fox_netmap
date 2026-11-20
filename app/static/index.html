@@ -22,6 +22,7 @@
     <option value="online">online</option>
     <option value="offline">offline</option>
   </select>
+  <select id="filter-site" aria-label="Standort filtern"><option value="">Alle Standorte</option></select>
   <button id="btn-online" aria-pressed="false" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
   <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
   <span class="spacer"></span>
@@ -74,6 +75,7 @@
             <label>Auto-Export alle (Stunden, 0 = nach jedem Scan) <input id="st-autoexport-interval" type="number" min="0" max="720"></label>
             <label><input id="st-mdns" type="checkbox"> mDNS-Namensauflösung</label>
             <label>Whitelist (MAC/IP, kommagetrennt; kein Alarm) <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
+            <label>Standorte (Name:Subnetz; Name2:Subnetz2) <input id="st-sites" type="text" placeholder="Zuhause:192.168.178.0/24; Remote:192.168.179.0/24"></label>
             <button type="submit">Speichern</button>
           </form>
           <p id="settings-msg" class="muted" role="alert"></p>
