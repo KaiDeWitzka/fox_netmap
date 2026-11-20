@@ -123,6 +123,21 @@ def test_dedupe_devices_by_ip(tmp_path):
     assert rows[0]["x"] == 5
 
 
+def test_migration_adds_connection_column(tmp_path):
+    conn = db.connect(str(tmp_path / "old.db"))
+    conn.execute(
+        "CREATE TABLE devices (mac TEXT PRIMARY KEY, ip TEXT NOT NULL DEFAULT '', hostname TEXT NOT NULL DEFAULT '',"
+        " vendor TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'Unbekannt', category_override TEXT,"
+        " status TEXT NOT NULL DEFAULT 'offline', subnet TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT '',"
+        " note TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT '', last_seen TEXT NOT NULL DEFAULT '')"
+    )
+    conn.commit()
+    db.init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
+    assert "connection" in cols
+    conn.close()
+
+
 def test_settings_kv(tmp_path):
     conn = make_conn(tmp_path)
     assert db.get_setting(conn, "scan_interval") is None

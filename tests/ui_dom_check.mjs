@@ -18,7 +18,7 @@ doc.head.appendChild(style);
 
 const calls = [];
 w.fetch = async (url, opts = {}) => {
-  calls.push({ url: String(url), method: opts.method || "GET" });
+  calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
   const json = async () => {
     if (String(url).includes("/api/devices"))
       return [
@@ -32,7 +32,19 @@ w.fetch = async (url, opts = {}) => {
           mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
           category: "Smart-Home/IoT", status: "online", subnet: "192.168.179.0/24", source: "tcp",
           ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-          port_count: 0, x: null, y: null,
+          port_count: 0, x: null, y: null, connection: "",
+        },
+        {
+          mac: "d8:47:32:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
+          category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp",
+          ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+          port_count: 1, x: null, y: null, connection: "lan",
+        },
+        {
+          mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
+          category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", source: "tr064",
+          ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+          port_count: 0, x: null, y: null, connection: "wlan",
         },
       ];
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
@@ -42,7 +54,7 @@ w.fetch = async (url, opts = {}) => {
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064", note: "",
         first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
         ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
-        layout: {}, history: [], events: [],
+        connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
       };
     if (String(url).includes("/api/settings"))
       return {
@@ -70,18 +82,22 @@ w.fetch = async (url, opts = {}) => {
   };
   return { ok: true, status: 200, json, cookies: {} };
 };
-const cyStub = {
-  on() {},
-  elements: () => ({ remove() {} }),
-  add() {},
-  layout: () => ({ run() {} }),
-  fit() {},
-  resize() {},
-  nodes: () => ({ removeClass() {} }),
-  edges: () => ({ removeClass() {}, filter: () => ({ addClass() {} }) }),
-  getElementById: () => ({ addClass() {} }),
+let cyInstance = null;
+w.cytoscape = () => {
+  cyInstance = {
+    _els: [],
+    on() {},
+    elements: () => ({ remove() {} }),
+    add(els) { this._els = els; },
+    layout: () => ({ run() {} }),
+    fit() {},
+    resize() {},
+    nodes: () => ({ removeClass() {} }),
+    edges: () => ({ removeClass() {}, filter: () => ({ addClass() {} }) }),
+    getElementById: () => ({ addClass() {} }),
+  };
+  return cyInstance;
 };
-w.cytoscape = () => cyStub;
 w.print = () => calls.push({ url: "window.print", method: "CALL" });
 
 w.eval(fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8"));
@@ -212,6 +228,18 @@ check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
 const macThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "mac");
 const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("remote-plug"));
 check("MAC-less (VPN-remote): MAC-Zelle zeigt Strich", !!remoteRow && remoteRow.children[macThIdx].textContent.trim() === "–");
+
+check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._els.some((e) => e.data && e.data.id === "wlan:192.168.178.1" && e.data.virtual));
+
+const parentSel = $("#ed-parent");
+check("Detail: Verbunden-mit-Select mit Switch-Option", !!parentSel && parentSel.innerHTML.includes("TL-SG108E-GZ"));
+if (parentSel) {
+  parentSel.value = "d8:47:32:8e:ee:06";
+  $("#ed-parent-save").click();
+  await sleep(60);
+  const lastPatch = [...calls].reverse().find((c) => c.url.includes("/api/device/") && c.method === "PATCH" && c.body && c.body.includes("connected_to"));
+  check("Detail: Parent speichern -> PATCH mit connected_to=Switch-MAC", !!lastPatch && lastPatch.body.includes("d8:47:32:8e:ee:06"));
+}
 
 $("#nav [data-view='log']").click();
 await sleep(100);

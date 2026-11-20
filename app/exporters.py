@@ -37,6 +37,7 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
                 "status": r["status"],
                 "subnet": r["subnet"],
                 "source": r["source"],
+                "connection": r.get("connection", ""),
                 "connected_to": r.get("connected_to") or "",
                 "ports": [p["port"] for p in port_rows],
                 "note": r["note"],

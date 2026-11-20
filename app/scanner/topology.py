@@ -16,7 +16,8 @@ def resolve_connected_to(
     mac: str,
     ip: str,
     snmp_map: dict | None = None,
-    tr064_map: dict | None = None,
+    tr064_parent: dict | None = None,
+    tr064_type: str = "",
     gateway: str = "",
     manual: str | None = None,
 ) -> str:
@@ -24,6 +25,8 @@ def resolve_connected_to(
         return manual
     if snmp_map and mac in snmp_map:
         return snmp_map[mac]
-    if tr064_map and mac in tr064_map:
-        return tr064_map[mac]
+    if tr064_parent and mac in tr064_parent:
+        return tr064_parent[mac]
+    if "wlan" in (tr064_type or "").lower() and gateway:
+        return "wlan:" + gateway
     return gateway

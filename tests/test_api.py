@@ -72,6 +72,17 @@ def test_devices_list_filter_patch(auth_client, app):
     assert detail["ports"][0]["port"] == 443
 
 
+def test_patch_connected_to_set_and_clear(auth_client, app):
+    insert_device(app)
+    r = auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"connected_to": "11:22:33:44:55:66"})
+    assert r.status_code == 200
+    assert r.json()["layout"]["connected_to"] == "11:22:33:44:55:66"
+    assert r.json()["layout"]["connected_manual"] == 1
+    r = auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"connected_to": ""})
+    assert r.json()["layout"]["connected_to"] is None
+    assert r.json()["layout"]["connected_manual"] == 0
+
+
 def test_scan_trigger(auth_client, app):
     r = auth_client.post("/api/scan")
     assert r.status_code == 200
