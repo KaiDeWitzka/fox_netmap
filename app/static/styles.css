@@ -56,6 +56,7 @@ header input[type="search"], header select {
   border-radius: 6px;
   padding: 4px 8px;
 }
+header select#layout-select { padding: 4px 6px; }
 #search { min-width: 220px; }
 #scan-status { color: var(--muted); font-size: 12px; }
 #scan-status.running { color: var(--accent); font-weight: 600; }
@@ -173,7 +174,8 @@ body.embed header #btn-print,
 body.embed header #exp-json,
 body.embed header #exp-csv,
 body.embed #tab-settings,
-body.embed #nav [data-view="log"] { display: none; }
+body.embed #nav [data-view="log"],
+body.embed #btn-layout-reset { display: none; }
 .login-page { display: flex; align-items: center; justify-content: center; }
 .login-page .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;

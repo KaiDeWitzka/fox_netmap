@@ -25,6 +25,15 @@
   <span class="spacer"></span>
   <a class="hdr-btn" href="/api/export/json" download>JSON</a>
   <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
+  <select id="layout-select" title="Karten-Layout">
+    <option value="auto" selected>Layout: auto</option>
+    <option value="force">Force</option>
+    <option value="tree">Hierarchisch</option>
+    <option value="concentric">Kreise</option>
+    <option value="circle">Kreis</option>
+    <option value="grid">Raster</option>
+  </select>
+  <button id="btn-layout-reset" title="Gespeicherte Positionen löschen (Auto-Layout)">↺ Layout</button>
   <button id="btn-scan" title="Scan jetzt auslösen">Jetzt scannen</button>
   <button id="btn-print" title="Druckansicht (PDF)">Drucken</button>
   <button id="btn-theme" title="Theme wechseln">🌗</button>

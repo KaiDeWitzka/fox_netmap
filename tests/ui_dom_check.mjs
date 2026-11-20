@@ -89,7 +89,7 @@ w.cytoscape = () => {
     on() {},
     elements: () => ({ remove() {} }),
     add(els) { this._els = els; },
-    layout: () => ({ run() {} }),
+    layout(opts) { this._lastLayout = opts.name; return { run() {} }; },
     fit() {},
     resize() {},
     nodes: () => ({ removeClass() {} }),
@@ -291,6 +291,19 @@ $("#st-retention").value = "14";
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Settings: Retention 14 -> PATCH", patchCount() === patchBase2 + 1);
+
+check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
+$("#layout-select").value = "grid";
+$("#layout-select").dispatchEvent(new w.Event("change"));
+await sleep(20);
+check("Layout: Wechsel auf Raster -> cy.layout('grid')", cyInstance._lastLayout === "grid");
+$("#layout-select").value = "tree";
+$("#layout-select").dispatchEvent(new w.Event("change"));
+await sleep(20);
+check("Layout: Wechsel auf Hierarchisch -> cy.layout('breadthfirst')", cyInstance._lastLayout === "breadthfirst");
+$("#btn-layout-reset").click();
+await sleep(60);
+check("Layout: Reset -> POST /api/layout/reset", calls.some((c) => c.url.includes("/api/layout/reset") && c.method === "POST"));
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

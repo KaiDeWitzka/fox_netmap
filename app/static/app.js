@@ -51,6 +51,28 @@ function loadColWidths() {
 let colWidths = loadColWidths();
 let suppressSortClick = false;
 
+const LAYOUTS = { force: "cose", tree: "breadthfirst", circle: "circle", concentric: "concentric", grid: "grid" };
+
+function currentLayout() {
+  return localStorage.getItem("fox_layout") || "auto";
+}
+
+function applyLayout() {
+  if (!cy || !devices.length) return;
+  const choice = currentLayout();
+  const hasPos = devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
+  let opts;
+  if (choice === "auto") {
+    opts = hasPos ? { name: "preset" } : { name: "cose", animate: false, idealEdgeLength: 130, nodeRepulsion: 9000, spacingFactor: 1.1 };
+  } else if (choice === "tree") {
+    opts = { name: "breadthfirst", directed: true, spacingFactor: 1.3, animate: false };
+  } else {
+    opts = { name: LAYOUTS[choice], animate: false };
+  }
+  cy.layout(opts).run();
+  cy.fit(undefined, 40);
+}
+
 function api(path, opts = {}) {
   const url = TOKEN ? path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN) : path;
   return fetch(url, { headers: { "Content-Type": "application/json" }, ...opts }).then((r) => {
@@ -174,9 +196,7 @@ function renderMap() {
   }
   cy.elements().remove();
   cy.add(buildElements());
-  const hasPos = devices.length > 0 && devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
-  cy.layout(hasPos ? { name: "preset" } : { name: "breadthfirst", directed: true, spacingFactor: 1.3, animate: false }).run();
-  cy.fit(undefined, 40);
+  applyLayout();
 }
 
 async function showDetail(mac) {
@@ -539,6 +559,19 @@ function validateSettings(v) {
   return errs;
 }
 
+function bindLayout() {
+  const sel = document.getElementById("layout-select");
+  sel.value = currentLayout();
+  sel.addEventListener("change", () => {
+    localStorage.setItem("fox_layout", sel.value);
+    applyLayout();
+  });
+  document.getElementById("btn-layout-reset").addEventListener("click", async () => {
+    await api("/api/layout/reset", { method: "POST" });
+    await loadDevices();
+  });
+}
+
 function bindScan() {
   const btn = document.getElementById("btn-scan");
   if (EMBED) return;
@@ -616,6 +649,7 @@ async function init() {
   bindScan();
   bindTableDrag();
   bindLog();
+  bindLayout();
   startLogTimer();
   await loadDevices();
   pollScanStatus();

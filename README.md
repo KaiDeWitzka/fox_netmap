@@ -14,12 +14,20 @@ docker compose up -d --build
 
 Konfiguration über Umgebungsvariablen (`NETZ_*`, siehe `docker-compose.yml`):
 `NETZ_SUBNETS` (kommagetrennt, leer = lokales Subnetz), `NETZ_SCAN_INTERVAL` (Sekunden, Default 900),
-`NETZ_PORT_TOP` (Top-N-Ports, 0 = alle), `NETZ_FRITZ_URL/USER/PASS` (TR-064),
+`NETZ_PORT_TOP` (Top-N-Ports, 0 = alle), `NETZ_FRITZ_URL/USER/PASS` (TR-064, Hauptgeraet), `NETZ_FRITZ_URLS` (weitere TR-064-Endpunkte kommagetrennt, z. B. Repeater — deren WLAN-Clients werden dem jeweiligen Geraet zugeordnet),
 `NETZ_SNMP_ENABLED/COMMUNITY/SWITCHES`, `NETZ_AUTH_ENABLED/USER/PASS`, `NETZ_NOTIFY_*`, `NETZ_HISTORY_HOURS`, `NETZ_DEVICE_RETENTION_DAYS` (Geräte offline löschen nach N Tagen, Default 30, 0 = nie), `NETZ_THEME`.
 
 Der Scanner-Container läuft im Host-Netzwerkmodus (`network_mode: host`), damit MAC-Adressen per ARP aufgelöst werden können. Daten liegen in `./data` (SQLite + Exporte).
 
+**Topologie („Verbunden mit“), Priorität:** manuelles Mapping in der Karte (Detail-Panel → „Verbunden mit“) > SNMP CAM-Tabelle + LLDP-MIB verwalteter Switche > TR-064-Endpunkt (z. B. Repeater, an dem der Client hängt) > TR-064 WLAN/LAN (WLAN-Geräte hängen an einem virtuellen WLAN-Knoten) > Gateway. Unmanaged Switche (z. B. TL-SG108E ohne SNMP) sind nicht automatisch sichtbar — dort manuell zuordnen.
+
 OUI-Datenbank aktualisieren: `python scripts/update_oui.py ./data` (lädt die IEEE-OUI-Datei nach `data/oui.txt`).
+
+## Releases
+
+- Version steht in `app/__init__.py` (`__version__`), `pyproject.toml` und `app/config.py` (`app_version`). Aktuell: **v1.0.0**
+- SemVer ab v1.0.0: Releases tragen Tags im Format `vMAJOR.MINOR.PATCH` (z. B. `v1.0.0`, `v1.1.0`, `v2.0.0`) auf `main`
+- Tag pushen (`git tag v1.1.0 && git push origin v1.1.0`) → Workflow `release.yml` testet (ruff + pytest + UI-DOM) und erstellt automatisch ein GitHub-Release
 
 ## Entwicklung
 
