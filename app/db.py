@@ -1,6 +1,9 @@
+import logging
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
+
+log = logging.getLogger("fox_netmap")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS devices (
@@ -96,7 +99,51 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)"
     )
+    removed = dedupe_devices_by_ip(conn)
     conn.commit()
+    if removed:
+        log.info("Identitaet: %s doppelte Geraete (gleiche IP) zusammengefuehrt", removed)
+
+
+def dedupe_devices_by_ip(conn: sqlite3.Connection) -> int:
+    rows = conn.execute(
+        "SELECT mac, ip, status, last_seen, source FROM devices WHERE ip != '' ORDER BY ip, last_seen DESC"
+    ).fetchall()
+    by_ip: dict[str, list[dict]] = {}
+    for r in rows:
+        by_ip.setdefault(r["ip"], []).append(dict(r))
+    removed = 0
+    for group in by_ip.values():
+        if len(group) < 2:
+            continue
+        real = [g for g in group if not g["mac"].startswith("ip:")]
+        keep = max(real or group, key=lambda g: g["last_seen"])
+        keep_mac = keep["mac"]
+        for g in group:
+            if g["mac"] == keep_mac:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO device_ports (mac, port, proto, service, scan_ts) "
+                "SELECT ?, port, proto, service, scan_ts FROM device_ports WHERE mac = ?",
+                (keep_mac, g["mac"]),
+            )
+            conn.execute("DELETE FROM device_ports WHERE mac = ?", (g["mac"],))
+            if conn.execute("SELECT 1 FROM device_layout WHERE mac = ?", (keep_mac,)).fetchone() is None:
+                conn.execute("UPDATE device_layout SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
+            else:
+                conn.execute("DELETE FROM device_layout WHERE mac = ?", (g["mac"],))
+            conn.execute("UPDATE device_history SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
+            conn.execute("UPDATE device_events SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
+            conn.execute("DELETE FROM devices WHERE mac = ?", (g["mac"],))
+            removed += 1
+        sources = sorted({s for g in group for s in g["source"].split(",") if s})
+        status = "online" if any(g["status"] == "online" for g in group) else "offline"
+        last_seen = max(g["last_seen"] for g in group)
+        conn.execute(
+            "UPDATE devices SET source = ?, status = ?, last_seen = ? WHERE mac = ?",
+            (",".join(sources), status, last_seen, keep_mac),
+        )
+    return removed
 
 
 def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:

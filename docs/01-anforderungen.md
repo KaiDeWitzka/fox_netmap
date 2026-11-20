@@ -19,6 +19,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | IPv6 | Nur IPv4; IPv6 → Backlog |
 | TR-064 | Generischer TR-064-Client, FRITZ!Box zuerst getestet; Daten: Host-Liste (IP/MAC/Hostname/aktiv/Verbindungstyp), WLAN-Gäste, WAN-Status; Auth per Benutzer+Passwort (Env) |
 | „Verbunden mit“ | Auto-Erkennung per SNMP-CAM (verwaltete Switche) und/oder TR-064; manueller Override in der Karte; unmanaged Switche: Geräte dahinter hängen am Gateway |
+| Geräte-Identität | Primärschlüssel MAC; Abgleich auch per IP: ARP-MAC gewinnt bei Konflikt gegen TR-064 (Konflikt wird geloggt), MAC-lose Funde adoptieren bekannte MAC per IP aus der DB (sonst temporärer Schlüssel `ip:<ip>`); Duplikate derselben IP werden beim Start automatisch zusammengeführt (Quelle vereint, online gewinnt, Ports/Layout bleiben) |
 | OUI | Lokale OUI-Datenbank im Image (offline, DSGVO-sauber, aktualisierbar); Online-Lookup nur optionaler Fallback |
 | Hostname | Kombination aus DNS-Reverse, NetBIOS, mDNS, TR-064 |
 | Kategorie | Heuristik-Vorschlag (Ports, Hostname, OUI, TR-064-Typ) + manueller Override; Kategorien: Router, Switch, Server/NAS, Client, Drucker, Smart-Home/IoT, Unbekannt |

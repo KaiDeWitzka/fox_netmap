@@ -46,32 +46,54 @@ def load_oui_table(settings: Settings) -> dict[str, str]:
     return {}
 
 
-def merge_sources(found: list[dict], tr064_hosts: dict[str, dict]) -> list[dict]:
+def add_source(d: dict, src: str) -> None:
+    parts = [s for s in d.get("source", "").split(",") if s]
+    if src not in parts:
+        parts.append(src)
+    d["source"] = ",".join(parts)
+
+
+def known_mac(conn, ip: str) -> str | None:
+    if conn is None or not ip:
+        return None
+    row = conn.execute(
+        "SELECT mac FROM devices WHERE ip = ? AND mac NOT LIKE 'ip:%' ORDER BY last_seen DESC LIMIT 1",
+        (ip,),
+    ).fetchone()
+    return row["mac"] if row else None
+
+
+def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) -> list[dict]:
     by_ip = {d["ip"]: d for d in found if d.get("ip")}
     by_mac: dict[str, dict] = {}
     for d in found:
         if not d.get("ip"):
             continue
         if not d.get("mac"):
-            d["mac"] = f"ip:{d['ip']}"
+            d["mac"] = known_mac(conn, d["ip"]) or f"ip:{d['ip']}"
         by_mac[d["mac"]] = d
     for mac, h in tr064_hosts.items():
         if mac in by_mac:
             d = by_mac[mac]
         elif h.get("ip") in by_ip:
             d = by_ip[h["ip"]]
-            old_key = d.get("mac")
-            if old_key and old_key != mac and old_key.startswith("ip:"):
-                by_mac.pop(old_key, None)
-            d["mac"] = mac
-            by_mac[mac] = d
+            existing = d.get("mac", "")
+            if existing.startswith("ip:") or not existing:
+                by_mac.pop(existing, None)
+                d["mac"] = mac
+                by_mac[mac] = d
+            else:
+                log.warning(
+                    "MAC-Konflikt bei %s: ARP %s vs TR-064 %s -> ARP gewinnt", h.get("ip"), existing, mac
+                )
+                d = by_mac[existing]
         else:
             d = None
         if d is not None:
             d["ip"] = d["ip"] or h["ip"]
             if h.get("hostname"):
                 d["hostname"] = h["hostname"]
-            d["source"] = (d["source"] + ",tr064") if d.get("source") else "tr064"
+            add_source(d, "tr064")
             d["tr064_type"] = h.get("type", "")
             d["tr064_active"] = h.get("active", True)
         else:
@@ -105,7 +127,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         except tr064.TR064Error as exc:
             log.warning("TR-064 nicht erreichbar (%s): %s", base, exc)
 
-    devices = merge_sources(found, tr064_hosts)
+    devices = merge_sources(found, tr064_hosts, conn)
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
     for d in live:
         d["ports"] = ports.scan_ports(d["ip"], ports.port_list(settings.port_top, settings.ports), settings.scan_timeout)

@@ -95,6 +95,34 @@ def test_trim_history(tmp_path):
     assert len(conn.execute("SELECT ts FROM device_history").fetchall()) == 1
 
 
+def test_dedupe_devices_by_ip(tmp_path):
+    conn = make_conn(tmp_path)
+    now = db.utcnow()
+    conn.execute(
+        "INSERT INTO devices (mac, ip, hostname, status, subnet, source, last_seen, first_seen) VALUES "
+        "('b0:4a:39:01:78:3c', '192.168.178.33', 'kid-robot', 'online', '192.168.178.0/24', 'ping+arp', ?, ?)",
+        (now, now),
+    )
+    conn.execute(
+        "INSERT INTO devices (mac, ip, hostname, status, subnet, source, last_seen, first_seen) VALUES "
+        "('ip:192.168.178.33', '192.168.178.33', 'kid-robot', 'offline', '192.168.178.0/24', 'tr064', '2026-11-20T04:21:00+00:00', '2026-11-20T04:21:00+00:00')"
+    )
+    conn.execute("INSERT INTO device_ports (mac, port, scan_ts) VALUES ('b0:4a:39:01:78:3c', 80, ?)", (now,))
+    conn.execute("INSERT INTO device_ports (mac, port, scan_ts) VALUES ('ip:192.168.178.33', 443, ?)", (now,))
+    conn.execute("INSERT INTO device_layout (mac, x, y) VALUES ('ip:192.168.178.33', 5, 6)")
+    conn.commit()
+    removed = db.dedupe_devices_by_ip(conn)
+    conn.commit()
+    assert removed == 1
+    rows = db.list_devices(conn)
+    assert len(rows) == 1
+    assert rows[0]["mac"] == "b0:4a:39:01:78:3c"
+    assert rows[0]["status"] == "online"
+    assert rows[0]["source"] == "ping+arp,tr064"
+    assert rows[0]["ports_str"] == "80;443"
+    assert rows[0]["x"] == 5
+
+
 def test_settings_kv(tmp_path):
     conn = make_conn(tmp_path)
     assert db.get_setting(conn, "scan_interval") is None
