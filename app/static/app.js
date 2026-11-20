@@ -12,7 +12,22 @@ const CATEGORY_COLORS = {
   "Smart-Home/IoT": "#facc15",
   Unbekannt: "#9ca3af",
   WLAN: "#e879f9",
+  Internet: "#94a3b8",
 };
+
+const CATEGORY_ICONS = {
+  Router: "📡",
+  Switch: "🔀",
+  "Server/NAS": "🖥️",
+  Client: "💻",
+  Drucker: "🖨️",
+  "Smart-Home/IoT": "💡",
+  Unbekannt: "❓",
+  WLAN: "📶",
+  Internet: "🌐",
+};
+
+let META = { gateway: "", wan_ip: "", wan_status: "" };
 
 let devices = [];
 let categories = [];
@@ -137,6 +152,11 @@ async function loadDevices() {
   renderTable();
 }
 
+async function loadMeta() {
+  const r = await api("/api/meta");
+  if (r.ok) META = await r.json();
+}
+
 function parentId(d) {
   const ct = d.connected_to || "";
   if (!ct) return null;
@@ -147,17 +167,41 @@ function parentId(d) {
 }
 
 function buildElements() {
-  const nodes = devices.map((d) => ({
-    data: {
-      id: d.mac,
-      label: d.hostname || d.ip || d.mac,
-      category: d.category,
-      status: d.status,
-      color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
-      ports: d.port_count || 0,
-    },
-    position: { x: d.x || 0, y: d.y || 0 },
-  }));
+  const n = Math.max(1, devices.length);
+  const R = Math.max(220, 32 * Math.sqrt(n));
+  const nodes = devices.map((d, i) => {
+    let x = d.x;
+    let y = d.y;
+    if (typeof x !== "number" || typeof y !== "number") {
+      const a = (i / n) * Math.PI * 2;
+      x = Math.cos(a) * R;
+      y = Math.sin(a) * R;
+    }
+    return {
+      data: {
+        id: d.mac,
+        label: (CATEGORY_ICONS[d.category] || "❓") + " " + (d.hostname || d.ip || d.mac),
+        category: d.category,
+        status: d.status,
+        color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
+        ports: d.port_count || 0,
+      },
+      position: { x, y },
+    };
+  });
+  if (META.gateway || META.wan_ip) {
+    nodes.push({
+      data: {
+        id: "internet",
+        label: "🌐 Internet" + (META.wan_ip ? "  " + META.wan_ip : ""),
+        category: "Internet",
+        status: "online",
+        color: CATEGORY_COLORS.Internet,
+        virtual: true,
+      },
+      position: { x: -R * 1.6, y: 0 },
+    });
+  }
   const edges = [];
   for (const d of devices) {
     const p = parentId(d);
@@ -165,9 +209,13 @@ function buildElements() {
   }
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
-    nodes.push({ data: { id: w, label: "WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
+    nodes.push({ data: { id: w, label: "📶 WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
     edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
+  }
+  if (META.gateway) {
+    const gw = devices.find((x) => x.ip === META.gateway);
+    edges.push({ data: { source: "internet", target: gw ? gw.mac : META.gateway } });
   }
   return [...nodes, ...edges];
 }
@@ -643,6 +691,7 @@ async function init() {
     document.body.classList.add("embed");
   }
   await loadCategories();
+  await loadMeta();
   bindNav();
   bindFilters();
   bindSidebar();

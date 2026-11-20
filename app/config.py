@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     theme: str = "dark"
     auto_export: bool = False
     auto_export_dir: str = "exports"
-    app_version: str = "1.0.0"
+    app_version: str = "1.1.0"
 
     @property
     def subnet_list(self) -> list[str]:

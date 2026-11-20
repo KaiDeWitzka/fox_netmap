@@ -275,6 +275,15 @@ def delete_token(token: str, conn=Depends(get_conn), _=Depends(require_auth)):
     return {"ok": True}
 
 
+@router.get("/api/meta")
+def meta(conn=Depends(get_conn)):
+    return {
+        "gateway": db.get_setting(conn, "gateway") or "",
+        "wan_ip": db.get_setting(conn, "wan_ip") or "",
+        "wan_status": db.get_setting(conn, "wan_status") or "",
+    }
+
+
 @router.post("/api/layout/reset")
 def layout_reset(conn=Depends(get_conn), _=Depends(require_auth)):
     conn.execute("UPDATE device_layout SET x = NULL, y = NULL")
