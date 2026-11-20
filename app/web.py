@@ -17,7 +17,7 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-PUBLIC_PATHS = ("/api/health", "/api/login", "/api/categories", "/api/scan/status", "/api/meta", "/static/", "/login", "/favicon.ico", "/embed")
+PUBLIC_PATHS = ("/api/health", "/api/login", "/api/categories", "/api/scan/status", "/api/meta", "/api/sites", "/static/", "/login", "/favicon.ico", "/embed")
 TOKEN_PATHS = ("/api/devices", "/api/device/", "/api/export/")
 
 

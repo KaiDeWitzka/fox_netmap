@@ -104,7 +104,7 @@ Scanner (zyklisch/manuell)
 
 ## 5. Backlog
 
-- Mehrere Standorte (VPN-vernetzte Netze): teilweise umgesetzt — entferntes VPN-Subnetz als weiteres `NETZ_SUBNETS` (Fund via TCP-Probe, da ICMP/ARP dort nicht greifen; MAC nur via TR-064, sonst synthetischer Schlüssel `ip:<ip>` und MAC-Anzeige „–“)
+- Mehrere Standorte (VPN-vernetzte Netze): umgesetzt — `NETZ_SITES` bildet Subnetze auf benannte Standorte ab (Spalte/Filter in Tabelle, Standort im Detail, Standort-Label in Subnetz-Gruppen der Karte, `site`-Feld in JSON/CSV-Export, `?site=`-Filter in `/api/devices`, `/api/sites`). Entferntes VPN-Subnetz als weiteres `NETZ_SUBNETS` (Fund via TCP-Probe, da ICMP/ARP dort nicht greifen; MAC nur via TR-064, sonst synthetischer Schlüssel `ip:<ip>` und MAC-Anzeige „–“)
 - Mehr als 200 Geräte (Performance-Optimierung)
 - IPv6
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle)

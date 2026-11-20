@@ -29,6 +29,8 @@ const CATEGORY_ICONS = {
 };
 
 let META = { gateway: "", wan_ip: "", wan_status: "" };
+let SITES = [];
+let SITE_MAP = {};
 
 let collapsed = new Set(JSON.parse(localStorage.getItem("fox_collapsed") || "[]"));
 let groupMode = localStorage.getItem("fox_groups") || "none";
@@ -67,7 +69,7 @@ let sortDir = 1;
 
 const TABLE_COLS = [
   ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"], ["source", "Quelle"],
-  ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"],
+  ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"], ["site", "Standort"],
   ["ports_str", "Ports"], ["connected_to", "Verbunden mit"], ["note", "Notiz"], ["last_seen", "Zuletzt gesehen"],
 ];
 
@@ -137,9 +139,11 @@ function currentFilters() {
   const q = document.getElementById("search").value.trim();
   const c = document.getElementById("filter-category").value;
   const s = document.getElementById("filter-status").value;
+  const site = document.getElementById("filter-site").value;
   if (q) p.set("q", q);
   if (c) p.set("category", c);
   if (s) p.set("status", s);
+  if (site) p.set("site", site);
   return p.toString();
 }
 
@@ -191,6 +195,21 @@ async function loadMeta() {
   if (r.ok) META = await r.json();
 }
 
+async function loadSites() {
+  const r = await api("/api/sites");
+  if (!r.ok) return;
+  const data = await r.json();
+  SITES = data.names || [];
+  SITE_MAP = data.map || {};
+  const sel = document.getElementById("filter-site");
+  for (const name of SITES) {
+    const o = document.createElement("option");
+    o.value = name;
+    o.textContent = name;
+    sel.appendChild(o);
+  }
+}
+
 function parentId(d) {
   const ct = d.connected_to || "";
   if (!ct) return null;
@@ -215,10 +234,11 @@ function buildElements() {
 
   if (grouping) {
     for (const sn of [...new Set(devices.map((d) => d.subnet).filter(Boolean))]) {
+      const siteName = SITE_MAP[sn] || "";
       addNode({
         data: {
           id: "subnet:" + sn,
-          label: sn + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
+          label: (siteName ? siteName + " · " : "") + sn + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
           subnet: true,
           virtual: true,
           status: "online",
@@ -392,7 +412,7 @@ async function showDetail(mac) {
   const hostLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.label}</a>`).join(", ");
   const rows = [
     ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", (d.mac || "").startsWith("ip:") ? "– (nur IP bekannt)" : d.mac], ["Hersteller", d.vendor],
-    ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
+    ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Standort", d.site || "–"], ["Quelle", d.source],
     ["Verbindung", d.connection ? d.connection.toUpperCase() : "–"], ["Verbunden mit", d.layout.connected_to || "auto"], ["Notiz", d.note],
     ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
   ];
@@ -680,6 +700,7 @@ function bindFilters() {
   let t = null;
   document.getElementById("search").addEventListener("input", () => { clearTimeout(t); t = setTimeout(loadDevices, 300); });
   document.getElementById("filter-category").addEventListener("change", loadDevices);
+  document.getElementById("filter-site").addEventListener("change", loadDevices);
   const statusSel = document.getElementById("filter-status");
   const btnOnline = document.getElementById("btn-online");
   const syncOnline = () => {
@@ -726,6 +747,7 @@ function bindSidebar() {
       auto_export_interval_hours: parseInt(document.getElementById("st-autoexport-interval").value, 10),
       mdns_enabled: document.getElementById("st-mdns").checked,
       alarm_whitelist: document.getElementById("st-whitelist").value,
+      sites: document.getElementById("st-sites").value,
     };
     const errs = validateSettings(body);
     if (errs.length) {
@@ -779,6 +801,23 @@ function validCidr(s) {
   return !!m && m.slice(1, 5).map(Number).every((o) => o <= 255) && Number(m[5]) <= 32;
 }
 
+function validCidrAny(s) {
+  if (validCidr(s)) return true;
+  return s.includes(":") && s.includes("/") && /^[0-9a-fA-F:/]+$/.test(s);
+}
+
+function validSites(str) {
+  for (const part of String(str || "").split(";").map((p) => p.trim()).filter(Boolean)) {
+    if (!part.includes(":")) return false;
+    const name = part.split(":")[0].trim();
+    const subs = part.slice(part.indexOf(":") + 1);
+    if (!name) return false;
+    for (const sn of subs.split(",").map((x) => x.trim()).filter(Boolean))
+      if (!validCidrAny(sn)) return false;
+  }
+  return true;
+}
+
 function validateSettings(v) {
   const errs = [];
   if (!Number.isInteger(v.scan_interval) || v.scan_interval < 30 || v.scan_interval > 86400)
@@ -793,6 +832,7 @@ function validateSettings(v) {
     errs.push("Auto-Export-Intervall: 0–720 Stunden (0 = jeder Scan)");
   for (const e of String(v.alarm_whitelist || "").split(",").map((s) => s.trim()).filter(Boolean))
     if (!validIpAny(e) && !validMac(e)) errs.push(`Whitelist-Eintrag ungültig (MAC oder IP): ${e}`);
+  if (!validSites(v.sites || "")) errs.push("Standorte: Format 'Name:Subnetz; Name2:Subnetz2' mit gültigen CIDRs");
   if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
     if (!validCidr(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
@@ -866,6 +906,7 @@ async function loadSettings() {
   document.getElementById("st-autoexport-interval").value = s.auto_export_interval_hours;
   document.getElementById("st-mdns").checked = String(s.mdns_enabled) === "true" || s.mdns_enabled === true;
   document.getElementById("st-whitelist").value = s.alarm_whitelist || "";
+  document.getElementById("st-sites").value = s.sites || "";
   loadTokens();
 }
 
@@ -900,6 +941,7 @@ async function init() {
   }
   await loadCategories();
   await loadMeta();
+  await loadSites();
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") clearSpotlight(); });
   bindNav();
   bindFilters();
