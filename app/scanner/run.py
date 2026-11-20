@@ -116,6 +116,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
     oui_table = load_oui_table(settings)
     gateway = topology.gateway_ip()
+    if gateway:
+        db.set_setting(conn, "gateway", gateway)
+        conn.commit()
 
     endpoints: list[str] = []
     if settings.fritz_url:
@@ -136,6 +139,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 wan = tr064.fetch_wan(ep, settings.fritz_user, settings.fritz_pass)
                 if wan:
                     log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
+                    db.set_setting(conn, "wan_ip", wan["wan_ip"])
+                    db.set_setting(conn, "wan_status", wan["status"])
+                    conn.commit()
             except tr064.TR064Error as exc:
                 log.warning("TR-064 nicht erreichbar (%s): %s", ep, exc)
     tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}

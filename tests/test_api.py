@@ -32,7 +32,19 @@ def test_health(client):
     body = r.json()
     assert body["status"] == "ok"
     assert body["devices"] == 0
-    assert body["version"] == "1.0.0"
+    assert body["version"] == "1.1.0"
+
+
+def test_meta_public(client, app):
+    conn = db.connect(app.state.db_path)
+    db.set_setting(conn, "gateway", "192.168.178.1")
+    db.set_setting(conn, "wan_ip", "79.227.229.246")
+    db.set_setting(conn, "wan_status", "Connected")
+    conn.commit()
+    conn.close()
+    r = client.get("/api/meta")
+    assert r.status_code == 200
+    assert r.json() == {"gateway": "192.168.178.1", "wan_ip": "79.227.229.246", "wan_status": "Connected"}
 
 
 def test_layout_reset(auth_client, app):

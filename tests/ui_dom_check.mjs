@@ -48,6 +48,7 @@ w.fetch = async (url, opts = {}) => {
         },
       ];
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
+    if (String(url).includes("/api/meta")) return { gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
     if (String(url).includes("/api/device/"))
       return {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
@@ -230,6 +231,18 @@ const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) =
 check("MAC-less (VPN-remote): MAC-Zelle zeigt Strich", !!remoteRow && remoteRow.children[macThIdx].textContent.trim() === "–");
 
 check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._els.some((e) => e.data && e.data.id === "wlan:192.168.178.1" && e.data.virtual));
+check(
+  "Karte: Internet-Knoten mit WAN-IP + Kante zum Gateway",
+  !!cyInstance &&
+    cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label.includes("79.227.229.246")) &&
+    cyInstance._els.some((e) => e.data && e.data.source === "internet")
+);
+const devNodes = cyInstance._els.filter((e) => e.data && !e.data.virtual && e.position);
+check(
+  "Karte: Ring-Initialpositionen (nicht alle 0,0, verteilt)",
+  devNodes.length >= 3 && new Set(devNodes.slice(0, 4).map((e) => `${Math.round(e.position.x)},${Math.round(e.position.y)}`)).size > 1
+);
+check("Karte: Kategorie-Icons im Label", devNodes.some((e) => /^[\u{1F300}-\u{1FAFF}❓]/u.test(e.data.label)));
 
 const parentSel = $("#ed-parent");
 check("Detail: Verbunden-mit-Select mit Switch-Option", !!parentSel && parentSel.innerHTML.includes("TL-SG108E-GZ"));
