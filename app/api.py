@@ -25,6 +25,7 @@ SAFE_SETTINGS = [
     "snmp_switches",
     "auth_enabled",
     "history_hours",
+    "device_retention_days",
     "theme",
     "auto_export",
     "auto_export_dir",
@@ -197,6 +198,7 @@ class SettingsPatch(BaseModel):
     snmp_enabled: bool | None = None
     snmp_switches: str | None = None
     history_hours: int | None = None
+    device_retention_days: int | None = None
     theme: str | None = None
     auto_export: bool | None = None
     auto_export_dir: str | None = None
@@ -210,6 +212,8 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "port_top muss zwischen 0 (alle Ports) und 65535 liegen"
     if body.history_hours is not None and not 1 <= body.history_hours <= 87600:
         return "history_hours muss zwischen 1 und 87600 liegen"
+    if body.device_retention_days is not None and not 0 <= body.device_retention_days <= 3650:
+        return "device_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
     if body.theme is not None and body.theme not in ("dark", "light"):
         return "theme muss 'dark' oder 'light' sein"
     if body.subnets is not None and body.subnets.strip():

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     notify_ntfy: str = ""
     notify_ntfy_token: str = ""
     history_hours: int = 720
+    device_retention_days: int = 30
     theme: str = "dark"
     auto_export: bool = False
     auto_export_dir: str = "exports"

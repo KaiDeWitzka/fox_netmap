@@ -51,6 +51,7 @@ w.fetch = async (url, opts = {}) => {
         subnets: "",
         port_top: 1000,
         history_hours: 720,
+        device_retention_days: 30,
         snmp_enabled: true,
         snmp_switches: "",
         auth_enabled: true,
@@ -252,6 +253,16 @@ $("#st-subnets").value = "";
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Settings: gueltige Werte -> PATCH /api/settings", patchCount() === patchBase + 1);
+
+const patchBase2 = patchCount();
+$("#st-retention").value = "-1";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Retention -1 -> kein PATCH, Fehlermeldung", patchCount() === patchBase2 && $("#settings-msg").textContent.includes("Retention"));
+$("#st-retention").value = "14";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Retention 14 -> PATCH", patchCount() === patchBase2 + 1);
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

@@ -22,7 +22,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | OUI | Lokale OUI-Datenbank im Image (offline, DSGVO-sauber, aktualisierbar); Online-Lookup nur optionaler Fallback |
 | Hostname | Kombination aus DNS-Reverse, NetBIOS, mDNS, TR-064 |
 | Kategorie | Heuristik-Vorschlag (Ports, Hostname, OUI, TR-064-Typ) + manueller Override; Kategorien: Router, Switch, Server/NAS, Client, Drucker, Smart-Home/IoT, Unbekannt |
-| Persistenz | SQLite (WAL) im Daten-Volume; gespeichert: Snapshot, Online/Offline-Historie, Änderungsereignisse; Aufbewahrung konfigurierbar (Default 30 Tage, dann Trim) |
+| Persistenz | SQLite (WAL) im Daten-Volume; gespeichert: Snapshot, Online/Offline-Historie, Änderungsereignisse; Historie wird nach konfigurierter Zeit getrimmt (Default 30 Tage); Geräte, die länger offline sind, werden nach `NETZ_DEVICE_RETENTION_DAYS` automatisch entfernt (Default 30, 0 = nie löschen) |
 | Update-Zyklen | Intervall Default 900 s, konfigurierbar + „Jetzt scannen“-Button; Scans im Hintergrund, UI zeigt letzter/nächster Scan + Fortschritt; während eines Scans sichtbarer „Scan läuft…“-Indikator (pulsierender Punkt im Header), Geräteliste aktualisiert sich automatisch nach Scan-Ende; Änderungserkennung mit Alarm (Webhook/Gotify/Ntfy) + Whitelist bekannter Geräte |
 | Tech-Stack | Python (FastAPI) + SQLite Backend; Vanilla JS + Cytoscape.js Frontend; REST-API dazwischen; eine Sprache, ein Image |
 | Layout | Hierarchisches Auto-Layout nach Topologie (alternativ Force-Directed); Drag-&-Drop-Positionen werden in der DB gespeichert |
