@@ -7,27 +7,28 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Zum Inhalt springen</a>
 <header>
   <h1>fox_netmap</h1>
-  <nav id="nav">
-    <button data-view="map" class="active">Karte</button>
-    <button data-view="table">Tabelle</button>
-    <button data-view="log">Log</button>
+  <nav id="nav" aria-label="Ansicht">
+    <button data-view="map" class="active" aria-pressed="true">Karte</button>
+    <button data-view="table" aria-pressed="false">Tabelle</button>
+    <button data-view="log" aria-pressed="false">Log</button>
   </nav>
-  <input id="search" type="search" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
-  <select id="filter-category"><option value="">Alle Kategorien</option></select>
-  <select id="filter-status">
+  <input id="search" type="search" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
+  <select id="filter-category" aria-label="Kategorie filtern"><option value="">Alle Kategorien</option></select>
+  <select id="filter-status" aria-label="Status filtern">
     <option value="">alle</option>
     <option value="online">online</option>
     <option value="offline">offline</option>
   </select>
-  <button id="btn-online" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
-  <span id="scan-status" title="Scan-Status"></span>
+  <button id="btn-online" aria-pressed="false" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
+  <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
   <span class="spacer"></span>
   <a class="hdr-btn" href="/api/export/json" download>JSON</a>
   <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
   <label class="hdr-chk"><input type="checkbox" id="chk-groups" title="Geräte pro Subnetz als Gruppe zusammenfassen"> Subnetze gruppieren</label>
-  <select id="layout-select" title="Karten-Layout">
+  <select id="layout-select" aria-label="Karten-Layout" title="Karten-Layout">
     <option value="auto" selected>Layout: auto</option>
     <option value="force">Force</option>
     <option value="tree">Hierarchisch</option>
@@ -42,18 +43,19 @@
   <button id="btn-settings" title="Einstellungen öffnen">⚙</button>
   <button id="btn-logout">Logout</button>
 </header>
-<main>
-  <section id="view-map" class="view">
+<main id="main" tabindex="-1">
+  <section id="view-map" class="view" aria-label="Netzwerkkarte">
+    <p class="visually-hidden">Interaktive Netzwerkkarte. Alle Geräte und Details sind in der Tabellenansicht auch per Tastatur erreichbar (Zeile fokussieren, dann Enter drücken).</p>
     <div id="map"></div>
   </section>
-  <aside id="detail" hidden>
-      <div class="tabs">
-        <button id="tab-detail" class="active">Details</button>
-        <button id="tab-settings">Einstellungen</button>
+  <aside id="detail" hidden aria-label="Gerätedetails und Einstellungen">
+      <div class="tabs" role="tablist" aria-label="Detail-Bereich">
+        <button id="tab-detail" class="active" role="tab" aria-selected="true">Details</button>
+        <button id="tab-settings" role="tab" aria-selected="false">Einstellungen</button>
         <button id="btn-close-detail" title="Schließen">✕</button>
       </div>
-      <div id="detail-content"><p class="muted">Gerät anklicken für Details.</p></div>
-      <div id="settings-content" hidden>
+      <div id="detail-content" role="tabpanel" aria-labelledby="tab-detail"><p class="muted">Gerät anklicken für Details.</p></div>
+      <div id="settings-content" role="tabpanel" aria-labelledby="tab-settings" hidden>
         <div class="panel">
           <h2>Einstellungen</h2>
           <form id="settings-form">
@@ -71,7 +73,7 @@
             <label><input id="st-autoexport" type="checkbox"> automatische Exporte</label>
             <button type="submit">Speichern</button>
           </form>
-          <p id="settings-msg" class="muted"></p>
+          <p id="settings-msg" class="muted" role="alert"></p>
         </div>
         <div class="panel">
           <h2>Embed-Token</h2>
@@ -81,7 +83,7 @@
             <label>Kategorien (leer = alle) <input id="tk-categories" type="text"></label>
             <button type="submit">Token erstellen</button>
           </form>
-          <p id="token-result" class="muted"></p>
+          <p id="token-result" class="muted" role="status"></p>
           <ul id="token-list"></ul>
         </div>
       </div>
@@ -100,7 +102,7 @@
       <select id="log-level"><option value="">alle Level</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select>
       <select id="log-lines"><option value="100">100</option><option value="300" selected>300</option><option value="1000">1000</option></select>
       <a class="hdr-btn" href="/api/logs/download" download>Log-Datei</a>
-      <span id="log-status" class="muted"></span>
+      <span id="log-status" class="muted" role="status"></span>
     </div>
     <pre id="log-view"></pre>
   </section>

@@ -9,10 +9,12 @@
 <body class="login-page">
   <form id="login-form" class="panel">
     <h1>fox_netmap</h1>
+    <label for="login-user">Benutzer</label>
     <input id="login-user" placeholder="Benutzer" autocomplete="username" required>
+    <label for="login-pass">Passwort</label>
     <input id="login-pass" type="password" placeholder="Passwort" autocomplete="current-password" required>
     <button type="submit">Login</button>
-    <p id="login-err" class="muted"></p>
+    <p id="login-err" class="muted" role="alert"></p>
   </form>
   <script>
     document.getElementById("login-form").addEventListener("submit", async (e) => {

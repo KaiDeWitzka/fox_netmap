@@ -419,5 +419,35 @@ $("#ed-collapse").click();
 await sleep(120);
 check("Collapse: erneuter Klick -> remote-plug wieder sichtbar", cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20"));
 
+check("A11y: html lang=de", doc.documentElement.getAttribute("lang") === "de");
+check("A11y: Skip-Link + main#main", !!doc.querySelector("a.skip-link[href='#main']") && doc.querySelector("main").id === "main");
+check("A11y: Suche/Filter/Layout mit aria-label", ["#search", "#filter-category", "#filter-status", "#layout-select"].every((s) => $(s) && !!$(s).getAttribute("aria-label")));
+check("A11y: scan-status role=status, settings-msg role=alert", $("#scan-status").getAttribute("role") === "status" && $("#settings-msg").getAttribute("role") === "alert");
+check("A11y: Tabs role=tablist/tab + aria-selected", doc.querySelector(".tabs").getAttribute("role") === "tablist" && $("#tab-detail").getAttribute("role") === "tab" && $("#tab-detail").getAttribute("aria-selected") === "true");
+check("A11y: th scope=col", [...doc.querySelectorAll("#device-table thead th")].every((t) => t.getAttribute("scope") === "col"));
+check("A11y: CSS :focus-visible + --accent-strong + active=accent-strong", css.includes(":focus-visible") && css.includes("--accent-strong") && /button\.active\s*\{[^}]*var\(--accent-strong\)/.test(css));
+check("A11y: Karte hat visuell versteckten Tastatur-Hinweis", !!doc.querySelector("#view-map .visually-hidden"));
+
+const row0 = doc.querySelector("#device-table tbody tr");
+check("A11y: Tabellenzeile tabindex=0 + aria-label", !!row0 && row0.getAttribute("tabindex") === "0" && (row0.getAttribute("aria-label") || "").startsWith("Details:"));
+const devGetBefore = calls.filter((c) => c.url.includes("/api/device/") && c.method === "GET").length;
+row0.dispatchEvent(new w.KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+await sleep(80);
+check("A11y: Enter auf Zeile -> GET /api/device/ (Detail per Tastatur)", calls.filter((c) => c.url.includes("/api/device/") && c.method === "GET").length > devGetBefore);
+
+const thFirst = doc.querySelector("#device-table thead th");
+const keysBefore = thKeys();
+thFirst.dispatchEvent(new w.KeyboardEvent("keydown", { bubbles: true, key: "ArrowRight", altKey: true }));
+await sleep(20);
+const keysAfter = thKeys();
+check("A11y: Alt+Pfeil rechts auf th -> Spalte per Tastatur verschoben", keysAfter[1] === keysBefore[0] && keysAfter[0] === keysBefore[1]);
+
+cyInstance._handlers["tap:node"]({ target: switchFakeNode });
+await sleep(80);
+check("A11y: Angeschlossene Geräte als <button class=dev-link>", !!$("#detail-content button.dev-link[data-mac='ip:192.168.179.20']"));
+
+const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
+check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));
+
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

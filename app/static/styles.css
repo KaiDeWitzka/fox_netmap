@@ -2,20 +2,33 @@
   --bg: #0f172a;
   --fg: #e2e8f0;
   --panel: #1e293b;
-  --border: #334155;
+  --border: #64748b;
   --accent: #38bdf8;
+  --accent-strong: #075985;
   --muted: #94a3b8;
 }
 html[data-theme="light"] {
   --bg: #f8fafc;
   --fg: #0f172a;
   --panel: #ffffff;
-  --border: #cbd5e1;
-  --accent: #0284c7;
+  --border: #64748b;
+  --accent: #0369a1;
+  --accent-strong: #075985;
   --muted: #64748b;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+}
+.skip-link:focus-visible { left: 8px; top: 8px; }
 body {
   margin: 0;
   background: var(--bg);
@@ -48,8 +61,8 @@ nav button, header button, header a.hdr-btn {
   font-size: 13px;
   display: inline-block;
 }
-nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-header button.toggled { background: var(--accent); color: #fff; border-color: var(--accent); }
+nav button.active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
+header button.toggled { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
 header input[type="search"], header select {
   background: var(--bg);
   color: var(--fg);
@@ -108,7 +121,7 @@ aside#detail {
   cursor: pointer;
   font-size: 13px;
 }
-.tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tabs button.active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
 #btn-close-detail { margin-left: auto; }
 #detail-content, #settings-content { padding: 10px; }
 #detail-content h2 { font-size: 15px; margin: 4px 0 8px; }
@@ -126,13 +139,16 @@ aside#detail {
   font-size: 12px;
 }
 #detail-content ul { padding-left: 18px; font-size: 12px; margin: 4px 0; }
-#detail-content .dev-link { color: var(--accent); cursor: pointer; }
+#detail-content .dev-link {
+  background: none; border: none; padding: 0; font: inherit;
+  color: var(--accent); cursor: pointer; text-decoration: underline;
+}
 #detail-content select, #detail-content input[type="text"] {
   background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px;
 }
 #detail-content .edit-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 #detail-content .edit-row button {
-  background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer;
+  background: var(--accent-strong); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer;
 }
 #view-table { overflow: auto; }
 #device-table { border-collapse: collapse; width: 100%; font-size: 12px; table-layout: fixed; }
@@ -150,6 +166,8 @@ aside#detail {
   z-index: 2;
 }
 #device-table .resizer:hover { background: var(--accent); opacity: 0.5; }
+#device-table tbody tr { cursor: pointer; }
+#device-table tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 #device-table tr:hover td { background: var(--panel); }
 #device-table select, #device-table input {
   background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px;
@@ -164,7 +182,7 @@ aside#detail {
   background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; width: 100%;
 }
 .panel button[type="submit"] {
-  background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+  background: var(--accent-strong); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer;
 }
 .panel ul { padding-left: 16px; font-size: 12px; word-break: break-all; }
 .panel ul button { margin-left: 6px; background: transparent; color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
@@ -184,7 +202,8 @@ body.embed #btn-layout-reset { display: none; }
   width: 320px; display: flex; flex-direction: column; gap: 10px;
 }
 .login-page input { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; }
-.login-page button { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; }
+.login-page button { background: var(--accent-strong); color: #fff; border: none; border-radius: 6px; padding: 8px; cursor: pointer; }
+.login-page label { font-size: 13px; color: var(--muted); text-align: left; }
 #view-log { display: flex; flex-direction: column; }
 .log-toolbar {
   display: flex;
