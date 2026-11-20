@@ -106,7 +106,7 @@ Scanner (zyklisch/manuell)
 
 - Mehrere Standorte (VPN-vernetzte Netze): umgesetzt — `NETZ_SITES` bildet Subnetze auf benannte Standorte ab (Spalte/Filter in Tabelle, Standort im Detail, Standort-Label in Subnetz-Gruppen der Karte, `site`-Feld in JSON/CSV-Export, `?site=`-Filter in `/api/devices`, `/api/sites`). Entferntes VPN-Subnetz als weiteres `NETZ_SUBNETS` (Fund via TCP-Probe, da ICMP/ARP dort nicht greifen; MAC nur via TR-064, sonst synthetischer Schlüssel `ip:<ip>` und MAC-Anzeige „–“)
 - Mehr als 200 Geräte (Performance-Optimierung)
-- IPv6
+- IPv6: umgesetzt — v6-Subnetze in `NETZ_SUBNETS` (z. B. `2003:db8::/64`), Fund bei großen Netzen via NDP (`ip -6 neigh`) + Gateway-Ping, bei kleinen Netzen (<= /120 äquivalent) zusätzlich Ping/TCP-Sweep; MAC via NDP, synthetischer Schlüssel `ip:<v6>` sonst; Gateway-v6 (`gateway6`) für Topologie/„Verbunden mit“, mDNS-PTR über `ip6.arpa`, Web-Links mit `[v6]`-Klammern, Settings-Validierung akzeptiert v6-CIDRs. Einschränkungen: TR-064/SNMP bleiben IPv4-seitig.
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle)
 - Gruppieren der Geräte nach Räumen/Etagen in der Karte
 - Weitere Sprachen (Englisch zuerst)

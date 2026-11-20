@@ -122,7 +122,10 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     gateway = topology.gateway_ip()
     if gateway:
         db.set_setting(conn, "gateway", gateway)
-        conn.commit()
+    gateway6 = topology.gateway_ip6()
+    if gateway6:
+        db.set_setting(conn, "gateway6", gateway6)
+    conn.commit()
 
     endpoints: list[str] = []
     if settings.fritz_url:
@@ -206,7 +209,8 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 snmp_map=snmp_map,
                 tr064_parent=tr064_parent,
                 tr064_type=d.get("tr064_type", ""),
-                gateway=gateway,
+                gateway=topology.gateway_for(d.get("ip", ""), gateway, gateway6),
+                gateway6=gateway6,
                 manual=manual,
             )
         }

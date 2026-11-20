@@ -257,6 +257,15 @@ check(
     hnCell.querySelector('a[href="https://10.0.0.5"]') !== null &&
     hnCell.textContent.includes("(http, https)")
 );
+const webLinksSrc = fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8").match(/const WEB_PORTS[\s\S]*?\nfunction webLinks[\s\S]*?\n\}/)[0];
+const v6links = w.eval(webLinksSrc + "\n;webLinks({ ip: '2003:db8::5', ports_str: '80;8080;443;8443' })");
+check(
+  "IPv6: webLinks mit Klammern ([2003:db8::5], :8080/:8443 mit Port)",
+  v6links.some((l) => l.url === "http://[2003:db8::5]") &&
+    v6links.some((l) => l.url === "http://[2003:db8::5]:8080") &&
+    v6links.some((l) => l.url === "https://[2003:db8::5]") &&
+    v6links.some((l) => l.url === "https://[2003:db8::5]:8443")
+);
 
 doc.querySelector("#device-table tbody tr").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
 await sleep(80);
@@ -382,6 +391,16 @@ $("#st-sites").value = "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24";
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Settings: Standorte gueltig -> PATCH mit sites", patchCount() === patchBase4 + 1 && [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH").body.includes('"sites"'));
+const patchBase5 = patchCount();
+$("#st-subnets").value = "2003:db8::/999";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Subnetz 2003:db8::/999 -> kein PATCH, Fehlermeldung", patchCount() === patchBase5 && $("#settings-msg").textContent.includes("Subnetz"));
+$("#st-subnets").value = "2003:db8::/64, 192.168.178.0/24";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: IPv6-Subnetz 2003:db8::/64 gueltig -> PATCH", patchCount() === patchBase5 + 1);
+$("#st-subnets").value = "";
 
 check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
 $("#layout-select").value = "grid";

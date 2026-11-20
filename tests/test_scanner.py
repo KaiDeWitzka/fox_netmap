@@ -417,3 +417,81 @@ def test_resolve_all_mdns_fallback(monkeypatch):
     assert out["10.0.0.5"] == ""
     out2 = names.resolve_all(["192.168.178.77"], use_mdns=False)
     assert out2["192.168.178.77"] == ""
+
+
+def test_discover_ipv6_parser():
+    sample6 = (
+        "1: lo    inet6 ::1/128 scope host lo\n"
+        "2: eth0    inet6 2003:db8:1::4/64 scope global eth0\n"
+    )
+    assert discover.parse_ip_addr(sample6, 6) == ["2003:db8:1::/64"]
+    neigh_sample = (
+        "2003:db8:1::1 dev eth0 lladdr 3C:37:86:AB:CD:EF REACHABLE\n"
+        "2003:db8:1::5 dev eth0 lladdr 00:00:00:00:00:00 STALE\n"
+        "2003:db8:1::9 dev eth0 FAILED\n"
+        "fe80::1 dev eth0 lladdr aa:bb:cc:dd:ee:ff router STALE\n"
+    )
+    assert discover.parse_neigh6(neigh_sample) == {"2003:db8:1::1": "3c:37:86:ab:cd:ef", "fe80::1": "aa:bb:cc:dd:ee:ff"}
+
+
+def test_ping_host_verwendet_version_flag(monkeypatch):
+    calls = []
+
+    class R:
+        returncode = 0
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        return R()
+
+    monkeypatch.setattr(discover.subprocess, "run", fake_run)
+    assert discover.ping_host("2003:db8::5", 1.0)
+    assert discover.ping_host("192.168.178.1", 1.0)
+    assert "-6" in calls[0] and "2003:db8::5" in calls[0]
+    assert "-4" in calls[1] and "192.168.178.1" in calls[1]
+    assert discover.ping_host("kaputt", 1.0) is False
+
+
+def test_sweep_hosts_guard_grosse_netze():
+    import ipaddress
+
+    assert discover.sweep_hosts(ipaddress.ip_network("2003:db8::/64", strict=False)) == []
+    assert discover.sweep_hosts(ipaddress.ip_network("2003:db8::/126", strict=False)) == ["2003:db8::1", "2003:db8::2", "2003:db8::3"]
+
+
+def test_discover_v6_ndp_ohne_sweep(monkeypatch):
+    monkeypatch.setattr(discover, "arp_table", lambda: {})
+    monkeypatch.setattr(discover, "neigh6_table", lambda: {"2003:db8:1::10": "aa:bb:cc:dd:ee:ff", "2003:db8:9::1": "11:22:33:44:55:66"})
+    monkeypatch.setattr(discover.topology, "gateway_ip6", lambda: "2003:db8:1::1")
+    monkeypatch.setattr(discover, "ping_host", lambda ip, timeout: ip == "2003:db8:1::1")
+
+    def sweep_raise(subnet, timeout=1.0, max_hosts=1024):
+        raise AssertionError("Sweep darf bei /64 nicht laufen")
+
+    monkeypatch.setattr(discover, "ping_sweep", sweep_raise)
+    monkeypatch.setattr(discover, "tcp_probe_sweep", sweep_raise)
+    devices = discover.discover(["2003:db8:1::/64"])
+    by_ip = {d["ip"]: d for d in devices}
+    assert by_ip["2003:db8:1::10"]["mac"] == "aa:bb:cc:dd:ee:ff"
+    assert by_ip["2003:db8:1::10"]["source"] == "ndp"
+    assert by_ip["2003:db8:1::1"]["source"] == "ping"
+    assert "2003:db8:9::1" not in by_ip
+
+
+def test_topology_gateway6_und_v6_wahl(monkeypatch):
+    from app.scanner import topology
+
+    class R:
+        def __init__(self, out):
+            self.stdout = out
+
+    monkeypatch.setattr(
+        topology.subprocess,
+        "run",
+        lambda cmd, **kw: R("default via 2003:db8::1 dev eth0\n") if "-6" in cmd else R("default via 192.168.178.1 dev eth0\n"),
+    )
+    assert topology.gateway_ip6() == "2003:db8::1"
+    assert topology.gateway_ip() == "192.168.178.1"
+    assert topology.gateway_for("2003:db8::5", "192.168.178.1", "2003:db8::1") == "2003:db8::1"
+    assert topology.gateway_for("192.168.178.5", "192.168.178.1", "2003:db8::1") == "192.168.178.1"
+    assert topology.resolve_connected_to("aa:bb:cc:00:00:01", "2003:db8::5", gateway="192.168.178.1", gateway6="2003:db8::1") == "2003:db8::1"

@@ -215,7 +215,7 @@ function parentId(d) {
   if (!ct) return null;
   if (ct.startsWith("wlan:")) return ct;
   if (devices.some((x) => x.mac === ct)) return ct;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(ct)) return ct;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ct) || ct.includes(":")) return ct;
   const byIp = devices.find((x) => x.ip === ct);
   return byIp ? byIp.mac : null;
 }
@@ -527,11 +527,12 @@ function webLinks(d) {
   }
   const links = [];
   if (d.ip) {
+    const host = d.ip.includes(":") ? `[${d.ip}]` : d.ip;
     for (const p of ports) {
       const scheme = WEB_PORTS[p];
       if (scheme) {
         links.push({
-          url: `${scheme}://${d.ip}${p === 80 || p === 443 ? "" : ":" + p}`,
+          url: `${scheme}://${host}${p === 80 || p === 443 ? "" : ":" + p}`,
           port: p,
           scheme,
           label: scheme + (p === 80 || p === 443 ? "" : ":" + p),
@@ -803,7 +804,8 @@ function validCidr(s) {
 
 function validCidrAny(s) {
   if (validCidr(s)) return true;
-  return s.includes(":") && s.includes("/") && /^[0-9a-fA-F:/]+$/.test(s);
+  const m = s.match(/^([0-9a-fA-F:]+)\/(\d{1,3})$/);
+  return !!m && m[1].includes(":") && m[1].replace(/:/g, "").length <= 32 && Number(m[2]) <= 128;
 }
 
 function validSites(str) {
@@ -835,7 +837,7 @@ function validateSettings(v) {
   if (!validSites(v.sites || "")) errs.push("Standorte: Format 'Name:Subnetz; Name2:Subnetz2' mit gültigen CIDRs");
   if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
-    if (!validCidr(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
+    if (!validCidrAny(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
   for (const ip of v.snmp_switches.split(",").map((s) => s.trim()).filter(Boolean))
     if (!validIp(ip)) errs.push(`SNMP-Switch-IP ungültig: ${ip}`);
   return errs;
