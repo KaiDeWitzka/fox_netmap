@@ -341,6 +341,7 @@ def sites_api(request: Request):
 def meta(conn=Depends(get_conn)):
     return {
         "gateway": db.get_setting(conn, "gateway") or "",
+        "gateway6": db.get_setting(conn, "gateway6") or "",
         "wan_ip": db.get_setting(conn, "wan_ip") or "",
         "wan_status": db.get_setting(conn, "wan_status") or "",
     }

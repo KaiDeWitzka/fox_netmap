@@ -44,7 +44,7 @@ def test_meta_public(client, app):
     conn.close()
     r = client.get("/api/meta")
     assert r.status_code == 200
-    assert r.json() == {"gateway": "192.168.178.1", "wan_ip": "79.227.229.246", "wan_status": "Connected"}
+    assert r.json() == {"gateway": "192.168.178.1", "gateway6": "", "wan_ip": "79.227.229.246", "wan_status": "Connected"}
 
 
 def test_layout_reset(auth_client, app):
@@ -194,6 +194,8 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"device_retention_days": 14}).status_code == 200
     assert auth_client.patch("/api/settings", json={"subnets": "keine-ip"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"subnets": "192.168.1.0/24,10.0.0.0/8"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"subnets": "2003:db8::/64, 192.168.1.0/24"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"subnets": "2003:db8::/999"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"snmp_switches": "999.1.1.1"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"snmp_switches": "192.168.1.20, 10.0.0.5"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"theme": "blue"}).status_code == 422
