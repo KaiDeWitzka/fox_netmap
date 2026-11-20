@@ -238,8 +238,26 @@ function buildElements() {
   return [...nodes, ...edges];
 }
 
+let spotlightNode = null;
+
+function applySpotlight(node) {
+  const nhood = node.closedNeighborhood();
+  cy.elements().removeClass("spot dim");
+  nhood.addClass("spot");
+  cy.elements().not(nhood).addClass("dim");
+  cy.fit(nhood, 60);
+}
+
+function clearSpotlight() {
+  spotlightNode = null;
+  if (!cy) return;
+  cy.elements().removeClass("spot dim");
+  cy.fit(undefined, 40);
+}
+
 function renderMap() {
   const container = document.getElementById("map");
+  spotlightNode = null;
   if (!cy) {
     cy = cytoscape({
       container,
@@ -248,12 +266,25 @@ function renderMap() {
         { selector: "node[status='offline']", style: { opacity: 0.4 } },
         { selector: "node:selected", style: { "border-width": 3, "border-color": "#fff" } },
         { selector: "node.hl", style: { "border-width": 4, "border-color": "#facc15" } },
+        { selector: "node.spot", style: { "border-width": 5, "border-color": "#facc15" } },
         { selector: "edge", style: { "line-color": "#64748b", width: 1.5, "curve-style": "bezier" } },
         { selector: "edge.hl", style: { "line-color": "#facc15", width: 3 } },
+        { selector: "edge.spot", style: { "line-color": "#facc15", width: 3.5 } },
+        { selector: ".dim", style: { opacity: 0.12 } },
       ],
       wheelSensitivity: 0.2,
     });
-    cy.on("tap", "node", (e) => { if (!e.target.data("virtual")) showDetail(e.target.data("id")); });
+    cy.on("tap", "node", (e) => {
+      if (e.target.data("virtual")) return;
+      const id = e.target.data("id");
+      if (spotlightNode === id) clearSpotlight();
+      else {
+        spotlightNode = id;
+        applySpotlight(e.target);
+      }
+      showDetail(id);
+    });
+    cy.on("tap", (e) => { if (e.target === cy) clearSpotlight(); });
     cy.on("dragfree", "node", (e) => {
       if (EMBED || e.target.data("virtual")) return;
       const p = e.target.position();
@@ -533,7 +564,16 @@ function bindFilters() {
   let t = null;
   document.getElementById("search").addEventListener("input", () => { clearTimeout(t); t = setTimeout(loadDevices, 300); });
   document.getElementById("filter-category").addEventListener("change", loadDevices);
-  document.getElementById("filter-status").addEventListener("change", loadDevices);
+  const statusSel = document.getElementById("filter-status");
+  const btnOnline = document.getElementById("btn-online");
+  const syncOnline = () => btnOnline.classList.toggle("toggled", statusSel.value === "online");
+  btnOnline.addEventListener("click", () => {
+    statusSel.value = statusSel.value === "online" ? "" : "online";
+    syncOnline();
+    loadDevices();
+  });
+  statusSel.addEventListener("change", () => { syncOnline(); loadDevices(); });
+  syncOnline();
   document.getElementById("btn-theme").addEventListener("click", () => {
     const cur = document.documentElement.dataset.theme;
     applyTheme(cur === "dark" ? "light" : "dark");
@@ -710,6 +750,7 @@ async function init() {
   }
   await loadCategories();
   await loadMeta();
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") clearSpotlight(); });
   bindNav();
   bindFilters();
   bindSidebar();
