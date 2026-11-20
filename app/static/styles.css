@@ -49,6 +49,7 @@ nav button, header button, header a.hdr-btn {
   display: inline-block;
 }
 nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+header button.toggled { background: var(--accent); color: #fff; border-color: var(--accent); }
 header input[type="search"], header select {
   background: var(--bg);
   color: var(--fg);

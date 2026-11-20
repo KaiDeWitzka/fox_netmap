@@ -17,36 +17,40 @@ style.textContent = css;
 doc.head.appendChild(style);
 
 const calls = [];
+const DEVS = [
+      {
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
+        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064",
+        ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        port_count: 2, x: null, y: null, connection: "lan",
+      },
+      {
+        mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
+        category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", source: "tcp",
+        ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        port_count: 0, x: null, y: null, connection: "",
+      },
+      {
+        mac: "d8:47:32:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
+        category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp",
+        ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        port_count: 1, x: null, y: null, connection: "lan",
+      },
+      {
+        mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
+        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", source: "tr064",
+        ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        port_count: 0, x: null, y: null, connection: "wlan",
+      },
+];
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
   const json = async () => {
-    if (String(url).includes("/api/devices"))
-      return [
-        {
-          mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
-          category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064",
-          ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-          port_count: 2, x: null, y: null,
-        },
-        {
-          mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
-          category: "Smart-Home/IoT", status: "online", subnet: "192.168.179.0/24", source: "tcp",
-          ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-          port_count: 0, x: null, y: null, connection: "",
-        },
-        {
-          mac: "d8:47:32:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
-          category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp",
-          ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-          port_count: 1, x: null, y: null, connection: "lan",
-        },
-        {
-          mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
-          category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", source: "tr064",
-          ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-          port_count: 0, x: null, y: null, connection: "wlan",
-        },
-      ];
+    if (String(url).includes("/api/devices")) {
+      const m = String(url).match(/status=([^&]+)/);
+      return m && m[1] === "online" ? DEVS.filter((d) => d.status === "online") : DEVS;
+    }
+
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/meta")) return { gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
     if (String(url).includes("/api/device/"))
@@ -87,15 +91,27 @@ let cyInstance = null;
 w.cytoscape = () => {
   cyInstance = {
     _els: [],
-    on() {},
-    elements: () => ({ remove() {} }),
+    _handlers: {},
+    on(ev, sel, fn) {
+      if (typeof sel === "function") this._handlers[ev] = sel;
+      else this._handlers[ev + ":" + sel] = fn;
+    },
+    elements() {
+      const self = this;
+      return {
+        remove() {},
+        removeClass(c) { self._removedClass = c; },
+        addClass() {},
+        not(nhood) { return { addClass(c) { self._dimmedClass = c; } }; },
+      };
+    },
     add(els) { this._els = els; },
     layout(opts) { this._lastLayout = opts.name; return { run() {} }; },
-    fit() {},
+    fit() { this._fitCalls = (this._fitCalls || 0) + 1; },
     resize() {},
-    nodes: () => ({ removeClass() {} }),
-    edges: () => ({ removeClass() {}, filter: () => ({ addClass() {} }) }),
-    getElementById: () => ({ addClass() {} }),
+    nodes() { return { removeClass() {} }; },
+    edges() { return { removeClass() {}, filter: () => ({ addClass() {} }) }; },
+    getElementById: () => ({ addClass() {}, removeClass() {} }),
   };
   return cyInstance;
 };
@@ -323,6 +339,27 @@ check("Layout: Wechsel auf Hierarchisch -> cy.layout('breadthfirst')", cyInstanc
 $("#btn-layout-reset").click();
 await sleep(60);
 check("Layout: Reset -> POST /api/layout/reset", calls.some((c) => c.url.includes("/api/layout/reset") && c.method === "POST"));
+
+check("Nur online: initial 4 Zeilen", doc.querySelectorAll("#device-table tbody tr").length === 4);
+$("#btn-online").click();
+await sleep(80);
+const lastDevs = [...calls].reverse().find((c) => c.url.includes("/api/devices"));
+check("Nur online: Klick -> GET /api/devices mit status=online", !!lastDevs && lastDevs.url.includes("status=online"));
+check("Nur online: nur noch 3 Zeilen (offline raus)", doc.querySelectorAll("#device-table tbody tr").length === 3);
+check("Nur online: Button als aktiv markiert", $("#btn-online").classList.contains("toggled"));
+$("#btn-online").click();
+await sleep(80);
+check("Nur online: erneuter Klick -> wieder alle 4 Zeilen", doc.querySelectorAll("#device-table tbody tr").length === 4);
+
+const fakeNode = {
+  data(k) { return k === "id" ? "aa:bb:cc:dd:ee:ff" : undefined; },
+  closedNeighborhood() { return { addClass(c) { cyInstance._spotClass = c; } }; },
+};
+cyInstance._handlers["tap:node"]({ target: fakeNode });
+await sleep(30);
+check("Spotlight: Tap -> Nachbarschaft 'spot', Rest 'dim', fit() gerufen", cyInstance._spotClass === "spot" && cyInstance._dimmedClass === "dim" && cyInstance._fitCalls > 0);
+cyInstance._handlers["tap"]({ target: cyInstance });
+check("Spotlight: Hintergrund-Tap -> clear (removeClass 'spot dim')", cyInstance._removedClass === "spot dim");
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);
