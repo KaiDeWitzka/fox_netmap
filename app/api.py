@@ -131,15 +131,13 @@ def patch_device(mac: str, body: DevicePatch, request: Request, conn=Depends(get
         )
     if body.note is not None:
         conn.execute("UPDATE devices SET note = ? WHERE mac = ?", (body.note, mac))
-    if body.x is not None or body.y is not None or body.connected_to is not None:
-        db.set_layout(
-            conn,
-            mac,
-            x=body.x,
-            y=body.y,
-            connected_to=body.connected_to,
-            connected_manual=1 if body.connected_to is not None else None,
-        )
+    if body.connected_to is not None:
+        if body.connected_to == "":
+            conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE mac = ?", (mac,))
+        else:
+            db.set_layout(conn, mac, connected_to=body.connected_to, connected_manual=1)
+    if body.x is not None or body.y is not None:
+        db.set_layout(conn, mac, x=body.x, y=body.y)
     conn.commit()
     return db.get_device(conn, mac)
 

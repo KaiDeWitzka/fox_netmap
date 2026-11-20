@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     port_top: int = 1000
     ports: str = ""
     fritz_url: str = ""
+    fritz_urls: str = ""
     fritz_user: str = ""
     fritz_pass: str = ""
     snmp_enabled: bool = True

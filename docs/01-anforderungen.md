@@ -17,8 +17,8 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | Lebendigkeit | Ping-Sweep (ICMP+ARP) über alle Subnetze; nicht pingende, aber per ARP/DHCP/mDNS sichtbare Geräte als „passiv erkannt“ |
 | Ports | TCP-Connect-Scan; Default Top 1000, „alle 65535“ und eigene Liste konfigurierbar; parallelisiert |
 | IPv6 | Nur IPv4; IPv6 → Backlog |
-| TR-064 | Generischer TR-064-Client, FRITZ!Box zuerst getestet; Daten: Host-Liste (IP/MAC/Hostname/aktiv/Verbindungstyp), WLAN-Gäste, WAN-Status; Auth per Benutzer+Passwort (Env) |
-| „Verbunden mit“ | Auto-Erkennung per SNMP-CAM (verwaltete Switche) und/oder TR-064; manueller Override in der Karte; unmanaged Switche: Geräte dahinter hängen am Gateway |
+| TR-064 | Generischer TR-064-Client, FRITZ!Box zuerst getestet; Daten: Host-Liste (IP/MAC/Hostname/aktiv/Verbindungstyp LAN-WLAN), WAN-Status; Auth per Benutzer+Passwort (Env); mehrere Endpunkte via `NETZ_FRITZ_URLS` (z. B. Repeater — deren Clients werden dem Endpunkt zugeordnet) |
+| „Verbunden mit“ | Priorität: manueller Override (Dropdown im Detail-Panel) > SNMP CAM + LLDP-MIB (verwaltete Switche) > TR-064-Endpunkt (Repeater) > TR-064 WLAN/LAN (virtueller WLAN-Knoten) > Gateway; unmanaged Switche ohne SNMP nur manuell bestimmbar |
 | Geräte-Identität | Primärschlüssel MAC; Abgleich auch per IP: ARP-MAC gewinnt bei Konflikt gegen TR-064 (Konflikt wird geloggt), MAC-lose Funde adoptieren bekannte MAC per IP aus der DB (sonst temporärer Schlüssel `ip:<ip>`); Duplikate derselben IP werden beim Start automatisch zusammengeführt (Quelle vereint, online gewinnt, Ports/Layout bleiben) |
 | OUI | Lokale OUI-Datenbank im Image (offline, DSGVO-sauber, aktualisierbar); Online-Lookup nur optionaler Fallback |
 | Hostname | Kombination aus DNS-Reverse, NetBIOS, mDNS, TR-064 |

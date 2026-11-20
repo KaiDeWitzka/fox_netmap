@@ -11,6 +11,7 @@ const CATEGORY_COLORS = {
   Drucker: "#f472b6",
   "Smart-Home/IoT": "#facc15",
   Unbekannt: "#9ca3af",
+  WLAN: "#e879f9",
 };
 
 let devices = [];
@@ -117,6 +118,7 @@ async function loadDevices() {
 function parentId(d) {
   const ct = d.connected_to || "";
   if (!ct) return null;
+  if (ct.startsWith("wlan:")) return ct;
   if (devices.some((x) => x.mac === ct)) return ct;
   const byIp = devices.find((x) => x.ip === ct);
   return byIp ? byIp.mac : null;
@@ -139,6 +141,12 @@ function buildElements() {
     const p = parentId(d);
     if (p && p !== d.mac) edges.push({ data: { source: d.mac, target: p } });
   }
+  const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
+  for (const w of wlanIds) {
+    nodes.push({ data: { id: w, label: "WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
+    const gw = devices.find((x) => x.ip === w.slice(5));
+    edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
+  }
   return [...nodes, ...edges];
 }
 
@@ -157,9 +165,9 @@ function renderMap() {
       ],
       wheelSensitivity: 0.2,
     });
-    cy.on("tap", "node", (e) => showDetail(e.target.data("id")));
+    cy.on("tap", "node", (e) => { if (!e.target.data("virtual")) showDetail(e.target.data("id")); });
     cy.on("dragfree", "node", (e) => {
-      if (EMBED) return;
+      if (EMBED || e.target.data("virtual")) return;
       const p = e.target.position();
       api("/api/device/" + e.target.data("id"), { method: "PATCH", body: JSON.stringify({ x: p.x, y: p.y }) });
     });
@@ -188,7 +196,7 @@ async function showDetail(mac) {
   const rows = [
     ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", (d.mac || "").startsWith("ip:") ? "– (nur IP bekannt)" : d.mac], ["Hersteller", d.vendor],
     ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Quelle", d.source],
-    ["Verbunden mit", d.layout.connected_to || ""], ["Notiz", d.note],
+    ["Verbindung", d.connection ? d.connection.toUpperCase() : "–"], ["Verbunden mit", d.layout.connected_to || "auto"], ["Notiz", d.note],
     ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
   ];
   let html = `<h2>${d.hostname || d.ip}</h2><table>` + rows.map(([k, v]) => `<tr><td>${k}</td><td>${v ?? ""}</td></tr>`).join("") + "</table>";
@@ -198,6 +206,9 @@ async function showDetail(mac) {
   }
   if (!EMBED) {
     html += `<h3>Bearbeiten</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${c}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="Notiz" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">Speichern</button></div>`;
+    const parents = devices.filter((x) => x.category === "Router" || x.category === "Switch");
+    const cur = d.layout.connected_to || "";
+    html += `<h3>Verbunden mit</h3><div class="edit-row"><select id="ed-parent"><option value="">auto</option>` + parents.map((x) => `<option value="${x.mac}"${cur === x.mac ? " selected" : ""}>${x.hostname || x.ip} (${x.ip})</option>`).join("") + `</select><button id="ed-parent-save">Setzen</button></div>`;
   }
   html += `<h3>Verlauf (neu zuerst)</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
   html += `<h3>Ereignisse</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
@@ -207,6 +218,14 @@ async function showDetail(mac) {
   if (save) {
     save.addEventListener("click", async () => {
       await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ category: document.getElementById("ed-cat").value, note: document.getElementById("ed-note").value }) });
+      await loadDevices();
+      showDetail(mac);
+    });
+  }
+  const psave = document.getElementById("ed-parent-save");
+  if (psave) {
+    psave.addEventListener("click", async () => {
+      await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ connected_to: document.getElementById("ed-parent").value }) });
       await loadDevices();
       showDetail(mac);
     });

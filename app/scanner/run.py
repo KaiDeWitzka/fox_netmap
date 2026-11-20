@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from .. import db
 from ..config import Settings, get_settings
@@ -96,6 +97,8 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
             add_source(d, "tr064")
             d["tr064_type"] = h.get("type", "")
             d["tr064_active"] = h.get("active", True)
+            if h.get("endpoint"):
+                d["tr064_endpoint"] = h["endpoint"]
         else:
             by_mac[mac] = {
                 "ip": h["ip"],
@@ -114,18 +117,32 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     oui_table = load_oui_table(settings)
     gateway = topology.gateway_ip()
 
-    tr064_hosts: dict[str, dict] = {}
-    base = settings.fritz_url or (f"http://{gateway}:49000" if gateway else "")
-    if base and settings.fritz_user and settings.fritz_pass:
-        try:
-            hosts = tr064.fetch_hosts_with_fallback(base, settings.fritz_user, settings.fritz_pass)
-            tr064_hosts = {h["mac"]: h for h in hosts if h.get("mac")}
-            log.info("TR-064: %s Hosts von %s gelesen", len(tr064_hosts), base)
-            wan = tr064.fetch_wan(base, settings.fritz_user, settings.fritz_pass)
-            if wan:
-                log.info("TR-064 WAN (%s): externe IP %s, Status %s", wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
-        except tr064.TR064Error as exc:
-            log.warning("TR-064 nicht erreichbar (%s): %s", base, exc)
+    endpoints: list[str] = []
+    if settings.fritz_url:
+        endpoints.append(settings.fritz_url)
+    elif gateway:
+        endpoints.append(f"http://{gateway}:49000")
+    endpoints += [u.strip() for u in settings.fritz_urls.split(",") if u.strip()]
+    all_tr064: list[dict] = []
+    if endpoints and settings.fritz_user and settings.fritz_pass:
+        for ep in endpoints:
+            try:
+                hosts = tr064.fetch_hosts_with_fallback(ep, settings.fritz_user, settings.fritz_pass)
+                host_part = urlparse(ep if "://" in ep else "http://" + ep).hostname or ep
+                for h in hosts:
+                    h["endpoint"] = host_part
+                all_tr064.extend(hosts)
+                log.info("TR-064: %s Hosts von %s gelesen", len(hosts), ep)
+                wan = tr064.fetch_wan(ep, settings.fritz_user, settings.fritz_pass)
+                if wan:
+                    log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
+            except tr064.TR064Error as exc:
+                log.warning("TR-064 nicht erreichbar (%s): %s", ep, exc)
+    tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}
+    tr064_parent: dict[str, str] = {}
+    for h in all_tr064:
+        if h.get("mac") and h.get("endpoint"):
+            tr064_parent[h["mac"]] = h["endpoint"]
 
     devices = merge_sources(found, tr064_hosts, conn)
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
@@ -138,9 +155,11 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         custom = [s.strip() for s in settings.snmp_switches.split(",") if s.strip()]
         targets = custom or [d["ip"] for d in live if any(p["port"] == 161 for p in d.get("ports", []))]
         if targets:
-            snmp_map = snmp.cam_map(targets, settings.snmp_community)
-
-    tr064_map = {mac: gateway for mac in tr064_hosts if gateway}
+            cam = snmp.cam_map(targets, settings.snmp_community)
+            lldp = snmp.lldp_map(targets, settings.snmp_community)
+            snmp_map = {**lldp, **cam}
+            if lldp:
+                log.info("LLDP-MIB: %s Nachbarn zusaetzlich erkannt", len(lldp))
 
     for d in devices:
         if not d.get("mac"):
@@ -166,11 +185,19 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             ports=d.get("ports", []),
             tr064_type=d.get("tr064_type", ""),
         )
+        t = (d.get("tr064_type") or "").lower()
+        d["connection"] = "wlan" if "wlan" in t else ("lan" if "lan" in t else "")
         layout = db.get_layout(conn, d["mac"]) or {}
         manual = layout.get("connected_to") if layout.get("connected_manual") else None
         d["layout"] = {
             "connected_to": topology.resolve_connected_to(
-                d["mac"], d.get("ip", ""), snmp_map=snmp_map, tr064_map=tr064_map, gateway=gateway, manual=manual
+                d["mac"],
+                d.get("ip", ""),
+                snmp_map=snmp_map,
+                tr064_parent=tr064_parent,
+                tr064_type=d.get("tr064_type", ""),
+                gateway=gateway,
+                manual=manual,
             )
         }
     return devices

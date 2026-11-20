@@ -236,6 +236,26 @@ def test_port_list():
     assert 8080 in ports.port_list(2000)
 
 
+def test_resolve_connected_to_prioritaet():
+    from app.scanner import topology
+
+    gw = "192.168.178.1"
+    assert topology.resolve_connected_to("m", "10.0.0.5", manual="man") == "man"
+    assert topology.resolve_connected_to("m", "10.0.0.5", snmp_map={"m": "192.168.178.10"}, tr064_parent={"m": "192.168.178.14"}, gateway=gw) == "192.168.178.10"
+    assert topology.resolve_connected_to("m", "10.0.0.5", tr064_parent={"m": "192.168.178.14"}, gateway=gw) == "192.168.178.14"
+    assert topology.resolve_connected_to("m", "10.0.0.5", tr064_type="WLAN", gateway=gw) == "wlan:" + gw
+    assert topology.resolve_connected_to("m", "10.0.0.5", tr064_type="LAN", gateway=gw) == gw
+    assert topology.resolve_connected_to("m", "10.0.0.5", gateway=gw) == gw
+
+
+def test_snmp_parse_lldp():
+    sample = (
+        ".1.0.8802.1.1.2.1.4.1.1.6.0.5.1 = Hex-STRING: B0 4A 39 01 78 3C\n"
+        ".1.0.8802.1.1.2.1.4.1.1.6.0.5.2 = Hex-STRING: A4 D5 78 0D BC C9\n"
+    )
+    assert snmp.parse_lldp(sample) == {"b0:4a:39:01:78:3c", "a4:d5:78:0d:bc:c9"}
+
+
 def test_snmp_parse_cam():
     sample = (
         ".1.3.6.1.2.1.17.4.3.1.2.60.55.134.171.205.239 = INTEGER: 3\n"
