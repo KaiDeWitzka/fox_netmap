@@ -33,6 +33,7 @@ SAFE_SETTINGS = [
     "mdns_enabled",
     "alarm_whitelist",
     "sites",
+    "lang",
 ]
 
 
@@ -222,6 +223,7 @@ class SettingsPatch(BaseModel):
     mdns_enabled: bool | None = None
     alarm_whitelist: str | None = None
     sites: str | None = None
+    lang: str | None = None
     auth_enabled: bool | None = None
 
 
@@ -236,6 +238,8 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "device_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
     if body.theme is not None and body.theme not in ("dark", "light"):
         return "theme muss 'dark' oder 'light' sein"
+    if body.lang is not None and body.lang not in ("de", "en", "fr", "es", "it", "pt"):
+        return "lang muss de, en, fr, es, it oder pt sein"
     if body.subnets is not None and body.subnets.strip():
         for sn in body.subnets.split(","):
             try:

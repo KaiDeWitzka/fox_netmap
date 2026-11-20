@@ -109,7 +109,7 @@ Scanner (zyklisch/manuell)
 - IPv6: umgesetzt — v6-Subnetze in `NETZ_SUBNETS` (z. B. `2003:db8::/64`), Fund bei großen Netzen via NDP (`ip -6 neigh`) + Gateway-Ping, bei kleinen Netzen (<= /120 äquivalent) zusätzlich Ping/TCP-Sweep; MAC via NDP, synthetischer Schlüssel `ip:<v6>` sonst; Gateway-v6 (`gateway6`) für Topologie/„Verbunden mit“, mDNS-PTR über `ip6.arpa`, Web-Links mit `[v6]`-Klammern, Settings-Validierung akzeptiert v6-CIDRs. Einschränkungen: TR-064/SNMP bleiben IPv4-seitig.
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle)
 - Gruppieren der Geräte nach Räumen/Etagen in der Karte
-- Weitere Sprachen (Englisch zuerst)
+- Weitere Sprachen: umgesetzt — de/en/fr/es/it/pt (`NETZ_LANG`, Sprachwahl im Header + Settings, `?lang=` für Embed, Login-Seite mehrsprachig; Kategorie-Schlüssel bleiben kanonisch englisch, Anzeige lokalisiert)
 - Online-OUI-Fallback
 
 ## 6. Out of Scope (bestätigt)

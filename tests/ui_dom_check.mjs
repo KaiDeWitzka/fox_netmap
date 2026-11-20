@@ -6,6 +6,7 @@ const repo = path.resolve(new URL("..", import.meta.url).pathname);
 const html = fs
   .readFileSync(path.join(repo, "app/static/index.html"), "utf8")
   .replace('<script src="/static/vendor/cytoscape.min.js"></script>', "")
+  .replace('<script src="/static/i18n.js"></script>', "")
   .replace('<script src="/static/app.js"></script>', "");
 const css = fs.readFileSync(path.join(repo, "app/static/styles.css"), "utf8");
 
@@ -89,6 +90,7 @@ w.fetch = async (url, opts = {}) => {
         mdns_enabled: true,
         alarm_whitelist: "",
         sites: "",
+        lang: "de",
       };
     if (String(url).includes("/api/tokens")) return [];
     if (String(url).includes("/api/logs"))
@@ -133,7 +135,11 @@ w.cytoscape = () => {
 };
 w.print = () => calls.push({ url: "window.print", method: "CALL" });
 
-w.eval(fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8"));
+w.eval(
+  fs.readFileSync(path.join(repo, "app/static/i18n.js"), "utf8") +
+    "\n;\n" +
+    fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8")
+);
 await new Promise((r) => setTimeout(r, 200));
 
 let failures = 0;
@@ -209,6 +215,26 @@ check("Standorte: Filter -> GET /api/devices mit site=Remote", [...calls].revers
 $("#filter-site").value = "";
 $("#filter-site").dispatchEvent(new w.Event("change"));
 await sleep(80);
+
+check("i18n: Sprachwahl mit 6 Sprachen befuellt", !!$("#lang-select") && $("#lang-select").options.length === 6);
+$("#lang-select").value = "en";
+$("#lang-select").dispatchEvent(new w.Event("change"));
+await sleep(60);
+check(
+  "i18n: Wechsel auf en -> Nav 'Map', Scan 'Scan now', Spalte 'Vendor'",
+  $("#nav [data-view='map']").textContent === "Map" &&
+    $("#btn-scan").textContent === "Scan now" &&
+    [...doc.querySelectorAll("#device-table thead th")].some((th) => th.dataset.key === "vendor" && th.textContent.includes("Vendor"))
+);
+check(
+  "i18n: Wechsel auf en -> PATCH /api/settings lang=en + localStorage fox_lang",
+  [...calls].reverse().some((c) => c.url.includes("/api/settings") && c.method === "PATCH" && c.body.includes('"lang":"en"')) &&
+    w.localStorage.getItem("fox_lang") === "en"
+);
+$("#lang-select").value = "de";
+$("#lang-select").dispatchEvent(new w.Event("change"));
+await sleep(60);
+check("i18n: Zurueck auf de -> Nav 'Karte' wiederhergestellt", $("#nav [data-view='map']").textContent === "Karte" && w.localStorage.getItem("fox_lang") === "de");
 
 const thKeys = () => [...doc.querySelectorAll("#device-table thead th")].map((t) => t.dataset.key);
 const beforeCols = thKeys();

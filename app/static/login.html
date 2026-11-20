@@ -9,26 +9,37 @@
 <body class="login-page">
   <form id="login-form" class="panel">
     <h1>fox_netmap</h1>
-    <label for="login-user">Benutzer</label>
-    <input id="login-user" placeholder="Benutzer" autocomplete="username" required>
-    <label for="login-pass">Passwort</label>
-    <input id="login-pass" type="password" placeholder="Passwort" autocomplete="current-password" required>
-    <button type="submit">Login</button>
+    <label for="login-user" data-i18n="login.user">Benutzer</label>
+    <input id="login-user" data-i18n-ph="login.user" placeholder="Benutzer" autocomplete="username" required>
+    <label for="login-pass" data-i18n="login.pass">Passwort</label>
+    <input id="login-pass" type="password" data-i18n-ph="login.pass" placeholder="Passwort" autocomplete="current-password" required>
+    <button type="submit" data-i18n="login.btn">Login</button>
     <p id="login-err" class="muted" role="alert"></p>
   </form>
+  <script src="/static/i18n.js"></script>
   <script>
-    document.getElementById("login-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const r = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: document.getElementById("login-user").value,
-          password: document.getElementById("login-pass").value
-        })
+    (function () {
+      const qp = new URLSearchParams(location.search).get("lang");
+      let lang = qp || localStorage.getItem("fox_lang") || (navigator.language || "de").slice(0, 2);
+      if (!I18N[lang]) lang = "de";
+      const tr = (k) => I18N[lang][k] || I18N.de[k] || k;
+      document.documentElement.lang = lang;
+      document.title = tr("login.title");
+      document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+      document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = tr(el.dataset.i18nPh); });
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const r = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: document.getElementById("login-user").value,
+            password: document.getElementById("login-pass").value
+          })
+        });
+        if (r.ok) { location.href = "/"; } else { document.getElementById("login-err").textContent = tr("login.fail"); }
       });
-      if (r.ok) { location.href = "/"; } else { document.getElementById("login-err").textContent = "Login fehlgeschlagen"; }
-    });
+    })();
   </script>
 </body>
 </html>

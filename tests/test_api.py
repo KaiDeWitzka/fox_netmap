@@ -199,6 +199,8 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"snmp_switches": "999.1.1.1"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"snmp_switches": "192.168.1.20, 10.0.0.5"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"theme": "blue"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"lang": "xx"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"lang": "pt"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "/abs"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": -1}).status_code == 422
@@ -222,6 +224,7 @@ def test_settings_get_patch(auth_client, app):
     assert body["auto_export_interval_hours"] == 24
     assert body["mdns_enabled"] is True
     assert body["alarm_whitelist"] == ""
+    assert body["lang"] == "de"
     assert "auth_pass" not in body
     r = auth_client.patch("/api/settings", json={"theme": "light", "scan_interval": 120})
     assert r.status_code == 200

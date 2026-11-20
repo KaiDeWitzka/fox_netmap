@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     history_hours: int = 720
     device_retention_days: int = 30
     theme: str = "dark"
+    lang: str = "de"
     auto_export: bool = False
     auto_export_dir: str = "exports"
     auto_export_interval_hours: int = 24
