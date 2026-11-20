@@ -243,6 +243,12 @@ check(
   devNodes.length >= 3 && new Set(devNodes.slice(0, 4).map((e) => `${Math.round(e.position.x)},${Math.round(e.position.y)}`)).size > 1
 );
 check("Karte: Kategorie-Icons im Label", devNodes.some((e) => /^[\u{1F300}-\u{1FAFF}❓]/u.test(e.data.label)));
+check(
+  "Karte: Kanten gerendert + virtueller Gateway-Knoten (Gateway nicht in Geraeteliste)",
+  !!cyInstance &&
+    cyInstance._els.some((e) => e.data && e.data.source && e.data.target) &&
+    cyInstance._els.some((e) => e.data && e.data.id === "192.168.178.1" && e.data.virtual && e.data.label.includes("Gateway"))
+);
 
 const parentSel = $("#ed-parent");
 check("Detail: Verbunden-mit-Select mit Switch-Option", !!parentSel && parentSel.innerHTML.includes("TL-SG108E-GZ"));

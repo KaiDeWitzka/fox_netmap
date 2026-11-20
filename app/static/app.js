@@ -13,6 +13,7 @@ const CATEGORY_COLORS = {
   Unbekannt: "#9ca3af",
   WLAN: "#e879f9",
   Internet: "#94a3b8",
+  Gateway: "#38bdf8",
 };
 
 const CATEGORY_ICONS = {
@@ -162,6 +163,7 @@ function parentId(d) {
   if (!ct) return null;
   if (ct.startsWith("wlan:")) return ct;
   if (devices.some((x) => x.mac === ct)) return ct;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ct)) return ct;
   const byIp = devices.find((x) => x.ip === ct);
   return byIp ? byIp.mac : null;
 }
@@ -216,6 +218,22 @@ function buildElements() {
   if (META.gateway) {
     const gw = devices.find((x) => x.ip === META.gateway);
     edges.push({ data: { source: "internet", target: gw ? gw.mac : META.gateway } });
+  }
+  const nodeIds = new Set(nodes.map((nd) => nd.data.id));
+  for (const e of edges) {
+    if (!nodeIds.has(e.data.target)) {
+      nodes.push({
+        data: {
+          id: e.data.target,
+          label: "🏠 Gateway " + e.data.target,
+          category: "Gateway",
+          status: "online",
+          color: CATEGORY_COLORS.Gateway,
+          virtual: true,
+        },
+      });
+      nodeIds.add(e.data.target);
+    }
   }
   return [...nodes, ...edges];
 }
