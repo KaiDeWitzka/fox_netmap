@@ -32,6 +32,25 @@ let META = { gateway: "", wan_ip: "", wan_status: "" };
 let SITES = [];
 let SITE_MAP = {};
 
+const QP = new URLSearchParams(location.search);
+let LANG = QP.get("lang") || localStorage.getItem("fox_lang") || "de";
+if (!LANGS.some(([c]) => c === LANG)) LANG = "de";
+
+function t(key, vars) {
+  let s = (I18N[LANG] && I18N[LANG][key]) || I18N.de[key] || key;
+  if (vars) for (const k of Object.keys(vars)) s = s.split("{" + k + "}").join(String(vars[k]));
+  return s;
+}
+
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  document.documentElement.lang = LANG;
+  document.title = t("app.title");
+}
+
 let collapsed = new Set(JSON.parse(localStorage.getItem("fox_collapsed") || "[]"));
 let groupMode = localStorage.getItem("fox_groups") || "none";
 
@@ -68,9 +87,9 @@ let sortKey = "hostname";
 let sortDir = 1;
 
 const TABLE_COLS = [
-  ["hostname", "Hostname"], ["ip", "IP"], ["mac", "MAC"], ["vendor", "Hersteller"], ["source", "Quelle"],
-  ["category", "Kategorie"], ["status", "Status"], ["subnet", "Subnetz"], ["site", "Standort"],
-  ["ports_str", "Ports"], ["connected_to", "Verbunden mit"], ["note", "Notiz"], ["last_seen", "Zuletzt gesehen"],
+  ["hostname", "cols.hostname"], ["ip", "cols.ip"], ["mac", "cols.mac"], ["vendor", "cols.vendor"], ["source", "cols.source"],
+  ["category", "cols.category"], ["status", "cols.status"], ["subnet", "cols.subnet"], ["site", "cols.site"],
+  ["ports_str", "cols.ports"], ["connected_to", "cols.connected"], ["note", "cols.note"], ["last_seen", "cols.lastSeen"],
 ];
 
 function loadColOrder() {
@@ -170,16 +189,23 @@ function activateTab(tab) {
   if (!isDetail) loadSettings();
 }
 
-async function loadCategories() {
-  const r = await api("/api/categories");
-  categories = r.ok ? await r.json() : Object.keys(CATEGORY_COLORS);
+function fillCategoryOptions() {
   const sel = document.getElementById("filter-category");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${t("filter.allCategories")}</option>`;
   for (const c of categories) {
     const o = document.createElement("option");
     o.value = c;
-    o.textContent = c;
+    o.textContent = t("cat." + c);
     sel.appendChild(o);
   }
+  sel.value = cur;
+}
+
+async function loadCategories() {
+  const r = await api("/api/categories");
+  categories = r.ok ? await r.json() : Object.keys(CATEGORY_COLORS);
+  fillCategoryOptions();
 }
 
 async function loadDevices() {
@@ -279,7 +305,7 @@ function buildElements() {
     addNode({
       data: {
         id: "internet",
-        label: "🌐 Internet" + (META.wan_ip ? "  " + META.wan_ip : ""),
+        label: t("internet.node") + (META.wan_ip ? "  " + META.wan_ip : ""),
         category: "Internet",
         status: "online",
         color: CATEGORY_COLORS.Internet,
@@ -312,7 +338,7 @@ function buildElements() {
 
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
-    addNode({ data: { id: w, label: "📶 WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
+    addNode({ data: { id: w, label: t("wlan.node"), category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
     edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
   }
@@ -325,7 +351,7 @@ function buildElements() {
       addNode({
         data: {
           id: e.data.target,
-          label: "🏠 Gateway " + e.data.target,
+          label: t("gw.node", { ip: e.data.target }),
           category: "Gateway",
           status: "online",
           color: CATEGORY_COLORS.Gateway,
@@ -411,28 +437,28 @@ async function showDetail(mac) {
   const el = document.getElementById("detail-content");
   const hostLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.label}</a>`).join(", ");
   const rows = [
-    ["Hostname", (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], ["MAC", (d.mac || "").startsWith("ip:") ? "– (nur IP bekannt)" : d.mac], ["Hersteller", d.vendor],
-    ["Kategorie", d.category], ["Status", d.status], ["Subnetz", d.subnet], ["Standort", d.site || "–"], ["Quelle", d.source],
-    ["Verbindung", d.connection ? d.connection.toUpperCase() : "–"], ["Verbunden mit", d.layout.connected_to || "auto"], ["Notiz", d.note],
-    ["Erstmals gesehen", d.first_seen], ["Zuletzt gesehen", d.last_seen],
+    [t("d.hostname"), (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], [t("d.mac"), (d.mac || "").startsWith("ip:") ? t("d.macUnknown") : d.mac], [t("d.vendor"), d.vendor],
+    [t("d.category"), t("cat." + d.category)], [t("d.status"), d.status], [t("d.subnet"), d.subnet], [t("d.site"), d.site || "–"], [t("d.source"), d.source],
+    [t("d.connection"), d.connection ? d.connection.toUpperCase() : "–"], [t("d.connected"), d.layout.connected_to || t("d.auto")], [t("d.note"), d.note],
+    [t("d.firstSeen"), d.first_seen], [t("d.lastSeen"), d.last_seen],
   ];
   let html = `<h2>${d.hostname || d.ip}</h2><table>` + rows.map(([k, v]) => `<tr><td>${k}</td><td>${v ?? ""}</td></tr>`).join("") + "</table>";
-  html += `<h3>Offene Ports (${d.ports.length})</h3><div class="chips">` + (d.ports.map((p) => `<span>${p.port}${p.service ? " " + p.service : ""}</span>`).join("") || "–") + "</div>";
+  html += `<h3>${t("d.ports", { n: d.ports.length })}</h3><div class="chips">` + (d.ports.map((p) => `<span>${p.port}${p.service ? " " + p.service : ""}</span>`).join("") || "–") + "</div>";
   if (children.length) {
-    html += `<h3>Angeschlossene Geräte (${children.length})</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</button> (${c.category})</li>`).join("") + "</ul>";
+    html += `<h3>${t("d.children", { n: children.length })}</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</button> (${t("cat." + c.category)})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
-    html += `<h3>Bearbeiten</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${c}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="Notiz" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">Speichern</button></div>`;
+    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${t("cat." + c)}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${t("cols.note")}" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">${t("btn.save")}</button></div>`;
     const parents = devices.filter((x) => x.category === "Router" || x.category === "Switch");
     const cur = d.layout.connected_to || "";
-    html += `<h3>Verbunden mit</h3><div class="edit-row"><select id="ed-parent"><option value="">auto</option>` + parents.map((x) => `<option value="${x.mac}"${cur === x.mac ? " selected" : ""}>${x.hostname || x.ip} (${x.ip})</option>`).join("") + `</select><button id="ed-parent-save">Setzen</button></div>`;
+    html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${x.mac}"${cur === x.mac ? " selected" : ""}>${x.hostname || x.ip} (${x.ip})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
     if (isNet) {
       const kids = childCount(mac);
-      html += `<div class="edit-row"><button id="ed-collapse">${collapsed.has(mac) ? `Kinder einblenden (${kids})` : `Kinder ausblenden (${kids})`}</button></div>`;
+      html += `<div class="edit-row"><button id="ed-collapse">${collapsed.has(mac) ? t("collapse.show", { n: kids }) : t("collapse.hide", { n: kids })}</button></div>`;
     }
   }
-  html += `<h3>Verlauf (neu zuerst)</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
-  html += `<h3>Ereignisse</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
   el.innerHTML = html;
   el.querySelectorAll(".dev-link").forEach((n) => n.addEventListener("click", () => showDetail(n.dataset.mac)));
   const save = document.getElementById("ed-save");
@@ -465,7 +491,7 @@ async function showDetail(mac) {
 function renderTable() {
   const thead = document.querySelector("#device-table thead");
   const tbody = document.querySelector("#device-table tbody");
-  const cols = colOrder.map((k) => TABLE_COLS.find(([key]) => key === k));
+  const cols = colOrder.map((k) => { const pair = TABLE_COLS.find(([key]) => key === k); return [k, t(pair[1])]; });
   const colgroup = document.querySelector("#device-table colgroup");
   if (colgroup) {
     colgroup.innerHTML = colOrder.map((k) => `<col data-key="${k}"${colWidths[k] ? ` style="width:${colWidths[k]}px"` : ""}>`).join("");
@@ -504,7 +530,7 @@ function renderTable() {
       tr.appendChild(buildCell(d, key));
     }
     tr.tabIndex = 0;
-    tr.setAttribute("aria-label", `Details: ${d.hostname || d.ip || d.mac}`);
+    tr.setAttribute("aria-label", t("row.aria", { v: d.hostname || d.ip || d.mac }));
     tr.addEventListener("click", (e) => { if (e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") showDetail(d.mac); });
     tr.addEventListener("keydown", (e) => {
       if ((e.key === "Enter" || e.key === " ") && e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") {
@@ -573,12 +599,13 @@ function buildCell(d, key) {
     td.title = m.startsWith("ip:") ? `nur IP bekannt (${m.slice(3)})` : m;
   } else if (key === "category" && !EMBED) {
     const sel = document.createElement("select");
-    for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = c; if (c === d.category) o.selected = true; sel.appendChild(o); }
+    for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = t("cat." + c); if (c === d.category) o.selected = true; sel.appendChild(o); }
     sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
     td.appendChild(sel);
   } else if (key === "note" && !EMBED) {
     const inp = document.createElement("input");
     inp.value = d.note || "";
+    inp.placeholder = t("cols.note");
     inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) }).then(loadDevices));
     td.appendChild(inp);
   } else {
@@ -686,8 +713,8 @@ async function loadLogs() {
   const r = await api(`/api/logs?lines=${lines}&level=${level}`);
   if (!r.ok) return;
   const data = await r.json();
-  document.getElementById("log-view").textContent = data.lines.join("\n") || "(noch keine Log-Eintraege)";
-  document.getElementById("log-status").textContent = `${data.returned}/${data.total} Zeilen · ${data.file}`;
+  document.getElementById("log-view").textContent = data.lines.join("\n") || t("log.empty");
+  document.getElementById("log-status").textContent = t("log.meta", { ret: data.returned, total: data.total, file: data.file });
 }
 
 function bindLog() {
@@ -736,6 +763,7 @@ function bindSidebar() {
     const msg = document.getElementById("settings-msg");
     const body = {
       theme: document.getElementById("st-theme").value,
+      lang: document.getElementById("st-lang").value,
       scan_interval: parseInt(document.getElementById("st-interval").value, 10),
       subnets: document.getElementById("st-subnets").value,
       port_top: parseInt(document.getElementById("st-porttop").value, 10),
@@ -752,16 +780,16 @@ function bindSidebar() {
     };
     const errs = validateSettings(body);
     if (errs.length) {
-      msg.textContent = "Plausibilitätsprüfung: " + errs.join("; ");
+      msg.textContent = t("msg.check") + errs.join("; ");
       return;
     }
     const r = await api("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
     if (r.ok) {
-      msg.textContent = "Gespeichert.";
+      msg.textContent = t("msg.saved");
     } else {
       let detail = "Fehler beim Speichern";
       try { detail = (await r.json()).detail || detail; } catch (err) { /* ignorieren */ }
-      msg.textContent = "Abgelehnt: " + detail;
+      msg.textContent = t("msg.rejected") + detail;
     }
   });
   document.getElementById("token-form").addEventListener("submit", async (e) => {
@@ -776,8 +804,8 @@ function bindSidebar() {
       }),
     });
     if (r.ok) {
-      const t = await r.json();
-      document.getElementById("token-result").textContent = "Embed-URL: " + location.origin + t.embed_url;
+      const tk = await r.json();
+      document.getElementById("token-result").textContent = t("tk.resultPrefix") + location.origin + tk.embed_url;
       loadTokens();
     }
   });
@@ -823,23 +851,24 @@ function validSites(str) {
 function validateSettings(v) {
   const errs = [];
   if (!Number.isInteger(v.scan_interval) || v.scan_interval < 30 || v.scan_interval > 86400)
-    errs.push("Scan-Intervall: 30–86400 s");
+    errs.push(t("err.interval"));
   if (!Number.isInteger(v.port_top) || v.port_top < 0 || v.port_top > 65535)
-    errs.push("Port-Umfang: 0 (alle) bis 65535");
+    errs.push(t("err.porttop"));
   if (!Number.isInteger(v.history_hours) || v.history_hours < 1 || v.history_hours > 87600)
-    errs.push("Historie: 1–87600 Stunden");
+    errs.push(t("err.history"));
   if (!Number.isInteger(v.device_retention_days) || v.device_retention_days < 0 || v.device_retention_days > 3650)
-    errs.push("Retention: 0–3650 Tage (0 = nie löschen)");
+    errs.push(t("err.retention"));
   if (!Number.isInteger(v.auto_export_interval_hours) || v.auto_export_interval_hours < 0 || v.auto_export_interval_hours > 720)
-    errs.push("Auto-Export-Intervall: 0–720 Stunden (0 = jeder Scan)");
+    errs.push(t("err.intervalExport"));
   for (const e of String(v.alarm_whitelist || "").split(",").map((s) => s.trim()).filter(Boolean))
-    if (!validIpAny(e) && !validMac(e)) errs.push(`Whitelist-Eintrag ungültig (MAC oder IP): ${e}`);
-  if (!validSites(v.sites || "")) errs.push("Standorte: Format 'Name:Subnetz; Name2:Subnetz2' mit gültigen CIDRs");
-  if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
+    if (!validIpAny(e) && !validMac(e)) errs.push(t("err.whitelist", { v: e }));
+  if (!validSites(v.sites || "")) errs.push(t("err.sites"));
+  if (v.theme !== "dark" && v.theme !== "light") errs.push(t("err.theme"));
+  if (v.lang && !LANGS.some(([c]) => c === v.lang)) errs.push(t("err.lang"));
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
-    if (!validCidrAny(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
+    if (!validCidrAny(sn)) errs.push(t("err.subnet", { v: sn }));
   for (const ip of v.snmp_switches.split(",").map((s) => s.trim()).filter(Boolean))
-    if (!validIp(ip)) errs.push(`SNMP-Switch-IP ungültig: ${ip}`);
+    if (!validIp(ip)) errs.push(t("err.snmp", { v: ip }));
   return errs;
 }
 
@@ -883,9 +912,9 @@ async function pollScanStatus() {
   const el = document.getElementById("scan-status");
   el.classList.toggle("running", !!s.scanning);
   el.textContent =
-    (s.scanning ? "Scan läuft… " : "") +
-    (s.last_scan ? "letzter Scan: " + s.last_scan : "noch kein Scan") +
-    (s.next_scan ? " · nächster Scan: " + s.next_scan : "");
+    (s.scanning ? t("scan.running") : "") +
+    (s.last_scan ? t("scan.last") + s.last_scan : t("scan.none")) +
+    (s.next_scan ? t("scan.next") + s.next_scan : "");
   if (!s.scanning && (wasScanning || (s.last_scan && s.last_scan !== lastScanSeen))) loadDevices();
   wasScanning = !!s.scanning;
   if (s.last_scan) lastScanSeen = s.last_scan;
@@ -896,6 +925,7 @@ async function loadSettings() {
   if (!r.ok) return;
   const s = await r.json();
   document.getElementById("st-theme").value = s.theme;
+  document.getElementById("st-lang").value = s.lang || "de";
   document.getElementById("st-interval").value = s.scan_interval;
   document.getElementById("st-subnets").value = s.subnets;
   document.getElementById("st-porttop").value = s.port_top;
@@ -918,19 +948,47 @@ async function loadTokens() {
   const list = await r.json();
   const ul = document.getElementById("token-list");
   ul.innerHTML = "";
-  for (const t of list) {
+  for (const tk of list) {
     const li = document.createElement("li");
-    li.textContent = `${location.origin}/embed?token=${t.token} (Ablauf: ${t.expires || "nie"}, Subnetze: ${t.subnets || "alle"}, Kategorien: ${t.categories || "alle"}) `;
+    li.textContent = `${location.origin}/embed?token=${tk.token} (${t("tok.expires")}${tk.expires || t("tok.never")}, ${t("tok.subnets")}${tk.subnets || t("tok.all")}, ${t("tok.cats")}${tk.categories || t("tok.all")}) `;
     const del = document.createElement("button");
-    del.textContent = "löschen";
-    del.addEventListener("click", async () => { await api("/api/tokens/" + t.token, { method: "DELETE" }); loadTokens(); });
+    del.textContent = t("tok.delete");
+    del.addEventListener("click", async () => { await api("/api/tokens/" + tk.token, { method: "DELETE" }); loadTokens(); });
     li.appendChild(del);
     ul.appendChild(li);
   }
 }
 
+function fillLangSelects() {
+  for (const sel of [document.getElementById("lang-select"), document.getElementById("st-lang")]) {
+    if (!sel) continue;
+    sel.innerHTML = "";
+    for (const [code, name] of LANGS) {
+      const o = document.createElement("option");
+      o.value = code;
+      o.textContent = name;
+      sel.appendChild(o);
+    }
+    sel.value = LANG;
+  }
+}
+
+async function setLang(l) {
+  if (!LANGS.some(([c]) => c === l)) l = "de";
+  LANG = l;
+  localStorage.setItem("fox_lang", l);
+  fillLangSelects();
+  applyI18n();
+  renderTable();
+  fillCategoryOptions();
+  if (!EMBED) await api("/api/settings", { method: "PATCH", body: JSON.stringify({ lang: l }) });
+}
+
 async function init() {
   applyTheme();
+  fillLangSelects();
+  applyI18n();
+  document.getElementById("lang-select").addEventListener("change", (e) => setLang(e.target.value));
   if (!EMBED) {
     const me = await api("/api/me");
     if (me.status === 401) return;
@@ -940,6 +998,18 @@ async function init() {
     });
   } else {
     document.body.classList.add("embed");
+  }
+  if (!EMBED) {
+    const rs = await api("/api/settings");
+    if (rs.ok) {
+      const sv = await rs.json();
+      if (sv.lang && LANGS.some(([c]) => c === sv.lang) && sv.lang !== LANG) {
+        LANG = sv.lang;
+        localStorage.setItem("fox_lang", LANG);
+        fillLangSelects();
+        applyI18n();
+      }
+    }
   }
   await loadCategories();
   await loadMeta();

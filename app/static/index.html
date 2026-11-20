@@ -7,86 +7,90 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Zum Inhalt springen</a>
+<a class="skip-link" href="#main" data-i18n="skip">Zum Inhalt springen</a>
 <header>
   <h1>fox_netmap</h1>
-  <nav id="nav" aria-label="Ansicht">
-    <button data-view="map" class="active" aria-pressed="true">Karte</button>
-    <button data-view="table" aria-pressed="false">Tabelle</button>
-    <button data-view="log" aria-pressed="false">Log</button>
+  <nav id="nav" aria-label="Ansicht" data-i18n-aria="nav.aria">
+    <button data-view="map" class="active" aria-pressed="true" data-i18n="nav.map">Karte</button>
+    <button data-view="table" aria-pressed="false" data-i18n="nav.table">Tabelle</button>
+    <button data-view="log" aria-pressed="false" data-i18n="nav.log">Log</button>
   </nav>
-  <input id="search" type="search" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
-  <select id="filter-category" aria-label="Kategorie filtern"><option value="">Alle Kategorien</option></select>
-  <select id="filter-status" aria-label="Status filtern">
-    <option value="">alle</option>
+  <input id="search" type="search" data-i18n-aria="search.aria" data-i18n-ph="search.ph" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
+  <select id="filter-category" data-i18n-aria="filter.catAria" aria-label="Kategorie filtern"><option value="" data-i18n="filter.allCategories">Alle Kategorien</option></select>
+  <select id="filter-status" data-i18n-aria="filter.statusAria" aria-label="Status filtern">
+    <option value="" data-i18n="filter.allStatus">alle</option>
     <option value="online">online</option>
     <option value="offline">offline</option>
   </select>
-  <select id="filter-site" aria-label="Standort filtern"><option value="">Alle Standorte</option></select>
-  <button id="btn-online" aria-pressed="false" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
+  <select id="filter-site" data-i18n-aria="filter.siteAria" aria-label="Standort filtern"><option value="" data-i18n="filter.allSites">Alle Standorte</option></select>
+  <button id="btn-online" aria-pressed="false" data-i18n="btn.onlyOnline" data-i18n-title="btn.onlyOnlineTitle" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
   <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
   <span class="spacer"></span>
   <a class="hdr-btn" href="/api/export/json" download>JSON</a>
   <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
-  <label class="hdr-chk"><input type="checkbox" id="chk-groups" title="Geräte pro Subnetz als Gruppe zusammenfassen"> Subnetze gruppieren</label>
-  <select id="layout-select" aria-label="Karten-Layout" title="Karten-Layout">
-    <option value="auto" selected>Layout: auto</option>
-    <option value="force">Force</option>
-    <option value="tree">Hierarchisch</option>
-    <option value="concentric">Kreise</option>
-    <option value="circle">Kreis</option>
-    <option value="grid">Raster</option>
+  <label class="hdr-chk"><input type="checkbox" id="chk-groups" data-i18n-title="chk.groupsTitle" title="Geräte pro Subnetz als Gruppe zusammenfassen"> <span data-i18n="chk.groups">Subnetze gruppieren</span></label>
+  <select id="layout-select" data-i18n-aria="layout.aria" aria-label="Karten-Layout" title="Karten-Layout">
+    <option value="auto" selected data-i18n="layout.auto">Layout: auto</option>
+    <option value="force" data-i18n="layout.force">Force</option>
+    <option value="tree" data-i18n="layout.tree">Hierarchisch</option>
+    <option value="concentric" data-i18n="layout.concentric">Kreise</option>
+    <option value="circle" data-i18n="layout.circle">Kreis</option>
+    <option value="grid" data-i18n="layout.grid">Raster</option>
   </select>
-  <button id="btn-layout-reset" title="Gespeicherte Positionen löschen (Auto-Layout)">↺ Layout</button>
-  <button id="btn-scan" title="Scan jetzt auslösen">Jetzt scannen</button>
-  <button id="btn-print" title="Druckansicht (PDF)">Drucken</button>
-  <button id="btn-theme" title="Theme wechseln">🌗</button>
-  <button id="btn-settings" title="Einstellungen öffnen">⚙</button>
-  <button id="btn-logout">Logout</button>
+  <button id="btn-layout-reset" data-i18n="btn.layoutReset" data-i18n-title="btn.layoutResetTitle" title="Gespeicherte Positionen löschen (Auto-Layout)">↺ Layout</button>
+  <button id="btn-scan" data-i18n="btn.scan" data-i18n-title="btn.scanTitle" title="Scan jetzt auslösen">Jetzt scannen</button>
+  <button id="btn-print" data-i18n="btn.print" data-i18n-title="btn.printTitle" title="Druckansicht (PDF)">Drucken</button>
+  <button id="btn-theme" data-i18n-title="title.theme" title="Theme wechseln">🌗</button>
+  <select id="lang-select" data-i18n-aria="lang.aria" aria-label="Sprache / Language"></select>
+  <button id="btn-settings" data-i18n-title="title.settings" title="Einstellungen öffnen">⚙</button>
+  <button id="btn-logout" data-i18n="btn.logout">Logout</button>
 </header>
 <main id="main" tabindex="-1">
-  <section id="view-map" class="view" aria-label="Netzwerkkarte">
-    <p class="visually-hidden">Interaktive Netzwerkkarte. Alle Geräte und Details sind in der Tabellenansicht auch per Tastatur erreichbar (Zeile fokussieren, dann Enter drücken).</p>
+  <section id="view-map" class="view" data-i18n-aria="map.aria" aria-label="Netzwerkkarte">
+    <p class="visually-hidden" data-i18n="map.hint">Interaktive Netzwerkkarte. Alle Geräte und Details sind in der Tabellenansicht auch per Tastatur erreichbar (Zeile fokussieren, dann Enter drücken).</p>
     <div id="map"></div>
   </section>
-  <aside id="detail" hidden aria-label="Gerätedetails und Einstellungen">
-      <div class="tabs" role="tablist" aria-label="Detail-Bereich">
-        <button id="tab-detail" class="active" role="tab" aria-selected="true">Details</button>
-        <button id="tab-settings" role="tab" aria-selected="false">Einstellungen</button>
-        <button id="btn-close-detail" title="Schließen">✕</button>
+  <aside id="detail" hidden aria-label="Gerätedetails und Einstellungen" data-i18n-aria="aside.aria">
+      <div class="tabs" role="tablist" data-i18n-aria="tabs.aria" aria-label="Detail-Bereich">
+        <button id="tab-detail" class="active" role="tab" aria-selected="true" data-i18n="tab.details">Details</button>
+        <button id="tab-settings" role="tab" aria-selected="false" data-i18n="tab.settings">Einstellungen</button>
+        <button id="btn-close-detail" data-i18n-title="title.close" title="Schließen">✕</button>
       </div>
-      <div id="detail-content" role="tabpanel" aria-labelledby="tab-detail"><p class="muted">Gerät anklicken für Details.</p></div>
+      <div id="detail-content" role="tabpanel" aria-labelledby="tab-detail"><p class="muted" data-i18n="detail.hint">Gerät anklicken für Details.</p></div>
       <div id="settings-content" role="tabpanel" aria-labelledby="tab-settings" hidden>
         <div class="panel">
-          <h2>Einstellungen</h2>
+          <h2 data-i18n="tab.settings">Einstellungen</h2>
           <form id="settings-form">
-            <label>Theme
+            <label><span data-i18n="st.theme">Theme</span>
               <select id="st-theme"><option value="dark">dark</option><option value="light">light</option></select>
             </label>
-            <label>Scan-Intervall (s) <input id="st-interval" type="number" min="30"></label>
-            <label>Subnetze (kommagetrennt) <input id="st-subnets" type="text"></label>
-            <label>Port-Umfang (Top N, 0 = alle) <input id="st-porttop" type="number" min="0"></label>
-            <label>Historie (Stunden) <input id="st-history" type="number" min="1"></label>
-            <label>Geräte offline löschen nach (Tagen, 0 = nie) <input id="st-retention" type="number" min="0"></label>
-            <label><input id="st-snmp" type="checkbox"> SNMP-Scan aktiv</label>
-            <label>SNMP-Switches (IPs, kommagetrennt) <input id="st-switches" type="text"></label>
-            <label><input id="st-auth" type="checkbox"> Login aktiv</label>
-            <label><input id="st-autoexport" type="checkbox"> automatische Exporte</label>
-            <label>Auto-Export alle (Stunden, 0 = nach jedem Scan) <input id="st-autoexport-interval" type="number" min="0" max="720"></label>
-            <label><input id="st-mdns" type="checkbox"> mDNS-Namensauflösung</label>
-            <label>Whitelist (MAC/IP, kommagetrennt; kein Alarm) <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
-            <label>Standorte (Name:Subnetz; Name2:Subnetz2) <input id="st-sites" type="text" placeholder="Zuhause:192.168.178.0/24; Remote:192.168.179.0/24"></label>
-            <button type="submit">Speichern</button>
+            <label><span data-i18n="st.lang">Sprache</span>
+              <select id="st-lang"></select>
+            </label>
+            <label><span data-i18n="st.interval">Scan-Intervall (s)</span> <input id="st-interval" type="number" min="30"></label>
+            <label><span data-i18n="st.subnets">Subnetze (kommagetrennt)</span> <input id="st-subnets" type="text"></label>
+            <label><span data-i18n="st.porttop">Port-Umfang (Top N, 0 = alle)</span> <input id="st-porttop" type="number" min="0"></label>
+            <label><span data-i18n="st.history">Historie (Stunden)</span> <input id="st-history" type="number" min="1"></label>
+            <label><span data-i18n="st.retention">Geräte offline löschen nach (Tagen, 0 = nie)</span> <input id="st-retention" type="number" min="0"></label>
+            <label><input id="st-snmp" type="checkbox"> <span data-i18n="st.snmp">SNMP-Scan aktiv</span></label>
+            <label><span data-i18n="st.switches">SNMP-Switches (IPs, kommagetrennt)</span> <input id="st-switches" type="text"></label>
+            <label><input id="st-auth" type="checkbox"> <span data-i18n="st.auth">Login aktiv</span></label>
+            <label><input id="st-autoexport" type="checkbox"> <span data-i18n="st.autoexport">automatische Exporte</span></label>
+            <label><span data-i18n="st.autoexportInterval">Auto-Export alle (Stunden, 0 = nach jedem Scan)</span> <input id="st-autoexport-interval" type="number" min="0" max="720"></label>
+            <label><input id="st-mdns" type="checkbox"> <span data-i18n="st.mdns">mDNS-Namensauflösung</span></label>
+            <label><span data-i18n="st.whitelist">Whitelist (MAC/IP, kommagetrennt; kein Alarm)</span> <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
+            <label><span data-i18n="st.sites">Standorte (Name:Subnetz; Name2:Subnetz2)</span> <input id="st-sites" type="text" placeholder="Zuhause:192.168.178.0/24; Remote:192.168.179.0/24"></label>
+            <button type="submit" data-i18n="st.save">Speichern</button>
           </form>
           <p id="settings-msg" class="muted" role="alert"></p>
         </div>
         <div class="panel">
-          <h2>Embed-Token</h2>
+          <h2 data-i18n="tk.title">Embed-Token</h2>
           <form id="token-form">
-            <label>Ablauf (Stunden, leer = nie) <input id="tk-hours" type="number" min="1"></label>
-            <label>Subnetze (leer = alle) <input id="tk-subnets" type="text"></label>
-            <label>Kategorien (leer = alle) <input id="tk-categories" type="text"></label>
-            <button type="submit">Token erstellen</button>
+            <label><span data-i18n="tk.hours">Ablauf (Stunden, leer = nie)</span> <input id="tk-hours" type="number" min="1"></label>
+            <label><span data-i18n="tk.subnets">Subnetze (leer = alle)</span> <input id="tk-subnets" type="text"></label>
+            <label><span data-i18n="tk.categories">Kategorien (leer = alle)</span> <input id="tk-categories" type="text"></label>
+            <button type="submit" data-i18n="tk.create">Token erstellen</button>
           </form>
           <p id="token-result" class="muted" role="status"></p>
           <ul id="token-list"></ul>
@@ -102,17 +106,18 @@
   </section>
   <section id="view-log" class="view" hidden>
     <div class="log-toolbar">
-      <button id="btn-log-refresh">Aktualisieren</button>
-      <label class="chk"><input type="checkbox" id="log-auto" checked> auto-refresh</label>
-      <select id="log-level"><option value="">alle Level</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select>
+      <button id="btn-log-refresh" data-i18n="log.refresh">Aktualisieren</button>
+      <label class="chk"><input type="checkbox" id="log-auto" checked> <span data-i18n="log.auto">auto-refresh</span></label>
+      <select id="log-level" data-i18n-aria="log.levelAria"><option value="" data-i18n="log.levelAll">alle Level</option><option>INFO</option><option>WARNING</option><option>ERROR</option></select>
       <select id="log-lines"><option value="100">100</option><option value="300" selected>300</option><option value="1000">1000</option></select>
-      <a class="hdr-btn" href="/api/logs/download" download>Log-Datei</a>
+      <a class="hdr-btn" href="/api/logs/download" download data-i18n="log.file">Log-Datei</a>
       <span id="log-status" class="muted" role="status"></span>
     </div>
     <pre id="log-view"></pre>
   </section>
 </main>
 <script src="/static/vendor/cytoscape.min.js"></script>
+<script src="/static/i18n.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

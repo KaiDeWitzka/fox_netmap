@@ -28,6 +28,7 @@ OVERRIDABLE = {
     "mdns_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
     "alarm_whitelist": str,
     "sites": str,
+    "lang": str,
 }
 
 
