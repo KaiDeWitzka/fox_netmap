@@ -32,6 +32,23 @@ def test_health(client):
     body = r.json()
     assert body["status"] == "ok"
     assert body["devices"] == 0
+    assert body["version"] == "1.0.0"
+
+
+def test_layout_reset(auth_client, app):
+    insert_device(app)
+    conn = db.connect(app.state.db_path)
+    db.set_layout(conn, "aa:bb:cc:dd:ee:ff", x=1.0, y=2.0, connected_to="11:22:33:44:55:66", connected_manual=1)
+    conn.commit()
+    conn.close()
+    r = auth_client.post("/api/layout/reset")
+    assert r.status_code == 200
+    conn = db.connect(app.state.db_path)
+    lay = db.get_layout(conn, "aa:bb:cc:dd:ee:ff")
+    conn.close()
+    assert lay["x"] is None and lay["y"] is None
+    assert lay["connected_to"] == "11:22:33:44:55:66"
+    assert lay["connected_manual"] == 1
 
 
 def test_api_requires_auth(client):

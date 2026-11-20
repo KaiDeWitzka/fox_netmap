@@ -275,6 +275,13 @@ def delete_token(token: str, conn=Depends(get_conn), _=Depends(require_auth)):
     return {"ok": True}
 
 
+@router.post("/api/layout/reset")
+def layout_reset(conn=Depends(get_conn), _=Depends(require_auth)):
+    conn.execute("UPDATE device_layout SET x = NULL, y = NULL")
+    conn.commit()
+    return {"ok": True}
+
+
 @router.get("/api/logs")
 def get_logs(request: Request, lines: int = 300, level: str = "", _=Depends(require_auth)):
     path = os.path.join(request.app.state.settings.data_dir, "netmap.log")
