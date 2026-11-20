@@ -58,6 +58,7 @@ header input[type="search"], header select {
   padding: 4px 8px;
 }
 header select#layout-select { padding: 4px 6px; }
+header .hdr-chk { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); white-space: nowrap; }
 #search { min-width: 220px; }
 #scan-status { color: var(--muted); font-size: 12px; }
 #scan-status.running { color: var(--accent); font-weight: 600; }
