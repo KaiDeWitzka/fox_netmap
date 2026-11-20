@@ -71,6 +71,9 @@
             <label>SNMP-Switches (IPs, kommagetrennt) <input id="st-switches" type="text"></label>
             <label><input id="st-auth" type="checkbox"> Login aktiv</label>
             <label><input id="st-autoexport" type="checkbox"> automatische Exporte</label>
+            <label>Auto-Export alle (Stunden, 0 = nach jedem Scan) <input id="st-autoexport-interval" type="number" min="0" max="720"></label>
+            <label><input id="st-mdns" type="checkbox"> mDNS-Namensauflösung</label>
+            <label>Whitelist (MAC/IP, kommagetrennt; kein Alarm) <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
             <button type="submit">Speichern</button>
           </form>
           <p id="settings-msg" class="muted" role="alert"></p>

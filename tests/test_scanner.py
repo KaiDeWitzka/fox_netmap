@@ -351,3 +351,69 @@ def test_tr064_https_fallback_auf_http(monkeypatch):
     hosts = tr064.fetch_hosts_with_fallback("https://192.168.178.1:49000", "user", "pass")
     assert len(hosts) == 1
     assert urls[0].startswith("https://") and urls[1].startswith("http://")
+
+
+def test_notify_whitelist():
+    from app.scanner import notify
+
+    class S:
+        alarm_whitelist = "aa:bb:cc:dd:ee:ff, 192.168.178.50"
+
+    assert notify.is_whitelisted(S(), {"mac": "AA-BB-CC-DD-EE-FF", "ip": "10.0.0.1"})
+    assert notify.is_whitelisted(S(), {"mac": "ip:192.168.178.50", "ip": "192.168.178.50"})
+    assert not notify.is_whitelisted(S(), {"mac": "11:22:33:44:55:66", "ip": "10.0.0.9"})
+
+    class Empty:
+        alarm_whitelist = ""
+
+    assert not notify.is_whitelisted(Empty(), {"mac": "aa:bb:cc:dd:ee:ff", "ip": "1.2.3.4"})
+
+
+def test_auto_export_due():
+    from datetime import datetime, timedelta, timezone
+
+    from app.exporters import auto_export_due
+
+    now = datetime.now(timezone.utc)
+    assert auto_export_due(None, 24, now)
+    assert auto_export_due("", 24, now)
+    assert auto_export_due("kaputt", 24, now)
+    assert auto_export_due((now - timedelta(hours=25)).isoformat(timespec="seconds"), 24, now)
+    assert not auto_export_due((now - timedelta(hours=1)).isoformat(timespec="seconds"), 24, now)
+    assert auto_export_due((now - timedelta(minutes=1)).isoformat(timespec="seconds"), 0, now)
+
+
+def test_names_ptr_name():
+    from app.scanner import names
+
+    assert names.ptr_name("192.168.178.20") == "20.178.168.192.in-addr.arpa"
+    p6 = names.ptr_name("2003::1")
+    assert p6.endswith(".ip6.arpa") and p6.startswith("1.0.0.0.") and p6.endswith("3.0.0.2.ip6.arpa")
+    assert names.ptr_name("keine-ip") is None
+
+
+def test_names_parse_mdns_answers():
+    import struct
+
+    from app.scanner import names
+
+    qname = "20.178.168.192.in-addr.arpa"
+    header = struct.pack(">HHHHHH", 0x1234, 0x8400, 1, 1, 0, 0)
+    question = names._encode_name(qname) + struct.pack(">HH", 12, 1)
+    rname = names._encode_name("drucker.local")
+    answer = b"\xc0\x0c" + struct.pack(">HHIH", 12, 1, 120, len(rname)) + rname
+    packet = header + question + answer
+    assert names.parse_mdns_answers(packet) == ["drucker.local"]
+    assert names.parse_mdns_answers(b"\x00" * 5) == []
+
+
+def test_resolve_all_mdns_fallback(monkeypatch):
+    from app.scanner import names
+
+    monkeypatch.setattr(names, "resolve_hostname", lambda ip: "")
+    monkeypatch.setattr(names, "resolve_hostname_mdns", lambda ip, timeout=1.0: "tv" if ip == "192.168.178.77" else "")
+    out = names.resolve_all(["192.168.178.77", "10.0.0.5"], use_mdns=True)
+    assert out["192.168.178.77"] == "tv"
+    assert out["10.0.0.5"] == ""
+    out2 = names.resolve_all(["192.168.178.77"], use_mdns=False)
+    assert out2["192.168.178.77"] == ""

@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+from datetime import datetime, timedelta, timezone
 
 from . import db
 
@@ -76,6 +77,21 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
             ]
         )
     return buf.getvalue()
+
+
+def auto_export_due(last: str | None, interval_hours: int, now=None) -> bool:
+    if interval_hours <= 0:
+        return True
+    if not last:
+        return True
+    now = now or datetime.now(timezone.utc)
+    try:
+        last_dt = datetime.fromisoformat(last)
+    except ValueError:
+        return True
+    if last_dt.tzinfo is None:
+        last_dt = last_dt.replace(tzinfo=timezone.utc)
+    return (now - last_dt) >= timedelta(hours=interval_hours)
 
 
 def auto_export(settings, conn) -> list[str]:

@@ -199,6 +199,12 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"theme": "blue"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "/abs"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": -1}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 721}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 24}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"alarm_whitelist": "bogus!!"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"alarm_whitelist": "AA:BB:CC:DD:EE:FF, 192.168.178.50, 2003::1"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"mdns_enabled": False}).status_code == 200
     r = auth_client.patch("/api/settings", json={"scan_interval": 600})
     assert r.status_code == 200
     conn = db.connect(app.state.db_path)
@@ -211,6 +217,9 @@ def test_settings_get_patch(auth_client, app):
     assert r.status_code == 200
     body = r.json()
     assert body["scan_interval"] == 60
+    assert body["auto_export_interval_hours"] == 24
+    assert body["mdns_enabled"] is True
+    assert body["alarm_whitelist"] == ""
     assert "auth_pass" not in body
     r = auth_client.patch("/api/settings", json={"theme": "light", "scan_interval": 120})
     assert r.status_code == 200

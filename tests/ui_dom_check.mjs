@@ -83,6 +83,9 @@ w.fetch = async (url, opts = {}) => {
         snmp_switches: "",
         auth_enabled: true,
         auto_export: false,
+        auto_export_interval_hours: 24,
+        mdns_enabled: true,
+        alarm_whitelist: "",
       };
     if (String(url).includes("/api/tokens")) return [];
     if (String(url).includes("/api/logs"))
@@ -336,6 +339,27 @@ $("#st-retention").value = "14";
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Settings: Retention 14 -> PATCH", patchCount() === patchBase2 + 1);
+
+check("Settings: Felder Whitelist/Auto-Export-Intervall/mDNS vorhanden", !!$("#st-whitelist") && !!$("#st-autoexport-interval") && !!$("#st-mdns"));
+const patchBase3 = patchCount();
+$("#st-whitelist").value = "bogus!!";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Whitelist 'bogus!!' -> kein PATCH, Fehlermeldung", patchCount() === patchBase3 && $("#settings-msg").textContent.includes("Whitelist"));
+$("#st-whitelist").value = "AA:BB:CC:DD:EE:FF, 192.168.178.50";
+$("#st-autoexport-interval").value = "-1";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Auto-Export-Intervall -1 -> kein PATCH, Fehlermeldung", patchCount() === patchBase3 && $("#settings-msg").textContent.includes("Auto-Export"));
+$("#st-autoexport-interval").value = "12";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Whitelist + Intervall 12 gueltig -> PATCH", patchCount() === patchBase3 + 1);
+const lastSettingsPatch = [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");
+check(
+  "Settings: PATCH enthaelt alarm_whitelist + auto_export_interval_hours + mdns_enabled",
+  !!lastSettingsPatch && lastSettingsPatch.body.includes("alarm_whitelist") && lastSettingsPatch.body.includes('"auto_export_interval_hours":12') && lastSettingsPatch.body.includes("mdns_enabled")
+);
 
 check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
 $("#layout-select").value = "grid";

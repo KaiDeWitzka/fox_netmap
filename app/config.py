@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     theme: str = "dark"
     auto_export: bool = False
     auto_export_dir: str = "exports"
+    auto_export_interval_hours: int = 24
+    mdns_enabled: bool = True
+    alarm_whitelist: str = ""
     app_version: str = "1.2.0"
 
     @property

@@ -29,6 +29,9 @@ SAFE_SETTINGS = [
     "theme",
     "auto_export",
     "auto_export_dir",
+    "auto_export_interval_hours",
+    "mdns_enabled",
+    "alarm_whitelist",
 ]
 
 
@@ -200,6 +203,9 @@ class SettingsPatch(BaseModel):
     theme: str | None = None
     auto_export: bool | None = None
     auto_export_dir: str | None = None
+    auto_export_interval_hours: int | None = None
+    mdns_enabled: bool | None = None
+    alarm_whitelist: str | None = None
     auth_enabled: bool | None = None
 
 
@@ -230,6 +236,22 @@ def validate_settings(body: SettingsPatch) -> str | None:
         d = body.auto_export_dir.strip()
         if not d or d.startswith("/") or ".." in d.split("/"):
             return "auto_export_dir muss ein relativer Ordnername innerhalb des Daten-Volumes sein"
+    if body.auto_export_interval_hours is not None and not 0 <= body.auto_export_interval_hours <= 720:
+        return "auto_export_interval_hours muss zwischen 0 (jeder Scan) und 720 liegen"
+    if body.alarm_whitelist is not None and body.alarm_whitelist.strip():
+        for entry in body.alarm_whitelist.split(","):
+            e = entry.strip()
+            if not e:
+                continue
+            try:
+                ipaddress.ip_address(e)
+                continue
+            except ValueError:
+                pass
+            parts = e.replace("-", ":").split(":")
+            is_mac = len(parts) == 6 and all(len(p) in (1, 2) and all(c in "0123456789abcdefABCDEF" for c in p) for p in parts)
+            if not is_mac:
+                return f"ungueltiger Whitelist-Eintrag: {e!r} (MAC oder IP erwartet)"
     return None
 
 
