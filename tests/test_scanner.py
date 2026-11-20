@@ -189,6 +189,35 @@ def test_merge_sources_by_ip():
     assert out[0]["hostname"] == "iot-plug"
 
 
+def test_merge_sources_mac_konflikt_arp_gewinnt():
+    from app.scanner.run import merge_sources
+
+    found = [{"ip": "192.168.178.33", "mac": "b0:4a:39:01:78:3c", "source": "ping+arp"}]
+    tr = {
+        "bc:24:11:67:14:23": {"mac": "bc:24:11:67:14:23", "ip": "192.168.178.33", "hostname": "kid-robot", "active": False, "type": "LAN"},
+        "bc:24:11:67:14:24": {"mac": "bc:24:11:67:14:24", "ip": "192.168.178.33", "hostname": "kid-robot", "active": False, "type": "LAN"},
+    }
+    out = merge_sources(found, tr)
+    assert len(out) == 1
+    assert out[0]["mac"] == "b0:4a:39:01:78:3c"
+    assert out[0]["source"] == "ping+arp,tr064"
+    assert out[0]["hostname"] == "kid-robot"
+
+
+def test_merge_sources_adoptiert_bekannte_mac_per_ip(tmp_path):
+    from app.scanner.run import merge_sources
+
+    conn, _settings = make(tmp_path)
+    conn.execute(
+        "INSERT INTO devices (mac, ip, hostname, status, last_seen) VALUES ('a4:d5:78:0d:bc:c9', '192.168.178.59', 'sz', 'offline', '2026-11-20T04:21:00+00:00')"
+    )
+    conn.commit()
+    out = merge_sources([{"ip": "192.168.178.59", "mac": None, "source": "ping"}], {}, conn)
+    assert out[0]["mac"] == "a4:d5:78:0d:bc:c9"
+    assert out[0]["source"] == "ping"
+    conn.close()
+
+
 def test_merge_sources_macless_bekommt_ip_key():
     from app.scanner.run import merge_sources
 
