@@ -723,6 +723,9 @@ function bindSidebar() {
       snmp_switches: document.getElementById("st-switches").value,
       auth_enabled: document.getElementById("st-auth").checked,
       auto_export: document.getElementById("st-autoexport").checked,
+      auto_export_interval_hours: parseInt(document.getElementById("st-autoexport-interval").value, 10),
+      mdns_enabled: document.getElementById("st-mdns").checked,
+      alarm_whitelist: document.getElementById("st-whitelist").value,
     };
     const errs = validateSettings(body);
     if (errs.length) {
@@ -762,6 +765,15 @@ function validIp(s) {
   return !!m && m.slice(1).map(Number).every((o) => o <= 255);
 }
 
+function validIpAny(s) {
+  if (validIp(s)) return true;
+  return s.includes(":") && /^[0-9a-fA-F:]+$/.test(s) && s.replace(/:/g, "").length <= 32;
+}
+
+function validMac(s) {
+  return /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/.test(s);
+}
+
 function validCidr(s) {
   const m = s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/);
   return !!m && m.slice(1, 5).map(Number).every((o) => o <= 255) && Number(m[5]) <= 32;
@@ -777,6 +789,10 @@ function validateSettings(v) {
     errs.push("Historie: 1–87600 Stunden");
   if (!Number.isInteger(v.device_retention_days) || v.device_retention_days < 0 || v.device_retention_days > 3650)
     errs.push("Retention: 0–3650 Tage (0 = nie löschen)");
+  if (!Number.isInteger(v.auto_export_interval_hours) || v.auto_export_interval_hours < 0 || v.auto_export_interval_hours > 720)
+    errs.push("Auto-Export-Intervall: 0–720 Stunden (0 = jeder Scan)");
+  for (const e of String(v.alarm_whitelist || "").split(",").map((s) => s.trim()).filter(Boolean))
+    if (!validIpAny(e) && !validMac(e)) errs.push(`Whitelist-Eintrag ungültig (MAC oder IP): ${e}`);
   if (v.theme !== "dark" && v.theme !== "light") errs.push("Theme: dark oder light");
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
     if (!validCidr(sn)) errs.push(`Subnetz ungültig (CIDR erwartet): ${sn}`);
@@ -847,6 +863,9 @@ async function loadSettings() {
   document.getElementById("st-switches").value = s.snmp_switches;
   document.getElementById("st-auth").checked = String(s.auth_enabled) === "true" || s.auth_enabled === true;
   document.getElementById("st-autoexport").checked = String(s.auto_export) === "true" || s.auto_export === true;
+  document.getElementById("st-autoexport-interval").value = s.auto_export_interval_hours;
+  document.getElementById("st-mdns").checked = String(s.mdns_enabled) === "true" || s.mdns_enabled === true;
+  document.getElementById("st-whitelist").value = s.alarm_whitelist || "";
   loadTokens();
 }
 

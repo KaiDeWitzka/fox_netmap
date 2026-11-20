@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from .. import db
 from ..config import Settings, get_settings
-from ..exporters import auto_export
+from ..exporters import auto_export, auto_export_due
 from ..logsetup import get_logger
 from . import categorize, discover, names, notify, oui, ports, snmp, topology, tr064
 
@@ -24,6 +24,9 @@ OVERRIDABLE = {
     "device_retention_days": int,
     "theme": str,
     "auto_export": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "auto_export_interval_hours": int,
+    "mdns_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "alarm_whitelist": str,
 }
 
 
@@ -154,7 +157,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
     for d in live:
         d["ports"] = ports.scan_ports(d["ip"], ports.port_list(settings.port_top, settings.ports), settings.scan_timeout)
-    hostnames = names.resolve_all([d["ip"] for d in live])
+    hostnames = names.resolve_all([d["ip"] for d in live], use_mdns=settings.mdns_enabled)
 
     snmp_map: dict[str, str] = {}
     if settings.snmp_enabled:
@@ -279,9 +282,21 @@ def run_once(settings: Settings, conn) -> dict:
             len(devices), n_ping, n_tcp, n_arp, n_tr, n_only_tr,
         )
         summary = apply_scan(conn, settings, devices)
-        notify.notify_new_devices(settings, summary["new_online"])
+        alarm_list = [d for d in summary["new_online"] if not notify.is_whitelisted(settings, d)]
+        skipped = len(summary["new_online"]) - len(alarm_list)
+        if skipped:
+            log.info("Alarm unterdrueckt (Whitelist): %s Geraet(e)", skipped)
+        notify.notify_new_devices(settings, alarm_list)
         if settings.auto_export:
-            auto_export(settings, conn)
+            last_export = db.get_setting(conn, "last_auto_export")
+            interval = getattr(settings, "auto_export_interval_hours", 24)
+            if auto_export_due(last_export, interval):
+                written = auto_export(settings, conn)
+                db.set_setting(conn, "last_auto_export", db.utcnow())
+                conn.commit()
+                log.info("Auto-Export geschrieben: %s", ", ".join(os.path.basename(p) for p in written))
+            else:
+                log.info("Auto-Export uebersprungen (Intervall %sh, letzter Export: %s)", interval, last_export)
         return summary
     finally:
         next_scan = db.utcnow()

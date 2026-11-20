@@ -87,15 +87,15 @@ Scanner (zyklisch/manuell)
 ## 4. Featureliste
 
 1. Zyklischer Netzwerkscan (Intervall konfigurierbar, manueller Trigger) über mehrere Subnetze/VLANs
-2. Geräte-Erkennung: IP, MAC, Hostname (DNS/NetBIOS/mDNS/TR-064), Hersteller via lokaler OUI-DB, offene Ports (TCP-Connect, konfigurierbarer Umfang), aktiv/passiv
+2. Geräte-Erkennung: IP, MAC, Hostname (DNS + mDNS-PTR-Fallback/TR-064), Hersteller via lokaler OUI-DB, offene Ports (TCP-Connect, konfigurierbarer Umfang), aktiv/passiv
 3. TR-064-Integration (Host-Liste, WLAN-Gäste, WAN-Status)
 4. Topologie: „Verbunden mit“ automatisch (SNMP-CAM/TR-064) + manueller Override
 5. Kategorisierung mit Heuristik + manuellem Override
 6. Interaktive Karte (Cytoscape.js): Auto-Layout + manuelle Positionen, Zoom/Pan, Suche, Filter, Klick-Details, Highlight angeschlossener Geräte
 7. Tabellenansicht (sortier/filterbar/editierbar)
 8. Persistenz in SQLite mit Historie und Änderungsereignissen (Aufbewahrung konfigurierbar)
-9. Alarm bei neuem/unbekanntem Gerät (Webhook/Gotify/Ntfy) mit Whitelist
-10. Export: JSON, CSV (Semikolon/Komma), PDF via Druckansicht; optional automatische tägliche Exporte
+9. Alarm bei neuem/unbekanntem Gerät (Webhook/Gotify/Ntfy) mit Whitelist (`NETZ_ALARM_WHITELIST`, MACs/IPs kommagetrennt — umgesetzt)
+10. Export: JSON, CSV (Semikolon/Komma), PDF via Druckansicht; optional automatische Exporte mit Intervall (`NETZ_AUTO_EXPORT_INTERVAL_HOURS`, Default 24 h = täglich, 0 = nach jedem Scan — umgesetzt)
 11. Embed via `/embed` (read-only, optional Share-Token mit Ablauf + Selektion)
 12. App-eigener Login (abschaltbar), Credentials nur als Env
 13. Dark/Light-Theme

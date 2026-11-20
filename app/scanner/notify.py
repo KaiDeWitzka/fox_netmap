@@ -1,6 +1,30 @@
 import httpx
 
 
+def _norm_mac(mac: str) -> str:
+    parts = mac.lower().replace("-", ":").split(":")
+    if len(parts) == 6:
+        try:
+            return ":".join(f"{int(p, 16):02x}" for p in parts)
+        except ValueError:
+            return mac.lower()
+    return mac.lower()
+
+
+def is_whitelisted(settings, dev: dict) -> bool:
+    raw = getattr(settings, "alarm_whitelist", "") or ""
+    entries = [_norm_mac(e.strip()) for e in raw.split(",") if e.strip()]
+    if not entries:
+        return False
+    mac = _norm_mac(dev.get("mac") or "")
+    ip = (dev.get("ip") or "").strip()
+    if mac and not mac.startswith("ip:") and mac in entries:
+        return True
+    if ip and ip in entries:
+        return True
+    return False
+
+
 def notify_new_devices(settings, devices: list[dict]) -> None:
     if not devices:
         return
