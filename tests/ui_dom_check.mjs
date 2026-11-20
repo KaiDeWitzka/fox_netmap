@@ -27,7 +27,7 @@ const DEVS = [
       {
         mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
         category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", source: "tcp",
-        ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        ports_str: "", connected_to: "d8:47:32:8e:ee:06", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "",
       },
       {
@@ -53,7 +53,16 @@ w.fetch = async (url, opts = {}) => {
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/meta")) return { gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
-    if (String(url).includes("/api/device/"))
+    if (String(url).includes("/api/device/")) {
+      const mac = String(url).split("/api/device/")[1];
+      if (mac === "d8:47:32:8e:ee:06")
+        return {
+          mac, ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
+          category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp", note: "",
+          first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
+          ports: [{ port: 80, proto: "tcp", service: "http" }],
+          connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
+        };
       return {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", source: "ping+arp,tr064", note: "",
@@ -61,6 +70,7 @@ w.fetch = async (url, opts = {}) => {
         ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
         connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
       };
+    }
     if (String(url).includes("/api/settings"))
       return {
         theme: "dark",
@@ -360,6 +370,54 @@ await sleep(30);
 check("Spotlight: Tap -> Nachbarschaft 'spot', Rest 'dim', fit() gerufen", cyInstance._spotClass === "spot" && cyInstance._dimmedClass === "dim" && cyInstance._fitCalls > 0);
 cyInstance._handlers["tap"]({ target: cyInstance });
 check("Spotlight: Hintergrund-Tap -> clear (removeClass 'spot dim')", cyInstance._removedClass === "spot dim");
+
+check("Gruppen: Checkbox vorhanden + initial aus", !!$("#chk-groups") && !$("#chk-groups").checked);
+check("Gruppen: initial keine Subnetz-Nodes", !cyInstance._els.some((e) => e.data && e.data.subnet));
+$("#chk-groups").checked = true;
+$("#chk-groups").dispatchEvent(new w.Event("change"));
+await sleep(30);
+check(
+  "Gruppen an: Subnetz-Nodes fuer alle 3 Subnetze",
+  ["subnet:10.0.0.0/24", "subnet:192.168.178.0/24", "subnet:192.168.179.0/24"].every((id) => cyInstance._els.some((e) => e.data && e.data.id === id && e.data.subnet))
+);
+check(
+  "Gruppen an: Geraete haben Parent (wlan-tv -> subnet:192.168.178.0/24)",
+  cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && e.data.parent === "subnet:192.168.178.0/24")
+);
+check(
+  "Gruppen an: WLAN-Kante bleibt geraetebasiert (wlan-tv -> wlan:...)",
+  cyInstance._els.some((e) => e.data && e.data.source === "aa:bb:cc:00:11:22" && e.data.target === "wlan:192.168.178.1")
+);
+check(
+  "Gruppen an: Cross-Subnetz-Kante auf Gruppen gemappt (179 -> 178)",
+  cyInstance._els.some((e) => e.data && e.data.source === "subnet:192.168.179.0/24" && e.data.target === "subnet:192.168.178.0/24")
+);
+check("Gruppen an: localStorage fox_groups=subnet", w.localStorage.getItem("fox_groups") === "subnet");
+$("#chk-groups").checked = false;
+$("#chk-groups").dispatchEvent(new w.Event("change"));
+await sleep(30);
+check(
+  "Gruppen aus: keine Subnetz-Nodes mehr, remote-plug ohne Parent",
+  !cyInstance._els.some((e) => e.data && e.data.subnet) && cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20" && !e.data.parent)
+);
+
+const switchFakeNode = {
+  data(k) { return k === "id" ? "d8:47:32:8e:ee:06" : undefined; },
+  closedNeighborhood() { return { addClass() {} }; },
+};
+cyInstance._handlers["tap:node"]({ target: switchFakeNode });
+await sleep(80);
+const colBtn = $("#ed-collapse");
+check("Collapse: Switch-Detail hat ed-collapse mit Kinder-Anzahl (1)", !!colBtn && colBtn.textContent.includes("(1)"));
+colBtn.click();
+await sleep(120);
+check("Collapse: remote-plug-Knoten aus der Karte entfernt", !cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20"));
+check("Collapse: Switch-Label enthaelt (+1)", cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.label.includes("(+1)")));
+check("Collapse: localStorage fox_collapsed enthaelt Switch-MAC", JSON.parse(w.localStorage.getItem("fox_collapsed") || "[]").includes("d8:47:32:8e:ee:06"));
+check("Collapse: Button wechselt zu 'einblenden'", !!$("#ed-collapse") && $("#ed-collapse").textContent.includes("einblenden"));
+$("#ed-collapse").click();
+await sleep(120);
+check("Collapse: erneuter Klick -> remote-plug wieder sichtbar", cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20"));
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

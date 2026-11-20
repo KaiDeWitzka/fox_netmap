@@ -30,6 +30,35 @@ const CATEGORY_ICONS = {
 
 let META = { gateway: "", wan_ip: "", wan_status: "" };
 
+let collapsed = new Set(JSON.parse(localStorage.getItem("fox_collapsed") || "[]"));
+let groupMode = localStorage.getItem("fox_groups") || "none";
+
+function groupOf(d) {
+  return d.subnet ? "subnet:" + d.subnet : null;
+}
+
+function childCount(mac) {
+  return devices.filter((d) => parentId(d) === mac).length;
+}
+
+function toggleCollapse(mac) {
+  if (collapsed.has(mac)) collapsed.delete(mac);
+  else collapsed.add(mac);
+  localStorage.setItem("fox_collapsed", JSON.stringify([...collapsed]));
+}
+
+function isHiddenByCollapse(mac) {
+  let p = parentId(devices.find((d) => d.mac === mac) || {});
+  let hops = 0;
+  while (p && hops++ < 10) {
+    if (collapsed.has(p)) return true;
+    const pd = devices.find((x) => x.mac === p) || devices.find((x) => x.ip === p);
+    if (!pd) return false;
+    p = parentId(pd);
+  }
+  return false;
+}
+
 let devices = [];
 let categories = [];
 let cy = null;
@@ -171,7 +200,32 @@ function parentId(d) {
 function buildElements() {
   const n = Math.max(1, devices.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
-  const nodes = devices.map((d, i) => {
+  const grouping = groupMode === "subnet";
+  const nodes = [];
+  const edges = [];
+  const nodeIds = new Set();
+  const addNode = (nd) => {
+    nodes.push(nd);
+    nodeIds.add(nd.data.id);
+  };
+
+  if (grouping) {
+    for (const sn of [...new Set(devices.map((d) => d.subnet).filter(Boolean))]) {
+      addNode({
+        data: {
+          id: "subnet:" + sn,
+          label: sn + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
+          subnet: true,
+          virtual: true,
+          status: "online",
+          color: CATEGORY_COLORS.Gateway,
+        },
+      });
+    }
+  }
+
+  devices.forEach((d, i) => {
+    if (isHiddenByCollapse(d.mac)) return;
     let x = d.x;
     let y = d.y;
     if (typeof x !== "number" || typeof y !== "number") {
@@ -179,10 +233,13 @@ function buildElements() {
       x = Math.cos(a) * R;
       y = Math.sin(a) * R;
     }
-    return {
+    const kids = childCount(d.mac);
+    const label =
+      (CATEGORY_ICONS[d.category] || "❓") + " " + (d.hostname || d.ip || d.mac) + (collapsed.has(d.mac) && kids ? ` (+${kids})` : "");
+    const nd = {
       data: {
         id: d.mac,
-        label: (CATEGORY_ICONS[d.category] || "❓") + " " + (d.hostname || d.ip || d.mac),
+        label,
         category: d.category,
         status: d.status,
         color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
@@ -190,9 +247,12 @@ function buildElements() {
       },
       position: { x, y },
     };
+    if (grouping && d.subnet) nd.data.parent = "subnet:" + d.subnet;
+    addNode(nd);
   });
+
   if (META.gateway || META.wan_ip) {
-    nodes.push({
+    addNode({
       data: {
         id: "internet",
         label: "🌐 Internet" + (META.wan_ip ? "  " + META.wan_ip : ""),
@@ -204,14 +264,31 @@ function buildElements() {
       position: { x: -R * 1.6, y: 0 },
     });
   }
-  const edges = [];
+
   for (const d of devices) {
+    if (!nodeIds.has(d.mac)) continue;
     const p = parentId(d);
-    if (p && p !== d.mac) edges.push({ data: { source: d.mac, target: p } });
+    if (!p || p === d.mac) continue;
+    let src = d.mac;
+    let tgt = p;
+    if (grouping && d.subnet) {
+      const pDev = devices.find((x) => x.mac === p) || devices.find((x) => x.ip === p);
+      if (pDev) {
+        const g1 = groupOf(d);
+        const g2 = groupOf(pDev);
+        if (g1 && g2 && g1 === g2) continue;
+        if (g1) {
+          src = g1;
+          if (g2) tgt = g2;
+        }
+      }
+    }
+    edges.push({ data: { source: src, target: tgt } });
   }
+
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
-    nodes.push({ data: { id: w, label: "📶 WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
+    addNode({ data: { id: w, label: "📶 WLAN", category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
     edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
   }
@@ -219,10 +296,9 @@ function buildElements() {
     const gw = devices.find((x) => x.ip === META.gateway);
     edges.push({ data: { source: "internet", target: gw ? gw.mac : META.gateway } });
   }
-  const nodeIds = new Set(nodes.map((nd) => nd.data.id));
   for (const e of edges) {
     if (!nodeIds.has(e.data.target)) {
-      nodes.push({
+      addNode({
         data: {
           id: e.data.target,
           label: "🏠 Gateway " + e.data.target,
@@ -232,7 +308,6 @@ function buildElements() {
           virtual: true,
         },
       });
-      nodeIds.add(e.data.target);
     }
   }
   return [...nodes, ...edges];
@@ -263,6 +338,7 @@ function renderMap() {
       container,
       style: [
         { selector: "node", style: { label: "data(label)", "font-size": 10, "text-valign": "bottom", "text-margin-y": 5, width: 26, height: 26, "background-color": "data(color)", color: "#e2e8f0", "text-background-color": "#0f172a", "text-background-opacity": 0.7, "text-background-padding": 2 } },
+        { selector: "node[subnet]", style: { "background-color": "#38bdf8", "background-opacity": 0.07, "border-width": 1.5, "border-color": "#38bdf8", "border-opacity": 0.55, label: "data(label)", "text-valign": "top", "text-margin-y": -8, "font-size": 12, "font-weight": 600, color: "#94a3b8", padding: 22 } },
         { selector: "node[status='offline']", style: { opacity: 0.4 } },
         { selector: "node:selected", style: { "border-width": 3, "border-color": "#fff" } },
         { selector: "node.hl", style: { "border-width": 4, "border-color": "#facc15" } },
@@ -326,6 +402,10 @@ async function showDetail(mac) {
     const parents = devices.filter((x) => x.category === "Router" || x.category === "Switch");
     const cur = d.layout.connected_to || "";
     html += `<h3>Verbunden mit</h3><div class="edit-row"><select id="ed-parent"><option value="">auto</option>` + parents.map((x) => `<option value="${x.mac}"${cur === x.mac ? " selected" : ""}>${x.hostname || x.ip} (${x.ip})</option>`).join("") + `</select><button id="ed-parent-save">Setzen</button></div>`;
+    if (isNet) {
+      const kids = childCount(mac);
+      html += `<div class="edit-row"><button id="ed-collapse">${collapsed.has(mac) ? `Kinder einblenden (${kids})` : `Kinder ausblenden (${kids})`}</button></div>`;
+    }
   }
   html += `<h3>Verlauf (neu zuerst)</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
   html += `<h3>Ereignisse</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
@@ -343,6 +423,14 @@ async function showDetail(mac) {
   if (psave) {
     psave.addEventListener("click", async () => {
       await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ connected_to: document.getElementById("ed-parent").value }) });
+      await loadDevices();
+      showDetail(mac);
+    });
+  }
+  const collapseBtn = document.getElementById("ed-collapse");
+  if (collapseBtn) {
+    collapseBtn.addEventListener("click", async () => {
+      toggleCollapse(mac);
       await loadDevices();
       showDetail(mac);
     });
@@ -678,6 +766,17 @@ function bindLayout() {
   });
 }
 
+function bindGroups() {
+  const chk = document.getElementById("chk-groups");
+  if (!chk) return;
+  chk.checked = groupMode === "subnet";
+  chk.addEventListener("change", () => {
+    groupMode = chk.checked ? "subnet" : "none";
+    localStorage.setItem("fox_groups", groupMode);
+    renderMap();
+  });
+}
+
 function bindScan() {
   const btn = document.getElementById("btn-scan");
   if (EMBED) return;
@@ -758,6 +857,7 @@ async function init() {
   bindTableDrag();
   bindLog();
   bindLayout();
+  bindGroups();
   startLogTimer();
   await loadDevices();
   pollScanStatus();
