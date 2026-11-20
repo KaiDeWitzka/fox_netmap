@@ -100,6 +100,7 @@ Scanner (zyklisch/manuell)
 12. App-eigener Login (abschaltbar), Credentials nur als Env
 13. Dark/Light-Theme
 14. Standalone-Docker-Betrieb; RunTipi-App als Verpackung in `foxhole`
+15. Barrierefreiheit (BITV 2.0 / WCAG 2.1 AA): Kontrast-Tokens (≥ 4,5:1 Text, ≥ 3:1 Rahmen/Fokus), Tastaturbedienung (Tabellenzeilen per Enter, Geräte-Links als Buttons, Spalten per Alt+Pfeil verschiebbar), Live-Regionen (role=status/alert), semantische Rollen (tablist, scope=col, aria-label), Skip-Link, sichtbare Login-Labels
 
 ## 5. Backlog
 

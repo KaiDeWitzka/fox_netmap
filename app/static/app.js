@@ -155,8 +155,12 @@ function hideSidebar() {
 
 function activateTab(tab) {
   const isDetail = tab === "detail";
-  document.getElementById("tab-detail").classList.toggle("active", isDetail);
-  document.getElementById("tab-settings").classList.toggle("active", !isDetail);
+  const tabDetail = document.getElementById("tab-detail");
+  const tabSettings = document.getElementById("tab-settings");
+  tabDetail.classList.toggle("active", isDetail);
+  tabDetail.setAttribute("aria-selected", String(isDetail));
+  tabSettings.classList.toggle("active", !isDetail);
+  tabSettings.setAttribute("aria-selected", String(!isDetail));
   document.getElementById("detail-content").hidden = !isDetail;
   document.getElementById("settings-content").hidden = isDetail;
   if (!isDetail) loadSettings();
@@ -395,7 +399,7 @@ async function showDetail(mac) {
   let html = `<h2>${d.hostname || d.ip}</h2><table>` + rows.map(([k, v]) => `<tr><td>${k}</td><td>${v ?? ""}</td></tr>`).join("") + "</table>";
   html += `<h3>Offene Ports (${d.ports.length})</h3><div class="chips">` + (d.ports.map((p) => `<span>${p.port}${p.service ? " " + p.service : ""}</span>`).join("") || "–") + "</div>";
   if (children.length) {
-    html += `<h3>Angeschlossene Geräte (${children.length})</h3><ul>` + children.map((c) => `<li><span class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</span> (${c.category})</li>`).join("") + "</ul>";
+    html += `<h3>Angeschlossene Geräte (${children.length})</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</button> (${c.category})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
     html += `<h3>Bearbeiten</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${c}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="Notiz" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">Speichern</button></div>`;
@@ -446,13 +450,28 @@ function renderTable() {
   if (colgroup) {
     colgroup.innerHTML = colOrder.map((k) => `<col data-key="${k}"${colWidths[k] ? ` style="width:${colWidths[k]}px"` : ""}>`).join("");
   }
-  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
-  thead.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
-    if (suppressSortClick) { suppressSortClick = false; return; }
-    const k = th.dataset.key;
-    if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
-    renderTable();
-  }));
+  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" scope="col" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
+  thead.querySelectorAll("th").forEach((th) => {
+    th.addEventListener("click", () => {
+      if (suppressSortClick) { suppressSortClick = false; return; }
+      const k = th.dataset.key;
+      if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+      renderTable();
+    });
+    th.addEventListener("keydown", (e) => {
+      if (!e.altKey) return;
+      const dir = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
+      if (!dir) return;
+      e.preventDefault();
+      const k = th.dataset.key;
+      const idx = colOrder.indexOf(k);
+      const ni = idx + dir;
+      if (ni < 0 || ni >= colOrder.length) return;
+      colOrder.splice(ni, 0, colOrder.splice(idx, 1)[0]);
+      localStorage.setItem("fox_table_cols", JSON.stringify(colOrder));
+      renderTable();
+    });
+  });
   const rows = [...devices].sort((a, b) => {
     const va = String(a[sortKey] ?? "").toLowerCase();
     const vb = String(b[sortKey] ?? "").toLowerCase();
@@ -464,7 +483,15 @@ function renderTable() {
     for (const key of colOrder) {
       tr.appendChild(buildCell(d, key));
     }
+    tr.tabIndex = 0;
+    tr.setAttribute("aria-label", `Details: ${d.hostname || d.ip || d.mac}`);
     tr.addEventListener("click", (e) => { if (e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") showDetail(d.mac); });
+    tr.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") {
+        e.preventDefault();
+        showDetail(d.mac);
+      }
+    });
     tbody.appendChild(tr);
   }
 }
@@ -611,8 +638,9 @@ function bindTableDrag() {
 
 function bindNav() {
   document.querySelectorAll("#nav button").forEach((b) => b.addEventListener("click", () => {
-    document.querySelectorAll("#nav button").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll("#nav button").forEach((x) => { x.classList.remove("active"); x.setAttribute("aria-pressed", "false"); });
     b.classList.add("active");
+    b.setAttribute("aria-pressed", "true");
     document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.view));
     if (b.dataset.view === "map" && cy) setTimeout(() => { cy.resize(); cy.fit(undefined, 40); }, 50);
     if (b.dataset.view === "log") loadLogs();
@@ -654,7 +682,11 @@ function bindFilters() {
   document.getElementById("filter-category").addEventListener("change", loadDevices);
   const statusSel = document.getElementById("filter-status");
   const btnOnline = document.getElementById("btn-online");
-  const syncOnline = () => btnOnline.classList.toggle("toggled", statusSel.value === "online");
+  const syncOnline = () => {
+    const on = statusSel.value === "online";
+    btnOnline.classList.toggle("toggled", on);
+    btnOnline.setAttribute("aria-pressed", String(on));
+  };
   btnOnline.addEventListener("click", () => {
     statusSel.value = statusSel.value === "online" ? "" : "online";
     syncOnline();
