@@ -1162,3 +1162,37 @@ const I18N_EXTRA5 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA5[lang] || {});
+
+const I18N_EXTRA6 = {
+  "de": {
+    "pdf.orientTitle": "PDF-Ausrichtung (wird gemerkt)",
+    "pdf.portrait": "hoch",
+    "pdf.landscape": "quer"
+  },
+  "en": {
+    "pdf.orientTitle": "PDF orientation (remembered)",
+    "pdf.portrait": "portrait",
+    "pdf.landscape": "landscape"
+  },
+  "fr": {
+    "pdf.orientTitle": "Orientation du PDF (mémorisée)",
+    "pdf.portrait": "portrait",
+    "pdf.landscape": "paysage"
+  },
+  "es": {
+    "pdf.orientTitle": "Orientación del PDF (se recuerda)",
+    "pdf.portrait": "vertical",
+    "pdf.landscape": "horizontal"
+  },
+  "it": {
+    "pdf.orientTitle": "Orientamento PDF (memorizzato)",
+    "pdf.portrait": "verticale",
+    "pdf.landscape": "orizzontale"
+  },
+  "pt": {
+    "pdf.orientTitle": "Orientação do PDF (guardada)",
+    "pdf.portrait": "retrato",
+    "pdf.landscape": "paisagem"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA6[lang] || {});

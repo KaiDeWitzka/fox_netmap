@@ -333,3 +333,66 @@ def test_export_pdf(auth_client, client, app):
     tok = auth_client.post("/api/tokens", json={"expires_hours": 24}).json()["token"]
     r3 = anon0.post(f"/api/export/pdf?token={tok}", json={})
     assert r3.status_code == 200 and r3.content.startswith(b"%PDF")
+
+
+def _pdf_mediabox(pdf: bytes):
+    import re
+
+    m = re.search(rb"/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]", pdf)
+    assert m, "kein MediaBox gefunden"
+    return float(m.group(1)), float(m.group(2))
+
+
+def _pdf_text(pdf: bytes) -> bytes:
+    """Rohe PDF-Bytes + alle FlateDecode-Streams entpackt (damit Text assertions greifen)."""
+    import re
+    import zlib
+
+    out = pdf
+    for m in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
+        try:
+            out += zlib.decompress(m.group(1))
+        except Exception:
+            pass
+    return out
+
+
+def test_export_pdf_orientation(auth_client):
+    r = auth_client.post("/api/export/pdf", json={})
+    assert r.status_code == 200
+    w, h = _pdf_mediabox(r.content)
+    assert w < h  # A4 portrait
+    r = auth_client.post("/api/export/pdf", json={"orientation": "landscape"})
+    assert r.status_code == 200
+    w, h = _pdf_mediabox(r.content)
+    assert w > h  # A4 quer
+    assert auth_client.post("/api/export/pdf", json={"orientation": "diagonal"}).status_code == 422
+
+
+def test_build_pdf_wraps_long_cells(app):
+    from app import exporters
+
+    settings = app.state.settings
+    rows = [
+        {
+            "hostname": "Sehr-Langer-Hostname-" * 5,
+            "ip": "192.168.178.10",
+            "mac": "d8:47:32:8e:ee:06",
+            "vendor": "TP-LINK TECHNOLOGIES CO.,LTD. International",
+            "category": "Switch",
+            "status": "online",
+            "subnet": "192.168.178.0/24",
+            "connected_to": "192.168.178.1",
+            "ports_str": ";".join(str(p) for p in range(1, 200)),
+        }
+    ]
+    pdf = exporters.build_pdf(settings, rows, None, title="T<b>bold</b>&Co")
+    assert pdf.startswith(b"%PDF")
+    # escaping greift: Markup landet literal im Text, wird nicht als Tag geparst
+    assert b"T<b>bold</b>&Co" in _pdf_text(pdf)
+    w, h = _pdf_mediabox(pdf)
+    assert w < h
+    pdf_ls = exporters.build_pdf(settings, rows, None, orientation="landscape")
+    assert pdf_ls.startswith(b"%PDF")
+    w, h = _pdf_mediabox(pdf_ls)
+    assert w > h

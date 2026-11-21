@@ -189,7 +189,7 @@ si può regolare con `?theme=dark|light` e `?lang=…`.
   collegamenti, siti). CSV con separatore a scelta (`/api/export/csv?sep=;`).
 - **Stampa → PDF:** vista ottimizzata per la stampa (browser «Salva come PDF»).
 - **Auto-export:**
-- **PDF (lato server):** pulsante **PDF** nell'intestazione — snapshot della mappa (PNG) + tabella dispositivi come PDF reale via `POST /api/export/pdf` (anche con token, filtri tramite query param). attivabile in Impostazioni; scrive JSON+CSV dopo ogni intervallo nella cartella
+- **PDF (lato server):** pulsante **PDF** nell'intestazione — snapshot della mappa (PNG) + tabella dispositivi come PDF reale via `POST /api/export/pdf`  (anche con token, filtri tramite query param). Orientamento verticale/orizzontale selezionabile accanto al pulsante (memorizzato, `orientation` nel body POST); le celle lunghe vanno a capo invece di sovrapporsi. attivabile in Impostazioni; scrive JSON+CSV dopo ogni intervallo nella cartella
   di esportazione (relativa al volume dati, predefinita `exports`).
 
 ---

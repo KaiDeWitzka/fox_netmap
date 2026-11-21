@@ -190,7 +190,7 @@ ajustar con `?theme=dark|light` y `?lang=…`.
   historial, conexiones, sitios). CSV con separador elegible (`/api/export/csv?sep=;`).
 - **Imprimir → PDF:** vista optimizada para imprimir (navegador «Guardar como PDF»).
 - **Auto-exportación:**
-- **PDF (en el servidor):** botón **PDF** en la cabecera — captura del mapa (PNG) + tabla de dispositivos como PDF real vía `POST /api/export/pdf` (también con token, filtros vía parámetros de consulta). activar en Configuración; escribe JSON+CSV tras cada intervalo en la
+- **PDF (en el servidor):** botón **PDF** en la cabecera — captura del mapa (PNG) + tabla de dispositivos como PDF real vía `POST /api/export/pdf`  (también con token, filtros vía parámetros de consulta). Orientación vertical/horizontal seleccionable junto al botón (se recuerda, `orientation` en el body del POST); las celdas largas se ajustan en vez de solaparse. activar en Configuración; escribe JSON+CSV tras cada intervalo en la
   carpeta de exportación (relativa al volumen de datos, por defecto `exports`).
 
 ---

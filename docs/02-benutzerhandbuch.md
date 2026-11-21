@@ -190,7 +190,7 @@ kann über `?theme=dark|light` und `?lang=…` angepasst werden.
   Standorte. CSV mit wählbarem Trennzeichen (`/api/export/csv?sep=;`).
 - **Drucken → PDF:** druckoptimierte Ansicht (Browser „Als PDF speichern“).
 - **Auto-Export:**
-- **PDF (serverseitig):** Button **PDF** im Header — Karten-Snapshot (PNG) + Geräte-Tabelle als echtes PDF via `POST /api/export/pdf` (auch mit Embed-Token, Filter via Query-Parameter). in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
+- **PDF (serverseitig):** Button **PDF** im Header — Karten-Snapshot (PNG) + Geräte-Tabelle als echtes PDF via `POST /api/export/pdf`  (auch mit Embed-Token, Filter via Query-Parameter). Ausrichtung hoch/quer per Select neben dem Button wählbar und gemerkt (`orientation` im POST-Body); lange Zellen werden umgebrochen statt zu überlappen. in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
   den Export-Ordner (relativ zum Daten-Volume, Default `exports`).
 
 ---
