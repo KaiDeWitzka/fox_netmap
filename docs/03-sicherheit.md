@@ -117,6 +117,22 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 - Embed-Tokens: zufällig (192 Bit), ablauffähig, filterbar, nur lesend.
 - Die Web-Oberfläche läuft ohne Host-Netzwerk.
 
+### 2.9 Lieferkette (Supply Chain, seit v1.5.1)
+
+| Maßnahme | Umsetzung |
+|---|---|
+| Hash-gepinnte Python-Abhängigkeiten | `requirements.txt` per `pip-compile --generate-hashes`; Installation in Image und CI nur mit `--require-hashes --no-deps` |
+| Gepinntes Basis-Image | `python:3.12-slim@sha256:…`; zusätzlich `apt-get upgrade` beim Build |
+| Gepinnte CI-Bausteine | Alle GitHub Actions per Commit-SHA (Versionskommentar dahinter), `npm ci` gegen `package-lock.json` |
+| Trivy ohne `trivy-action` | `scripts/trivy.sh` startet `ghcr.io/aquasecurity/trivy` per Digest. Hintergrund: Am 19.03.2026 wurden Tags von `trivy-action` und `setup-trivy` sowie das Binary v0.69.4 manipuliert ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23), CVE-2026-33634, [BSI-Warnung](https://www.bsi.bund.de/SharedDocs/Cybersicherheitswarnungen/DE/2026/2026-237970-1032.pdf?__blob=publicationFile&v=4)). Ein Digest kann nachträglich nicht umgebogen werden. |
+| Schwachstellen-Gate | CI (`docker`-Job) und Release brechen bei fixbaren `CRITICAL`/`HIGH`-Befunden ab; `trivy fs` prüft zusätzlich Dockerfile/Compose (Misconfig) und Secrets. Ausnahmen nur begründet in `.trivyignore` |
+| Nachscan | `image-scan.yml` scannt `latest` wöchentlich gegen die aktuelle Schwachstellen-Datenbank |
+| SBOM | CycloneDX und SPDX (Trivy) als CI-Artefakt und Release-Anhang; zusätzlich BuildKit-SBOM- und Provenance-Attestierung (`mode=max`) am Image in GHCR. Orientierung: BSI TR-03183-2 (SBOM-Formate CycloneDX/SPDX) |
+| Updates | Dependabot wöchentlich für pip, npm, Docker, Actions; 7 Tage Cooldown gegen kurzlebige kompromittierte Releases |
+| Release-Integrität | Image wird nur aus Tags gebaut, die zur App-Version passen, und nur nach grünem Test- und Trivy-Lauf gepusht |
+
+Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht verfügbar: Code-Scanning-Upload (SARIF) und GitHub-Artifact-Attestations. Ersatz: Berichte als Artefakt/Release-Anhang und BuildKit-Attestierungen in der Registry.
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |
@@ -129,6 +145,10 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 | ORP.4.A8 Passwortgebrauch / Speicherung | PBKDF2 mit 600.000 Iterationen, Startpasswort nicht im Log |
 | SYS.1.6.A3 / A8 / A21 Container: Rechte, Ressourcen, Härtung | Nicht-root, minimale Capabilities, Read-only-Root-FS, Healthcheck |
 | DSGVO Art. 25 Privacy by Default | Online-Herstellerabfrage standardmäßig aus |
+| CON.8 Software-Entwicklung (A6 Bibliotheken aus vertrauenswürdigen Quellen, A20 Prüfung von Komponenten) | Hash-gepinnte Abhängigkeiten, Trivy-Gate, SBOM |
+| OPS.1.1.3 Patch- und Änderungsmanagement | Dependabot, wöchentlicher Nachscan, Patch-Releases |
+| SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung | Basis-Image per Digest, eigenes Image in GHCR mit Provenance |
+| APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release |
 | OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |
 
 ## 4. Bekannte Restrisiken
@@ -140,7 +160,8 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 | Sessions nur im Speicher | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte |
 | Scanner ohne `no-new-privileges` | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt |
 | `style-src 'unsafe-inline'` in der CSP | Nötig für Cytoscape; Styles können kein JavaScript ausführen |
-| Image-Build, Schwachstellen-Scan, SBOM | Geplant (Punkt 3): GHCR-Veröffentlichung, Trivy, Dependabot, SBOM |
+| Paket in GHCR privat | Solange das Repository privat ist; Pull nur mit Token (`read:packages`). Für eine Runtipi-App müsste das Paket öffentlich werden |
+| Fixlose Schwachstellen im Basis-Image | Werden gemeldet, aber nicht als Gate gewertet (`--ignore-unfixed`); Abhilfe über Dependabot-Digest-Updates |
 
 ## 5. Sicherheitslücken melden
 

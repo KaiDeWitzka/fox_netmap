@@ -1,0 +1,9 @@
+# Bewusste Ausnahmen für Trivy. Jede Ausnahme braucht Begründung und Prüfdatum.
+# Format: eine ID pro Zeile (CVE-…, AVD-…/DS…); Kommentarzeilen mit #.
+
+# AVD-DS-0002 "Image user should not be 'root'":
+# Das Image startet absichtlich als root, damit docker/entrypoint.sh Bestandsdaten im Volume an
+# UID 10001 übergeben kann. Die Anwendung selbst läuft per setpriv als UID 10001 ohne Capabilities;
+# die CI prüft das im laufenden Container (Job "docker"). Geprüft: 2026-11-21.
+AVD-DS-0002
+DS002

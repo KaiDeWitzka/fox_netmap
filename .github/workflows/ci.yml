@@ -9,23 +9,27 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+      - name: Abhängigkeiten installieren (hash-gepinnt)
+        run: pip install --require-hashes --no-deps -r requirements-dev.txt && pip check
       - name: Lint
         run: ruff check .
       - name: Tests
         run: python -m pytest -q
       - name: UI DOM-Test (Knopf-Audit)
         run: |
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           node tests/ui_dom_check.mjs
 
   docker:
@@ -37,10 +41,38 @@ jobs:
       NETZ_SUBNETS: 127.0.0.0/30
       NETZ_PORT_TOP: "10"
       NETZ_SCAN_INTERVAL: "60"
+      COMPOSE_PROJECT_NAME: foxci
+      IMAGE: foxci-netmap
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Image bauen
         run: docker compose build
+      - name: Trivy-Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-${{ github.run_id }}
+          restore-keys: trivy-
+      - name: Trivy – Schwachstellen im Image (Gate CRITICAL/HIGH mit Fix)
+        run: |
+          mkdir -p reports ~/.cache/trivy
+          scripts/trivy.sh image --scanners vuln --ignore-unfixed --severity CRITICAL,HIGH \
+            --ignorefile .trivyignore --exit-code 1 "$IMAGE"
+      - name: Trivy – Konfiguration und Repository (Dockerfile, Compose, Lockfiles)
+        run: |
+          scripts/trivy.sh fs --scanners vuln,misconfig,secret --ignore-unfixed --severity CRITICAL,HIGH \
+            --ignorefile .trivyignore --skip-dirs node_modules --exit-code 1 .
+      - name: SBOM erzeugen (CycloneDX + SPDX)
+        run: |
+          scripts/trivy.sh image --format cyclonedx --output reports/sbom.cdx.json "$IMAGE"
+          scripts/trivy.sh image --format spdx-json --output reports/sbom.spdx.json "$IMAGE"
+          scripts/trivy.sh image --scanners vuln --format table --output reports/trivy-image.txt "$IMAGE"
+      - name: SBOM und Scan-Bericht hochladen
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-und-scan
+          path: reports/
+          retention-days: 30
       - name: Upgrade simulieren (root-eigene Bestandsdaten wie bis v1.4.x)
         run: |
           mkdir -p data

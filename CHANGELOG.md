@@ -4,6 +4,25 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.5.1] – 2026-11-21
+
+### Lieferkette (Supply Chain)
+- **Container-Image in GHCR:** Release-Tags veröffentlichen `ghcr.io/kaidewitzka/fox_netmap` für `linux/amd64` und
+  `linux/arm64` (Tags `X.Y.Z`, `X.Y`, `X`, `latest`, `sha-…`) mit SBOM- und Provenance-Attestierung.
+- **Trivy-Gate** in CI und Release: Abbruch bei fixbaren `CRITICAL`/`HIGH`-Schwachstellen im Image sowie bei
+  Fehlkonfigurationen und Secrets im Repository. Trivy läuft aus einem per Digest gepinnten Image
+  (`scripts/trivy.sh`), nicht über `trivy-action` (Kompromittierung März 2026).
+- **SBOM** (CycloneDX und SPDX) als CI-Artefakt und als Anhang jedes GitHub-Releases, zusammen mit dem Trivy-Bericht.
+- **Wöchentlicher Nachscan** des veröffentlichten Images (`image-scan.yml`).
+- **Dependabot** für pip, npm, Docker und GitHub Actions (wöchentlich, gruppiert, 7 Tage Cooldown).
+- **Reproduzierbarer Build:** Python-Abhängigkeiten mit SHA-256-Hashes (`pip-compile`, `--require-hashes`),
+  Basis-Image per Digest, alle Actions per Commit-SHA gepinnt, `npm ci` statt `npm install`, `apt-get upgrade` im Image.
+- OCI-Labels im Image (Quelle, Lizenz, Version); Release prüft, dass Tag und `app.__version__` übereinstimmen.
+
+### Geändert
+- `requirements.txt` ist jetzt eine generierte Lock-Datei; Versionsbereiche stehen in `requirements.in`.
+- `release.yml` macht zusätzlich einen Probelauf (ohne Push) in Pull Requests, die Build-Dateien ändern.
+
 ## [1.5.0] – 2026-11-21
 
 ### Sicherheit
