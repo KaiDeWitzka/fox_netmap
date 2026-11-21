@@ -70,6 +70,11 @@ CREATE TABLE IF NOT EXISTS scan_state (
     next_scan TEXT,
     scanning INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS oui_cache (
+    prefix TEXT PRIMARY KEY,
+    vendor TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_history_mac ON device_history(mac, ts);
 CREATE INDEX IF NOT EXISTS idx_events_mac ON device_events(mac, ts);
 """
@@ -313,6 +318,18 @@ def get_scan_state(conn: sqlite3.Connection) -> dict:
 def set_scan_state(conn: sqlite3.Connection, **fields) -> None:
     keys = ", ".join(f"{k} = ?" for k in fields)
     conn.execute(f"UPDATE scan_state SET {keys} WHERE id = 1", tuple(fields.values()))
+
+
+def get_oui_cache(conn: sqlite3.Connection, prefix: str) -> str | None:
+    r = conn.execute("SELECT vendor FROM oui_cache WHERE prefix = ?", (prefix,)).fetchone()
+    return r["vendor"] if r else None
+
+
+def set_oui_cache(conn: sqlite3.Connection, prefix: str, vendor: str) -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO oui_cache (prefix, vendor, fetched_at) VALUES (?, ?, ?)",
+        (prefix, vendor, utcnow()),
+    )
 
 
 def get_setting(conn: sqlite3.Connection, key: str) -> str | None:

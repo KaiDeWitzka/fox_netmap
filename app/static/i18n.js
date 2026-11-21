@@ -1117,3 +1117,42 @@ const I18N_EXTRA4 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA4[lang] || {});
+const I18N_EXTRA5 = {
+  "de": {
+    "st.ouiOnline": "Online-OUI-Fallback (Hersteller online nachschlagen)",
+    "st.ouiMax": "OUI-Online: max. Lookups pro Scan",
+    "st.ouiUrl": "OUI-Online-API-URL",
+    "err.ouiMax": "OUI-Lookups pro Scan: 0–200"
+  },
+  "en": {
+    "st.ouiOnline": "Online OUI fallback (look up vendor online)",
+    "st.ouiMax": "Online OUI: max lookups per scan",
+    "st.ouiUrl": "Online OUI API URL",
+    "err.ouiMax": "OUI lookups per scan: 0–200"
+  },
+  "fr": {
+    "st.ouiOnline": "Repli OUI en ligne (fabricant recherché en ligne)",
+    "st.ouiMax": "OUI en ligne : max de requêtes par scan",
+    "st.ouiUrl": "URL de l'API OUI en ligne",
+    "err.ouiMax": "Requêtes OUI par scan : 0–200"
+  },
+  "es": {
+    "st.ouiOnline": "Respaldo OUI en línea (buscar fabricante en línea)",
+    "st.ouiMax": "OUI en línea: máx. consultas por escaneo",
+    "st.ouiUrl": "URL de la API OUI en línea",
+    "err.ouiMax": "Consultas OUI por escaneo: 0–200"
+  },
+  "it": {
+    "st.ouiOnline": "Fallback OUI online (cerca il produttore online)",
+    "st.ouiMax": "OUI online: max lookup per scansione",
+    "st.ouiUrl": "URL API OUI online",
+    "err.ouiMax": "Lookup OUI per scansione: 0–200"
+  },
+  "pt": {
+    "st.ouiOnline": "Fallback OUI online (procurar fabricante online)",
+    "st.ouiMax": "OUI online: máx. consultas por scan",
+    "st.ouiUrl": "URL da API OUI online",
+    "err.ouiMax": "Consultas OUI por scan: 0–200"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA5[lang] || {});

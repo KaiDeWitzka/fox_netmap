@@ -33,6 +33,9 @@ SAFE_SETTINGS = [
     "auto_export_dir",
     "auto_export_interval_hours",
     "mdns_enabled",
+    "oui_online_enabled",
+    "oui_online_max",
+    "oui_online_url",
     "alarm_whitelist",
     "sites",
     "lang",
@@ -281,6 +284,9 @@ class SettingsPatch(BaseModel):
     auto_export_dir: str | None = None
     auto_export_interval_hours: int | None = None
     mdns_enabled: bool | None = None
+    oui_online_enabled: bool | None = None
+    oui_online_max: int | None = None
+    oui_online_url: str | None = None
     alarm_whitelist: str | None = None
     sites: str | None = None
     lang: str | None = None
@@ -338,6 +344,10 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "snmp_community darf keine Leerzeichen enthalten"
     if body.fritz_pass is not None and len(body.fritz_pass) > 256:
         return "fritz_pass darf hoechstens 256 Zeichen haben"
+    if body.oui_online_max is not None and not 0 <= body.oui_online_max <= 200:
+        return "oui_online_max muss zwischen 0 und 200 liegen"
+    if body.oui_online_url is not None and body.oui_online_url.strip() and not body.oui_online_url.strip().startswith(("http://", "https://")):
+        return f"oui_online_url muss eine http(s)-URL sein: {body.oui_online_url.strip()!r}"
     if body.subnets is not None and body.subnets.strip():
         for sn in body.subnets.split(","):
             try:

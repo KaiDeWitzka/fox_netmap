@@ -512,3 +512,49 @@ def test_effective_settings_neue_compose_keys(tmp_path):
     assert eff.notify_webhook == "https://hook.example/x"
     assert eff.fritz_pass == "geheim123"
     conn.close()
+
+
+def test_parse_vendor():
+    assert oui.parse_vendor("ExampleVendor Inc.") == "ExampleVendor Inc."
+    assert oui.parse_vendor('{"vendor": "JsonVendor"}') == "JsonVendor"
+    assert oui.parse_vendor('{"company": "OtherVendor"}') == "OtherVendor"
+    assert oui.parse_vendor("") == ""
+    assert oui.parse_vendor("{kaputt") == ""
+
+
+def test_oui_online_fallback(tmp_path, monkeypatch):
+    conn, settings = make(tmp_path)
+    settings = settings.model_copy(update={"oui_online_enabled": True, "oui_online_max": 5, "oui_online_url": "https://oui.example"})
+    calls = []
+
+    def fake_get(url, timeout=5.0):
+        calls.append(url)
+        return "ExampleVendor Inc."
+
+    monkeypatch.setattr(oui, "_http_get", fake_get)
+    budget = {"left": 5}
+    v = oui.lookup_online("AA:BB:CC:11:22:33", settings, conn, budget)
+    assert v == "ExampleVendor Inc."
+    assert budget["left"] == 4
+    assert calls == ["https://oui.example/AABBCC"]
+    assert db.get_oui_cache(conn, "AABBCC") == "ExampleVendor Inc."
+    # Cache-Treffer: kein HTTP, kein Budgetverbrauch
+    v2 = oui.lookup_online("aa:bb:cc:99:88:77", settings, conn, budget)
+    assert v2 == "ExampleVendor Inc." and len(calls) == 1 and budget["left"] == 4
+    # Budget 0 -> kein HTTP
+    assert oui.lookup_online("11:22:33:44:55:66", settings, conn, {"left": 0}) == "" and len(calls) == 1
+    # deaktiviert -> kein HTTP
+    s_off = settings.model_copy(update={"oui_online_enabled": False})
+    assert oui.lookup_online("11:22:33:44:55:66", s_off, conn, {"left": 5}) == "" and len(calls) == 1
+    # HTTP-Fehler -> "" und nicht gecacht
+    def boom(url, timeout=5.0):
+        raise OSError("down")
+
+    monkeypatch.setattr(oui, "_http_get", boom)
+    assert oui.lookup_online("DE:AD:BE:EF:00:01", settings, conn, {"left": 5}) == ""
+    assert db.get_oui_cache(conn, "DEADBE") is None
+    # JSON-Antwort parsen + cachen
+    monkeypatch.setattr(oui, "_http_get", lambda url, timeout=5.0: '{"vendor": "JsonVendor"}')
+    assert oui.lookup_online("DE:AD:BE:EF:00:02", settings, conn, {"left": 5}) == "JsonVendor"
+    assert db.get_oui_cache(conn, "DEADBE") == "JsonVendor"
+    conn.close()

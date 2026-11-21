@@ -159,6 +159,7 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 | Historique / rétention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historique en heures ; supprimer les appareils hors ligne après N jours (0 = jamais) |
 | Auto-export / intervalle / dossier | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV auto ; intervalle en h (0 = après chaque scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | noms d'hôte via mDNS PTR en secours |
+| Repli OUI en ligne / max de requêtes par scan / URL d'API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricant des MAC inconnues recherché en ligne (défaut `https://api.macvendors.com`), mis en cache en BDD |
 | Login activé | `NETZ_AUTH_ENABLED` | login par session on/off (user/pass restent env-only) |
 | Thème / langue | `NETZ_THEME` / `NETZ_LANG` | dark/light ; de/en/fr/es/it/pt |
 

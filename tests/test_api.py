@@ -213,6 +213,11 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"notify_ntfy": "https://ntfy.example/t"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"snmp_community": "mit leerzeichen"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"snmp_community": "public"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"oui_online_max": -1}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"oui_online_max": 25}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"oui_online_url": "keine-url"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"oui_online_url": "https://api.macvendors.com"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"oui_online_enabled": False}).status_code == 200
     body = auth_client.get("/api/settings").json()
     for secret in ("fritz_pass", "auth_pass", "notify_gotify_token", "notify_ntfy_token"):
         assert secret not in body, secret

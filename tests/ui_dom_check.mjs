@@ -88,6 +88,9 @@ w.fetch = async (url, opts = {}) => {
         auto_export: false,
         auto_export_interval_hours: 24,
         mdns_enabled: true,
+        oui_online_enabled: true,
+        oui_online_max: 10,
+        oui_online_url: "",
         alarm_whitelist: "",
         sites: "",
         lang: "de",
@@ -413,6 +416,18 @@ await sleep(50);
 check("Settings: Retention 14 -> PATCH", patchCount() === patchBase2 + 1);
 
 check("Settings: Felder Whitelist/Auto-Export-Intervall/mDNS vorhanden", !!$("#st-whitelist") && !!$("#st-autoexport-interval") && !!$("#st-mdns"));
+check("Settings: OUI-Online-Felder vorhanden (Checkbox/Max/URL)", !!$("#st-ouionline") && !!$("#st-ouimax") && !!$("#st-ouiurl"));
+const patchBase8 = patchCount();
+$("#st-ouimax").value = "-1";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: oui_online_max=-1 -> kein PATCH, Fehlermeldung", patchCount() === patchBase8 && $("#settings-msg").textContent.length > 0);
+$("#st-ouimax").value = "25";
+$("#st-ouiurl").value = "https://api.macvendors.com";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+const lastPatch8 = [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");
+check("Settings: OUI gueltig -> PATCH enthaelt oui_online_max=25 + oui_online_url", patchCount() === patchBase8 + 1 && !!lastPatch8 && lastPatch8.body.includes('"oui_online_max":25') && lastPatch8.body.includes('"oui_online_url":"https://api.macvendors.com"'));
 const patchBase3 = patchCount();
 $("#st-whitelist").value = "bogus!!";
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
