@@ -495,3 +495,18 @@ def test_topology_gateway6_und_v6_wahl(monkeypatch):
     assert topology.gateway_for("2003:db8::5", "192.168.178.1", "2003:db8::1") == "2003:db8::1"
     assert topology.gateway_for("192.168.178.5", "192.168.178.1", "2003:db8::1") == "192.168.178.1"
     assert topology.resolve_connected_to("aa:bb:cc:00:00:01", "2003:db8::5", gateway="192.168.178.1", gateway6="2003:db8::1") == "2003:db8::1"
+
+
+def test_effective_settings_neue_compose_keys(tmp_path):
+    conn, settings = make(tmp_path)
+    db.set_setting(conn, "fritz_url", "http://192.168.178.1:49000")
+    db.set_setting(conn, "scan_timeout", "3.5")
+    db.set_setting(conn, "ports", "80,443")
+    db.set_setting(conn, "notify_webhook", "https://hook.example/x")
+    conn.commit()
+    eff = effective_settings(conn, settings)
+    assert eff.fritz_url == "http://192.168.178.1:49000"
+    assert eff.scan_timeout == 3.5
+    assert eff.ports == "80,443"
+    assert eff.notify_webhook == "https://hook.example/x"
+    conn.close()
