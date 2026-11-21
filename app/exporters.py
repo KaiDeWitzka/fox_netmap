@@ -116,36 +116,54 @@ def auto_export(settings, conn) -> list[str]:
     return written
 
 
-def build_pdf(settings, rows: list[dict], conn, image_bytes: bytes | None = None, title: str = "") -> bytes:
-    """Serverseitiges PDF: Kopf (Version/Zeit/Statistik) + optional Karten-Snapshot (PNG/JPEG) + Geräte-Tabelle."""
+def build_pdf(
+    settings,
+    rows: list[dict],
+    conn,
+    image_bytes: bytes | None = None,
+    title: str = "",
+    orientation: str = "portrait",
+) -> bytes:
+    """Serverseitiges PDF: Kopf (Version/Zeit/Statistik) + optional Karten-Snapshot + Geräte-Tabelle.
+
+    orientation: "portrait" (A4 hoch) oder "landscape" (A4 quer).
+    Zellen sind Paragraphs -> langer Text wird umgebrochen statt zu überlappen.
+    """
+    from html import escape
+
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+    page = landscape(A4) if orientation == "landscape" else A4
+    margin = 14 * mm
+    usable_w = page[0] - 2 * margin
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=A4, leftMargin=14 * mm, rightMargin=14 * mm, topMargin=14 * mm, bottomMargin=14 * mm,
+        buf, pagesize=page, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin,
         title=title or "fox_netmap Export",
     )
     styles = getSampleStyleSheet()
+    cell_style = ParagraphStyle("cell", parent=styles["Normal"], fontName="Helvetica", fontSize=7, leading=8.5)
+    head_style = ParagraphStyle("head", parent=cell_style, fontName="Helvetica-Bold", textColor=colors.white)
     online = sum(1 for r in rows if r.get("status") == "online")
-    story = [Paragraph(f"fox_netmap — {title or 'Netzwerk-Export'}", styles["Title"])]
+    story = [Paragraph(escape(f"fox_netmap — {title or 'Netzwerk-Export'}"), styles["Title"])]
     meta = (
-        f"Version {settings.app_version} · erstellt {db.utcnow()} · "
+        f"Version {escape(str(settings.app_version))} · erstellt {db.utcnow()} · "
+        f"Ausrichtung: {'quer' if orientation == 'landscape' else 'hoch'} · "
         f"Geräte: {len(rows)} (online {online}, offline {len(rows) - online})"
     )
     story.append(Paragraph(meta, styles["Normal"]))
     story.append(Spacer(1, 6 * mm))
 
-    max_w = A4[0] - 28 * mm
     if image_bytes:
         img = Image(io.BytesIO(image_bytes))
         ratio = img.imageHeight / float(img.imageWidth or 1)
-        img.drawWidth = max_w
-        img.drawHeight = max_w * ratio
-        max_h = A4[1] - 70 * mm
+        img.drawWidth = usable_w
+        img.drawHeight = usable_w * ratio
+        max_h = page[1] - 70 * mm
         if img.drawHeight > max_h:
             img.drawHeight = max_h
             img.drawWidth = max_h / ratio
@@ -153,33 +171,25 @@ def build_pdf(settings, rows: list[dict], conn, image_bytes: bytes | None = None
         story.append(Spacer(1, 6 * mm))
 
     header = ["Hostname", "IP", "MAC", "Hersteller", "Kategorie", "Status", "Subnetz", "Verbunden mit", "Ports"]
-    data = [header]
+    fracs = [0.15, 0.11, 0.14, 0.13, 0.10, 0.07, 0.12, 0.10, 0.08]
+    data = [[Paragraph(escape(h), head_style) for h in header]]
     for r in rows:
         data.append([
-            r.get("hostname") or "",
-            r.get("ip") or "",
-            r.get("mac") or "",
-            r.get("vendor") or "",
-            r.get("category") or "",
-            r.get("status") or "",
-            r.get("subnet") or "",
-            r.get("connected_to") or "",
-            r.get("ports_str") or "",
+            Paragraph(escape(str(r.get(k) or "")), cell_style)
+            for k in ("hostname", "ip", "mac", "vendor", "category", "status", "subnet", "connected_to", "ports_str")
         ])
-    widths = [32 * mm, 24 * mm, 30 * mm, 22 * mm, 20 * mm, 15 * mm, 26 * mm, 24 * mm, max_w - 193 * mm]
-    t = Table(data, repeatRows=1, colWidths=widths)
+    t = Table(data, repeatRows=1, colWidths=[f * usable_w for f in fracs])
     t.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#075985")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 7),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f1f5f9")]),
                 ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#94a3b8")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("TOPPADDING", (0, 0), (-1, -1), 2),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
             ]
         )
     )

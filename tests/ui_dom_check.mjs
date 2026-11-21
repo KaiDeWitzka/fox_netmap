@@ -235,6 +235,21 @@ check(
   "Header: PDF-Button -> POST /api/export/pdf mit Karten-Snapshot (data:image/png)",
   !!pdfCall && pdfCall.method === "POST" && !!pdfCall.body && pdfCall.body.includes('"image":"data:image/png;base64,')
 );
+
+check(
+  "Header: PDF-Orientierung-Select vorhanden (2 Optionen, default hoch)",
+  (() => { const el = $("#pdf-orientation"); return !!el && el.options.length === 2 && el.value === "portrait"; })()
+);
+$("#pdf-orientation").value = "landscape";
+$("#pdf-orientation").dispatchEvent(new w.Event("change"));
+check("Header: Orientierung wird persistiert (localStorage fox_pdf_orientation)", w.localStorage.getItem("fox_pdf_orientation") === "landscape");
+const origAnchorClick2 = w.HTMLAnchorElement.prototype.click;
+w.HTMLAnchorElement.prototype.click = function () {};
+$("#btn-pdf").click();
+await sleep(60);
+w.HTMLAnchorElement.prototype.click = origAnchorClick2;
+const pdfCall2 = [...calls].reverse().find((c) => c.url.includes("/api/export/pdf"));
+check("Header: PDF-POST enthaelt orientation=landscape", !!pdfCall2 && !!pdfCall2.body && pdfCall2.body.includes('"orientation":"landscape"'));
 check("Header: Suche + 2 Filter vorhanden", $("#search") && $("#filter-category") && $("#filter-status"));
 
 $("#search").value = "nas";

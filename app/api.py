@@ -196,6 +196,7 @@ def export_json(request: Request, q: str = "", category: str = "", status: str =
 class PdfExport(BaseModel):
     image: str | None = None
     title: str | None = None
+    orientation: str | None = None
 
 
 @router.post("/api/export/pdf")
@@ -227,8 +228,11 @@ def export_pdf(
         if not (image_bytes.startswith(b"\x89PNG") or image_bytes.startswith(b"\xff\xd8")):
             raise HTTPException(422, "image muss PNG oder JPEG sein")
     title = (payload.title or "").strip()[:120]
+    orientation = (payload.orientation or "portrait").strip().lower()
+    if orientation not in ("portrait", "landscape"):
+        raise HTTPException(422, "orientation muss 'portrait' oder 'landscape' sein")
     try:
-        pdf = exporters.build_pdf(request.app.state.settings, rows, conn, image_bytes=image_bytes, title=title)
+        pdf = exporters.build_pdf(request.app.state.settings, rows, conn, image_bytes=image_bytes, title=title, orientation=orientation)
     except HTTPException:
         raise
     except Exception:

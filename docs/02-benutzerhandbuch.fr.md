@@ -190,7 +190,7 @@ et peut être ajusté avec `?theme=dark|light` et `?lang=…`.
   connexions, sites). CSV avec séparateur au choix (`/api/export/csv?sep=;`).
 - **Imprimer → PDF :** vue optimisée pour l'impression (navigateur « Enregistrer en PDF »).
 - **Auto-export :**
-- **PDF (côté serveur) :** bouton **PDF** dans l'en-tête — capture de la carte (PNG) + tableau des appareils en vrai PDF via `POST /api/export/pdf` (aussi avec un jeton, filtres via paramètres de requête). à activer dans les Paramètres ; écrit JSON+CSV après chaque intervalle dans
+- **PDF (côté serveur) :** bouton **PDF** dans l'en-tête — capture de la carte (PNG) + tableau des appareils en vrai PDF via `POST /api/export/pdf`  (aussi avec un jeton, filtres via paramètres de requête). Orientation portrait/paysage via la liste à côté du bouton (mémorisée, `orientation` dans le corps POST) ; les longues cellules sont coupées proprement au lieu de se chevaucher. à activer dans les Paramètres ; écrit JSON+CSV après chaque intervalle dans
   le dossier d'export (relatif au volume de données, défaut `exports`).
 
 ---

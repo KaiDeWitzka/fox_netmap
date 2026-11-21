@@ -766,6 +766,9 @@ function bindFilters() {
     document.querySelector('[data-view="table"]').click();
     setTimeout(() => window.print(), 100);
   });
+  const pdfOri = document.getElementById("pdf-orientation");
+  pdfOri.value = localStorage.getItem("fox_pdf_orientation") || "portrait";
+  pdfOri.addEventListener("change", () => localStorage.setItem("fox_pdf_orientation", pdfOri.value));
   document.getElementById("btn-pdf").addEventListener("click", async () => {
     const btn = document.getElementById("btn-pdf");
     btn.disabled = true;
@@ -775,7 +778,7 @@ function bindFilters() {
         const bg = document.documentElement.dataset.theme === "light" ? "#f8fafc" : "#0f172a";
         image = cy.png({ output: "datauri", full: true, scale: 2, bg });
       }
-      const r = await api("/api/export/pdf", { method: "POST", body: JSON.stringify({ image, title: "Netzwerkkarte" }) });
+      const r = await api("/api/export/pdf", { method: "POST", body: JSON.stringify({ image, title: "Netzwerkkarte", orientation: document.getElementById("pdf-orientation").value }) });
       if (!r.ok) throw new Error("HTTP " + r.status);
       const blob = await r.blob();
       const a = document.createElement("a");

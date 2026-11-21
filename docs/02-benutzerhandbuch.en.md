@@ -185,7 +185,7 @@ with `?theme=dark|light` and `?lang=…`.
   sites. CSV with selectable separator (`/api/export/csv?sep=;`).
 - **Print → PDF:** print-optimized view (browser "Save as PDF").
 - **Auto export:**
-- **PDF (server-side):** **PDF** button in the header — map snapshot (PNG) + device table as a real PDF via `POST /api/export/pdf` (also with an embed token, filters via query params). enable in Settings; writes JSON+CSV after each interval into the export
+- **PDF (server-side):** **PDF** button in the header — map snapshot (PNG) + device table as a real PDF via `POST /api/export/pdf`  (also with an embed token, filters via query params). Portrait/landscape selectable via the select next to the button (remembered, `orientation` in the POST body); long cells wrap instead of overlapping. enable in Settings; writes JSON+CSV after each interval into the export
   folder (relative to the data volume, default `exports`).
 
 ---
