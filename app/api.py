@@ -1,5 +1,6 @@
 import base64
 import ipaddress
+import logging
 import os
 import re
 import secrets
@@ -15,6 +16,7 @@ from .auth import router as auth_router
 
 router = APIRouter()
 router.include_router(auth_router)
+log = logging.getLogger("fox_netmap")
 
 CATEGORIES = ["Router", "Switch", "Server/NAS", "Client", "Drucker", "Smart-Home/IoT", "Unbekannt"]
 
@@ -149,6 +151,17 @@ class DevicePatch(BaseModel):
     connected_to: str | None = None
     x: float | None = None
     y: float | None = None
+
+
+@router.delete("/api/device/{mac}")
+def delete_device(mac: str, request: Request, conn=Depends(get_conn), _=Depends(require_auth)):
+    """Löscht ein Gerät samt Verlauf (Recht auf Löschung). Ist es noch im Netz, erscheint es beim nächsten Scan neu."""
+    if db.get_device(conn, mac) is None:
+        raise HTTPException(status_code=404, detail="device not found")
+    db.delete_device(conn, mac)
+    conn.commit()
+    log.info("Geraet %s manuell geloescht", mac)
+    return {"ok": True}
 
 
 @router.patch("/api/device/{mac}")

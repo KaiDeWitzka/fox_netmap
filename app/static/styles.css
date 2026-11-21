@@ -6,6 +6,7 @@
   --accent: #38bdf8;
   --accent-strong: #075985;
   --muted: #94a3b8;
+  --danger: #fca5a5;
 }
 html[data-theme="light"] {
   --bg: #f8fafc;
@@ -15,6 +16,7 @@ html[data-theme="light"] {
   --accent: #0369a1;
   --accent-strong: #075985;
   --muted: #64748b;
+  --danger: #b91c1c;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -83,9 +85,33 @@ header .hdr-chk { display: flex; align-items: center; gap: 4px; font-size: 13px;
   margin-right: 6px;
   border-radius: 50%;
   background: var(--accent);
-  animation: fox-scan-pulse 1s ease-in-out infinite;
+  /* Pulsiert 3 × 1,6 s = 4,8 s und bleibt dann ruhig stehen: Bewegung endet vor 5 s (WCAG 2.2.2),
+     der Status bleibt über Punkt + Text sichtbar. Startet bei jedem neuen Scan erneut. */
+  animation: fox-scan-pulse 1.6s ease-in-out 3;
 }
-@keyframes fox-scan-pulse { 50% { opacity: 0.25; } }
+@keyframes fox-scan-pulse { 50% { opacity: 0.35; } }
+#scan-status, #device-table td { font-variant-numeric: tabular-nums; }
+
+/* Druck-Feedback für Knöpfe (nur wenn Bewegung erwünscht ist) */
+@media (prefers-reduced-motion: no-preference) {
+  nav button, header button, header a.hdr-btn, .tabs button, #detail button, form button {
+    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  nav button:active, header button:active, header a.hdr-btn:active, .tabs button:active,
+  #detail button:active, form button:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Reduzierte Bewegung (Betriebssystem-Einstellung): keine Animationen, keine Übergänge.
+   Der Scan-Status bleibt als statischer Punkt plus Text erkennbar. WCAG 2.3.3 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
 main { flex: 1; min-height: 0; position: relative; }
 .view { height: 100%; }
 #view-map { height: 100%; }
@@ -151,6 +177,8 @@ aside#detail {
 #detail-content .edit-row button {
   background: var(--accent-strong); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer;
 }
+#detail-content p.muted { font-size: 12px; margin: 0 0 6px; }
+#detail-content .edit-row button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 #view-table { overflow: auto; }
 #device-table { border-collapse: collapse; width: 100%; font-size: 12px; table-layout: fixed; }
 #device-table th, #device-table td { border-bottom: 1px solid var(--border); padding: 4px 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

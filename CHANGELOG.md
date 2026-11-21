@@ -4,6 +4,31 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.5.2] – 2026-11-21
+
+### Barrierefreiheit
+- **`prefers-reduced-motion`:** Bei aktivierter Betriebssystem-Einstellung „Bewegung reduzieren“ keine Animationen
+  und Übergänge mehr (WCAG 2.3.3). Der laufende Scan bleibt als ruhiger Punkt plus Text erkennbar.
+- **Scan-Animation begrenzt:** Der Punkt pulsiert nicht mehr endlos, sondern dreimal (4,8 s) und bleibt dann stehen
+  (WCAG 2.2.2 Pausieren, Beenden, Ausblenden).
+- **Live-Region:** Der Scan-Status wird nur noch bei echter Änderung neu geschrieben; Screenreader lesen ihn nicht
+  mehr alle 5 Sekunden vor.
+
+### Datenschutz
+- **Neuer [Datenschutzhinweis](docs/04-datenschutz.md):** erhobene Daten, Speicherort, Löschfristen, Datenflüsse
+  nach außen, Hinweise für den Einsatz in Organisationen (DSGVO, Mitbestimmung), datensparsame Konfiguration.
+- **Gerät löschen** (Recht auf Löschung, Art. 17 DSGVO): Knopf im Detail-Panel und `DELETE /api/device/{mac}`;
+  entfernt Ports, Layout, Verlauf und Ereignisse und löst manuelle Zuordnungen anderer Geräte. Nur mit Login,
+  nicht über Embed-Tokens.
+
+### Design
+- Druck-Feedback für Knöpfe (`scale(0.97)`, 160 ms, ease-out) – nur ohne „Bewegung reduzieren“.
+- Tabellarische Ziffern (`tabular-nums`) in Gerätetabelle und Scan-Status, damit Zahlen beim Aktualisieren nicht springen.
+
+### Dokumentation
+- Handbuch (6 Sprachen): Bewegung reduzieren, Datenschutz, Gerät löschen, API-Tabelle; veraltete Angabe
+  `NET_ADMIN` für den Scanner entfernt (seit v1.5.0 nur `NET_RAW`).
+
 ## [1.5.1] – 2026-11-21
 
 ### Lieferkette (Supply Chain)

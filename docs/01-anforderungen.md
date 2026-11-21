@@ -35,7 +35,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | Embed | Dedizierte `/embed`-URL, read-only (Zoom/Pan/Klick ok), hinter Login; optionaler Share-Token mit Ablaufdatum; pro Token optional nur bestimmte Subnetze/Kategorien |
 | Export | JSON (vollständiges Schema, alle oder gefilterte Geräte); CSV (UTF-8, Komma/Semikolon wählbar, Default Semikolon); PDF = druckoptimierte Ansicht (serverseitiges PDF → Backlog); optional automatische tägliche Exporte in Export-Ordner |
 | Auth | App-eigener Session-Login (Default an, im LAN abschaltbar); RunTipi legt zusätzlich eigenen Login davor |
-| Betrieb | Scanner im Host-Netzwerkmodus (ARP/MAC, NET_RAW/NET_ADMIN), dokumentiert; Credentials nur als Env-Variablen, nie im Klartext in DB/UI/Logs; vollständig offline betreibbar |
+| Betrieb | Scanner im Host-Netzwerkmodus (ARP/MAC, nur NET_RAW, seit v1.5.0 als UID 10001), dokumentiert; Credentials nur als Env-Variablen, nie im Klartext in DB/UI/Logs; vollständig offline betreibbar |
 | Out of Scope | Kein dauerhaftes Monitoring jenseits „neues Gerät“-Alarm; keine Gerätesteuerung (WoL, Reboot); SNMP nur lesend; Sprache: Deutsch zuerst, weitere Sprachen → Backlog |
 
 ## 3. Zielarchitektur
@@ -45,7 +45,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 - **Image:** ein Python-Image (z. B. `python:3.12-alpine` bzw. slim), gleiche Codebasis für beide Rollen.
 - **docker-compose (standalone):** zwei Services
   - `netmap` — Web + REST-API (FastAPI), Port z. B. 8399, Bridge-Netz.
-  - `netmap-scanner` — Scan-Loop, `network_mode: host`, `cap_add: NET_RAW, NET_ADMIN`, schreibt in dasselbe Daten-Volume.
+  - `netmap-scanner` — Scan-Loop, `network_mode: host`, `cap_add: NET_RAW` (seit v1.5.0 ohne `NET_ADMIN`), schreibt in dasselbe Daten-Volume.
   - gemeinsames Volume `./data:/data` (SQLite-DB, Exporte, Config).
 - **RunTipi (später):** in `foxhole/apps/netmap/` zusätzlich `config.json` (form_fields → `NETZ_*` Env-Variablen, Port, `exposable`), `docker-compose.yml` mit `x-runtipi` (`is_main` auf Web-Service, `internal_port`), `metadata/` (Logo, description). Validierung über `__tests__/apps.test.ts`.
 
