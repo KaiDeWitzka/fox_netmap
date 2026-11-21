@@ -51,8 +51,9 @@ docker compose up -d --build
 ```
 
 - Web UI: **http://localhost:8399**
-- On first start with an empty `NETZ_AUTH_PASS`, a random password is printed once in the
-  container log (`docker compose logs netmap | grep Passwort`). Default login: `admin`.
+- On first start with an empty `NETZ_AUTH_PASS`, a random password is generated once and stored in
+  `./data/initial-admin-password.txt` (owner-readable only, not logged). Default login: `admin`.
+  Then set `NETZ_AUTH_PASS` – the file is deleted automatically.
 - The first scan runs automatically after `NETZ_SCAN_INTERVAL` (default 900 s) or immediately
   via **▶ Scan** in the header.
 - Data lives in the `./data` volume (SQLite `netmap.db`, log `netmap.log`, exports) and survives
@@ -155,7 +156,7 @@ Everything changed here takes effect **on the next scan without restarting the c
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR as fallback |
-| Online OUI fallback / max lookups per scan / API URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | look up vendors of unknown MACs online (default `https://api.macvendors.com`), cached in the DB |
+| Online OUI fallback / max lookups per scan / API URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | look up vendors of unknown MACs online (default `https://api.macvendors.com`), **off by default** (privacy: MAC prefixes are sent to a third party), cached in the DB |
 | Login enabled | `NETZ_AUTH_ENABLED` | session login on/off (user/pass stay env-only) |
 | Theme / language | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 
@@ -238,11 +239,12 @@ plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8:
 
 ## 14. Security
 
+- **Since v1.5.0:** password hash PBKDF2-SHA256 with 600,000 iterations (old hashes are upgraded automatically on next login); expired sessions are cleaned up; session cookie gets `Secure` over HTTPS (`NETZ_COOKIE_SECURE=auto|true|false`); online vendor lookup off by default.
 - **Since v1.4.1:** all network and user data is HTML-encoded before display (XSS protection); security headers (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) on all responses; login lockout for 15 minutes after 5 failed attempts (IP+user) or 20 (IP) (HTTP 429).
 - `NETZ_EMBED_ANCESTORS` defines which sites may embed `/embed` in an iframe (default `*`; recommended: list your own domains).
 - Details (German): [security concept](03-sicherheit.md).
 - Session login (PBKDF2, cookie `fox_session`), on by default; `NETZ_AUTH_ENABLED=false` disables it.
-- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` are env-only; empty password → a random password is logged once.
+- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` are env-only; empty password → random initial password in `./data/initial-admin-password.txt` (no longer logged since v1.5.0).
 - `GET /api/settings` returns **no secrets** (test-covered): no `auth_pass`, `fritz_pass` or
   `notify_*_token`. The TR-064 password is write-only in Settings.
 - Embed tokens: expirable, filterable, read-only; token-authenticated API paths are only
@@ -260,7 +262,10 @@ docker compose down                    # stop (data stays)
 docker compose down -v                 # WARNING: deletes ./data (DB, log, exports)!
 ```
 
-- Health: `GET /api/health` → `{ "status": "ok", "version": "1.3.1" }`
+- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.0" }`
+- Since v1.5.0 containers **no longer run as root** but as UID/GID `10001`. The web UI has no capabilities and a read-only root filesystem; the scanner keeps only `NET_RAW` for ping.
+- On the first start after the update, the container automatically hands over existing files in `./data` to UID 10001. On the host, use `sudo` to read them or add your user to a group with GID 10001.
+- Docker healthcheck: `docker compose ps` shows `healthy`/`unhealthy` (web: `/api/health`, scanner: scan loop running).
 - Volumes: `./data:/data` (SQLite WAL, rotating `netmap.log`, `exports/`)
 - Ports: `NETMAP_PORT` (host) → 8399 (container)
 - Timezone: `TZ=Europe/Berlin`

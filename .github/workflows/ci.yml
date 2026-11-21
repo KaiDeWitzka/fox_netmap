@@ -27,3 +27,72 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           node tests/ui_dom_check.mjs
+
+  docker:
+    # Baut das Image und prüft die Container-Härtung (v1.5.0) im laufenden Compose-Stack.
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      NETZ_AUTH_PASS: ci-secret
+      NETZ_SUBNETS: 127.0.0.0/30
+      NETZ_PORT_TOP: "10"
+      NETZ_SCAN_INTERVAL: "60"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image bauen
+        run: docker compose build
+      - name: Upgrade simulieren (root-eigene Bestandsdaten wie bis v1.4.x)
+        run: |
+          mkdir -p data
+          sudo sh -c 'echo alt > data/legacy.txt && chown 0:0 data data/legacy.txt'
+      - name: Stack starten
+        run: docker compose up -d
+      - name: Auf healthy warten
+        run: |
+          for i in $(seq 1 45); do
+            web=$(docker inspect -f '{{.State.Health.Status}}' fox-netmap)
+            scan=$(docker inspect -f '{{.State.Health.Status}}' fox-netmap-scanner)
+            echo "web=$web scanner=$scan"
+            [ "$web" = healthy ] && [ "$scan" = healthy ] && exit 0
+            sleep 2
+          done
+          exit 1
+      - name: Prozesse laufen als UID 10001 mit minimalen Capabilities
+        run: |
+          set -eu
+          for c in fox-netmap fox-netmap-scanner; do
+            uid=$(docker exec "$c" awk '/^Uid:/{print $2}' /proc/1/status)
+            eff=$(docker exec "$c" awk '/^CapEff:/{print $2}' /proc/1/status)
+            bnd=$(docker exec "$c" awk '/^CapBnd:/{print $2}' /proc/1/status)
+            echo "$c uid=$uid CapEff=$eff CapBnd=$bnd"
+            test "$uid" = 10001
+            test "$eff" = 0000000000000000
+          done
+          test "$(docker exec fox-netmap awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000000000
+          test "$(docker exec fox-netmap awk '/^NoNewPrivs:/{print $2}' /proc/1/status)" = 1
+          # Scanner: nur NET_RAW (Bit 13) im Bounding-Set
+          test "$(docker exec fox-netmap-scanner awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000002000
+      - name: ping funktioniert ohne root im Scanner-Kontext
+        run: |
+          docker exec fox-netmap-scanner setpriv --reuid=10001 --regid=10001 --clear-groups \
+            --bounding-set=-all,+net_raw --inh-caps=-all ping -c 1 -W 2 127.0.0.1
+      - name: Bestandsdaten übernommen, Root-Dateisystem schreibgeschützt
+        run: |
+          set -eu
+          test "$(stat -c %u data/legacy.txt)" = 10001
+          test "$(stat -c %u data/netmap.db)" = 10001
+          ! docker exec -u 0 fox-netmap touch /usr/local/x 2>/dev/null
+      - name: HTTP-Smoke-Test (Health, Header, Login)
+        run: |
+          set -eu
+          curl -fsS http://localhost:8399/api/health
+          curl -fsSI http://localhost:8399/login | grep -i "content-security-policy"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"ci-secret"}' http://localhost:8399/api/login)
+          test "$code" = 200
+      - name: Logs bei Fehler
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Aufräumen
+        if: always()
+        run: docker compose down -v

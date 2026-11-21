@@ -52,8 +52,9 @@ docker compose up -d --build
 ```
 
 - Interfaccia web: **http://localhost:8399**
-- Al primo avvio con `NETZ_AUTH_PASS` vuoto, una password casuale viene stampata una volta nei
-  log (`docker compose logs netmap | grep Passwort`). Login predefinito: `admin`.
+- Al primo avvio con `NETZ_AUTH_PASS` vuoto viene generata una volta una password casuale e salvata in
+  `./data/initial-admin-password.txt` (leggibile solo dal proprietario, non nei log). Login predefinito: `admin`.
+  Poi impostare `NETZ_AUTH_PASS`: il file viene eliminato automaticamente.
 - La prima scansione parte automaticamente dopo `NETZ_SCAN_INTERVAL` (900 s predefiniti) oppure
   subito tramite **▶ Scan** nell'intestazione.
 - I dati sono nel volume `./data` (SQLite `netmap.db`, log `netmap.log`, esportazioni) e
@@ -159,7 +160,7 @@ predefinito env).
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostname via mDNS PTR come fallback |
-| Fallback OUI online / max lookup per scansione / URL API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | produttore di MAC sconosciuti cercato online (predefinito `https://api.macvendors.com`), in cache nel DB |
+| Fallback OUI online / max lookup per scansione / URL API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | produttore di MAC sconosciuti cercato online (predefinito `https://api.macvendors.com`), **disattivato per impostazione predefinita** (privacy: i prefissi MAC vengono inviati a terzi), in cache nel DB |
 | Login attivo | `NETZ_AUTH_ENABLED` | login di sessione on/off (utente/password restano solo env) |
 | Tema / lingua | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 
@@ -243,11 +244,12 @@ gateway, più sweep per quelle piccole; gateway-v6 per la topologia; link web co
 
 ## 14. Sicurezza
 
+- **Dalla v1.5.0:** hash PBKDF2-SHA256 con 600.000 iterazioni (gli hash vecchi vengono aggiornati automaticamente al login successivo); le sessioni scadute vengono rimosse; cookie di sessione `Secure` con HTTPS (`NETZ_COOKIE_SECURE=auto|true|false`); ricerca online del produttore disattivata per impostazione predefinita.
 - **Dalla v1.4.1:** tutti i dati di rete e utente vengono codificati in HTML prima della visualizzazione (protezione XSS); header di sicurezza (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) su tutte le risposte; blocco del login per 15 minuti dopo 5 tentativi falliti (IP+utente) o 20 (IP) (HTTP 429).
 - `NETZ_EMBED_ANCESTORS` stabilisce quali siti possono incorporare `/embed` in un iframe (predefinito `*`; consigliato: indicare i propri domini).
 - Dettagli (in tedesco): [concetto di sicurezza](03-sicherheit.md).
 - Login di sessione (PBKDF2, cookie `fox_session`), attivo predefinito; `NETZ_AUTH_ENABLED=false` lo disattiva.
-- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sono solo env; password vuota → password casuale registrata una volta.
+- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sono solo env; password vuota → password iniziale casuale in `./data/initial-admin-password.txt` (dalla v1.5.0 non più nei log).
 - `GET /api/settings` **non restituisce segreti** (coperto da test): né `auth_pass`, né
   `fritz_pass`, né `notify_*_token`. La password TR-064 è write-only nelle Impostazioni.
 - Token di embed: con scadenza, filtrabili, sola lettura; i percorsi API protetti da token sono
@@ -265,7 +267,10 @@ docker compose down                    # ferma (i dati restano)
 docker compose down -v                 # ATTENZIONE: elimina ./data (DB, log, esportazioni)!
 ```
 
-- Salute: `GET /api/health` → `{ "status": "ok", "version": "1.3.1" }`
+- Salute: `GET /api/health` → `{ "status": "ok", "version": "1.5.0" }`
+- Dalla v1.5.0 i container **non girano più come root**, ma con UID/GID `10001`. L'interfaccia web non ha capability e ha un file system root in sola lettura; lo scanner mantiene solo `NET_RAW` per ping.
+- Al primo avvio dopo l'aggiornamento il container assegna automaticamente i file esistenti in `./data` all'UID 10001. Sull'host usare `sudo` per leggerli o aggiungere il proprio utente a un gruppo con GID 10001.
+- Healthcheck Docker: `docker compose ps` mostra `healthy`/`unhealthy` (web: `/api/health`, scanner: ciclo di scansione attivo).
 - Volumi: `./data:/data` (SQLite WAL, `netmap.log` rotante, `exports/`)
 - Porte: `NETMAP_PORT` (host) → 8399 (contenitore)
 - Fuso orario: `TZ=Europe/Berlin`

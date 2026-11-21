@@ -4,6 +4,32 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.5.0] – 2026-11-21
+
+### Sicherheit
+- **Container ohne root:** Web-Oberfläche und Scanner laufen als UID/GID 10001. Der Entrypoint übernimmt
+  Bestandsdaten in `./data` automatisch, entfernt alle Capabilities (Scanner: nur `NET_RAW`) und startet per `setpriv`.
+  Web zusätzlich mit `no-new-privileges`; beide mit schreibgeschütztem Root-Dateisystem. `NET_ADMIN` entfällt.
+- **Docker-Healthcheck** (`python -m app health`): Web prüft `/api/health`, Scanner prüft, ob die Scan-Schleife läuft.
+- **Passwort-Hash** PBKDF2-SHA256 mit 600.000 statt 100.000 Iterationen; alte Hashes werden beim Login umgestellt.
+  Dummy-Prüfung für unbekannte Benutzer gegen User-Enumeration.
+- **Sessions** werden aufgeräumt (abgelaufen, max. 200); Cookie mit `Secure` bei HTTPS (`NETZ_COOKIE_SECURE`).
+- **Startpasswort** ohne `NETZ_AUTH_PASS` nur beim ersten Start, in `data/initial-admin-password.txt` (0600) statt im Log.
+
+### Datenschutz
+- Online-Herstellerabfrage (`NETZ_OUI_ONLINE_ENABLED`) standardmäßig **aus** (Privacy by Default).
+
+### Geändert (bitte beachten)
+- Dateien in `./data` gehören nach dem Update UID 10001; auf dem Host ggf. `sudo` zum Lesen nutzen.
+- Ohne `NETZ_AUTH_PASS` bleibt das Passwort jetzt über Neustarts gleich (vorher bei jedem Start neu).
+
+### CI
+- Neuer Job `docker`: baut das Image, simuliert ein Upgrade mit root-eigenen Daten und prüft im laufenden
+  Stack UID, Capabilities, `NoNewPrivs`, Schreibschutz, ping, Healthcheck und Login.
+
+### Dokumentation
+- Sicherheitskonzept um Passwort/Sessions, Container-Härtung und Datenschutz ergänzt; Handbuch in 6 Sprachen aktualisiert.
+
 ## [1.4.1] – 2026-11-21
 
 ### Sicherheit

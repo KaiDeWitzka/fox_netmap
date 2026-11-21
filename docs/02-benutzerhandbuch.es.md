@@ -52,8 +52,9 @@ docker compose up -d --build
 ```
 
 - Interfaz web: **http://localhost:8399**
-- En el primer arranque con `NETZ_AUTH_PASS` vacío se imprime una contraseña aleatoria una vez
-  en los logs (`docker compose logs netmap | grep Passwort`). Login por defecto: `admin`.
+- En el primer arranque con `NETZ_AUTH_PASS` vacío se genera una vez una contraseña aleatoria y se guarda en
+  `./data/initial-admin-password.txt` (solo legible por el propietario, no en los logs). Login por defecto: `admin`.
+  Después, define `NETZ_AUTH_PASS`: el archivo se borra automáticamente.
 - El primer escaneo se ejecuta automáticamente tras `NETZ_SCAN_INTERVAL` (900 s por defecto) o
   de inmediato con **▶ Scan** en la cabecera.
 - Los datos viven en el volumen `./data` (SQLite `netmap.db`, log `netmap.log`, exportaciones) y
@@ -159,7 +160,7 @@ vacío = valor por defecto del entorno).
 | Historial / retención | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historial en horas; borrar dispositivos sin conexión tras N días (0 = nunca) |
 | Auto-exportación / intervalo / carpeta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automático; intervalo en h (0 = tras cada escaneo) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames vía mDNS PTR como respaldo |
-| Respaldo OUI en línea / máx. consultas por escaneo / URL de API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MAC desconocidas se busca en línea (por defecto `https://api.macvendors.com`), caché en la BD |
+| Respaldo OUI en línea / máx. consultas por escaneo / URL de API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MAC desconocidas se busca en línea (por defecto `https://api.macvendors.com`), **desactivado por defecto** (protección de datos: los prefijos MAC se envían a un tercero), caché en la BD |
 | Login activado | `NETZ_AUTH_ENABLED` | login por sesión on/off (usuario/contraseña siguen siendo solo env) |
 | Tema / idioma | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 
@@ -245,11 +246,12 @@ como `[2003:db8::10]:8080`.
 
 ## 14. Seguridad
 
+- **Desde v1.5.0:** hash PBKDF2-SHA256 con 600.000 iteraciones (los hashes antiguos se actualizan automáticamente en el siguiente inicio de sesión); las sesiones caducadas se eliminan; cookie de sesión `Secure` con HTTPS (`NETZ_COOKIE_SECURE=auto|true|false`); consulta de fabricante en línea desactivada por defecto.
 - **Desde v1.4.1:** todos los datos de red y de usuario se codifican en HTML antes de mostrarse (protección XSS); cabeceras de seguridad (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) en todas las respuestas; bloqueo del inicio de sesión durante 15 minutos tras 5 intentos fallidos (IP+usuario) o 20 (IP) (HTTP 429).
 - `NETZ_EMBED_ANCESTORS` define qué sitios pueden incrustar `/embed` en un iframe (por defecto `*`; recomendado: indicar sus propios dominios).
 - Detalles (en alemán): [concepto de seguridad](03-sicherheit.md).
 - Login por sesión (PBKDF2, cookie `fox_session`), activado por defecto; `NETZ_AUTH_ENABLED=false` lo desactiva.
-- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` son solo env; contraseña vacía → se registra una aleatoria una vez.
+- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` son solo env; contraseña vacía → contraseña inicial aleatoria en `./data/initial-admin-password.txt` (desde v1.5.0 ya no en los logs).
 - `GET /api/settings` **no devuelve secretos** (cubierto por test): ni `auth_pass`, ni
   `fritz_pass`, ni `notify_*_token`. La contraseña TR-064 es write-only en Configuración.
 - Tokens de embed: con caducidad, filtrables, solo lectura; las rutas API protegidas por token
@@ -267,7 +269,10 @@ docker compose down                    # detener (los datos quedan)
 docker compose down -v                 # ¡ATENCIÓN: borra ./data (BDD, log, exportaciones)!
 ```
 
-- Salud: `GET /api/health` → `{ "status": "ok", "version": "1.3.1" }`
+- Salud: `GET /api/health` → `{ "status": "ok", "version": "1.5.0" }`
+- Desde v1.5.0 los contenedores **ya no se ejecutan como root**, sino con UID/GID `10001`. La interfaz web no tiene capabilities y su sistema de archivos raíz es de solo lectura; el escáner solo conserva `NET_RAW` para ping.
+- En el primer arranque tras la actualización, el contenedor asigna automáticamente los archivos existentes de `./data` al UID 10001. En el host, usa `sudo` para leerlos o añade tu usuario a un grupo con GID 10001.
+- Healthcheck de Docker: `docker compose ps` muestra `healthy`/`unhealthy` (web: `/api/health`, escáner: bucle de escaneo activo).
 - Volúmenes: `./data:/data` (SQLite WAL, `netmap.log` rotativo, `exports/`)
 - Puertos: `NETMAP_PORT` (host) → 8399 (contenedor)
 - Zona horaria: `TZ=Europe/Berlin`
