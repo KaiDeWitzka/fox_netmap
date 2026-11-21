@@ -462,6 +462,19 @@ check(
     lastPatch6.body.includes("ports")
 );
 
+check("Settings: TR-064-Passwortfeld vorhanden (type=password)", !!$("#st-fritzpass") && $("#st-fritzpass").type === "password");
+const patchBase7 = patchCount();
+$("#st-fritzpass").value = "neuGeheim123";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+const patchWithPass = [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");
+check("Settings: Passwort gesetzt -> PATCH enthaelt fritz_pass", patchCount() === patchBase7 + 1 && !!patchWithPass && patchWithPass.body.includes('"fritz_pass":"neuGeheim123"'));
+$("#st-fritzpass").value = "";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+const patchWithoutPass = [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");
+check("Settings: Passwort leer -> PATCH ohne fritz_pass (write-only, bleibt unveraendert)", patchCount() === patchBase7 + 2 && !!patchWithoutPass && !patchWithoutPass.body.includes("fritz_pass"));
+
 check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
 $("#layout-select").value = "grid";
 $("#layout-select").dispatchEvent(new w.Event("change"));

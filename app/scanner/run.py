@@ -34,6 +34,7 @@ OVERRIDABLE = {
     "fritz_url": str,
     "fritz_urls": str,
     "fritz_user": str,
+    "fritz_pass": str,
     "snmp_community": str,
     "notify_webhook": str,
     "notify_gotify": str,

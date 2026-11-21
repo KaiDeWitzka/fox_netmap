@@ -286,3 +286,14 @@ def test_sites_api_filter_export(auth_client, app):
     assert sites["aa:bb:cc:00:00:01"] == "Zuhause"
     csv_text = auth_client.get("/api/export/csv?sep=semicolon").text
     assert "site" in csv_text.splitlines()[0]
+
+
+def test_fritz_pass_write_only(auth_client, app):
+    r = auth_client.patch("/api/settings", json={"fritz_pass": "geheim123"})
+    assert r.status_code == 200
+    body = auth_client.get("/api/settings").json()
+    assert "fritz_pass" not in body
+    conn = db.connect(app.state.db_path)
+    assert db.get_setting(conn, "fritz_pass") == "geheim123"
+    conn.close()
+    assert auth_client.patch("/api/settings", json={"fritz_pass": "x" * 257}).status_code == 422

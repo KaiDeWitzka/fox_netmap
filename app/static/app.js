@@ -788,6 +788,8 @@ function bindSidebar() {
       alarm_whitelist: document.getElementById("st-whitelist").value,
       sites: document.getElementById("st-sites").value,
     };
+    const fritzPassVal = document.getElementById("st-fritzpass").value;
+    if (fritzPassVal) body.fritz_pass = fritzPassVal;
     const errs = validateSettings(body);
     if (errs.length) {
       msg.textContent = t("msg.check") + errs.join("; ");
@@ -875,6 +877,7 @@ function validateSettings(v) {
     if (u && !/^https?:\/\/.+/.test(u)) errs.push(t("err.url", { v: u }));
   }
   if (String(v.snmp_community || "").trim() && /\s/.test(String(v.snmp_community).trim())) errs.push(t("err.community"));
+  if (String(v.fritz_pass || "").length > 256) errs.push(t("err.fritzPass"));
   const aed = String(v.auto_export_dir || "").trim();
   if (aed && (aed.startsWith("/") || aed.split("/").includes(".."))) errs.push(t("err.exportdir"));
   if (!Number.isInteger(v.port_top) || v.port_top < 0 || v.port_top > 65535)
