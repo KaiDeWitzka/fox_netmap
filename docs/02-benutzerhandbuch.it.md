@@ -89,7 +89,9 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
   (etichetta `sottorete · sito (numero)`). Gli archi tra sottoreti diverse vanno da gruppo a gruppo.
 - **Comprimi/espandi figli:** nel pannello dettagli di router/switch, un pulsante nasconde tutti
   i dispositivi collegati direttamente; il nodo mostra poi `(+N)`.
-- **Layout:** `auto` (fisica, predefinito), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Layout:**
+- **Pulizia automatica:** nodi più compatti (20 px), archi più sottili/trasparenti, parametri cose scalati in base al numero di dispositivi; etichette visibili solo da zoom ≥ 0,85; oltre 40 dispositivi i gruppi di sottorete si attivano automaticamente (sempre disattivabili).
+ `auto` (fisica, predefinito), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Ripristina** cancella le posizioni salvate.
 - Nodi virtuali: **🌐 Internet** (con IP WAN da TR-064, altrimenti «?»), **🏠 Gateway** (se il
   gateway non è nell'elenco) e **📶 wlan:…** per i dispositivi WLAN senza nodo proprio.
@@ -116,7 +118,7 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
 
 ![Log](screenshots/04-log.svg)
 
-La vista **Log** mostra `netmap.log` (rotante, 1 MB × 3) con aggiornamento automatico ogni 5 s,
+La vista **Log** mostraI livelli sono colorati (INFO blu, WARN ambra, ERROR rosso).  `netmap.log` (rotante, 1 MB × 3) con aggiornamento automatico ogni 5 s,
 filtro per livello e download del file completo. Lo stesso è offerto da `/api/logs` e
 `/api/logs/download`.
 

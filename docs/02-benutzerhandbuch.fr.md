@@ -89,7 +89,9 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
   groupe à groupe.
 - **Replier/déplier les enfants :** dans le panneau de détails d'un routeur/switch, un bouton
   masque tous les appareils directement connectés ; le nœud affiche alors `(+N)`.
-- **Disposition :** `auto` (physique, défaut), `force`, `tree`, `concentric`, `circle`, `grid` ;
+- **Disposition :**
+- **Allègement automatique :** nœuds plus compacts (20 px), arêtes plus fines/translucides, paramètres cose adaptés au nombre d'appareils ; étiquettes visibles seulement à partir du zoom ≥ 0,85 ; au-delà de 40 appareils, les groupes de sous-réseaux s'activent automatiquement (toujours désactivables).
+ `auto` (physique, défaut), `force`, `tree`, `concentric`, `circle`, `grid` ;
   **Réinitialiser** efface les positions enregistrées.
 - Nœuds virtuels : **🌐 Internet** (avec l'IP WAN via TR-064, sinon « ? »), **🏠 Passerelle**
   (si la passerelle n'est pas dans la liste) et **📶 wlan:…** pour les appareils WLAN sans nœud propre.
@@ -116,7 +118,7 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
 
 ![Journal](screenshots/04-log.svg)
 
-La vue **Journal** affiche `netmap.log` (rotation, 1 Mo × 3) avec rafraîchissement auto toutes
+La vue **Journal** afficheLes niveaux sont colorés (INFO bleu, WARN ambre, ERROR rouge).  `netmap.log` (rotation, 1 Mo × 3) avec rafraîchissement auto toutes
 les 5 s, filtre par niveau, et téléchargement du fichier complet. Idem via `/api/logs` et
 `/api/logs/download`.
 

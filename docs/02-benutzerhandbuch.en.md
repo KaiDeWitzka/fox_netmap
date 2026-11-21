@@ -86,7 +86,9 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
   Edges between different subnets run group-to-group.
 - **Collapse/expand children:** in the detail panel of a router/switch, a button hides all
   directly attached devices; the node then shows `(+N)`.
-- **Layout:** `auto` (physics, default), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Layout:**
+- **Auto declutter:** more compact nodes (20 px), thinner/translucent edges, cose parameters scale with device count; labels only visible from zoom ≥ 0.85; above 40 devices subnet groups are enabled automatically (still toggleable).
+ `auto` (physics, default), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Reset** clears saved positions.
 - Virtual nodes: **🌐 Internet** (with WAN IP from TR-064, otherwise "?"), **🏠 Gateway** (if the
   gateway itself is not in the device list) and **📶 wlan:…** for WLAN devices without their own node.
@@ -113,7 +115,7 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
 
 ![Log](screenshots/04-log.svg)
 
-The **Log** view shows `netmap.log` (rotating, 1 MB × 3) with auto-refresh every 5 s, level
+The **Log** view showsLevels are color-coded (INFO blue, WARN amber, ERROR red).  `netmap.log` (rotating, 1 MB × 3) with auto-refresh every 5 s, level
 filter, and download of the full file. The same is provided by `/api/logs` and
 `/api/logs/download`.
 

@@ -277,6 +277,13 @@ body.embed #btn-layout-reset { display: none; }
   white-space: pre-wrap;
   word-break: break-all;
 }
+#log-view .log-line { white-space: pre-wrap; word-break: break-all; }
+#log-view .log-ts { color: var(--muted); }
+#log-view .lv { font-weight: 700; }
+#log-view .lv-DEBUG { color: #94a3b8; }
+#log-view .lv-INFO { color: #38bdf8; }
+#log-view .lv-WARN { color: #fbbf24; }
+#log-view .lv-ERROR, #log-view .lv-CRITICAL { color: #f87171; }
 @media print {
   body { height: auto; overflow: visible; }
   header, aside#detail { display: none !important; }

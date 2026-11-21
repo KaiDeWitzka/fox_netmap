@@ -88,7 +88,9 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
   `sub-rede · local (nº)`). As arestas entre sub-redes diferentes vão de grupo para grupo.
 - **Ocultar/mostrar filhos:** no painel de detalhes de um router/switch, um botão oculta todos os
   dispositivos ligados diretamente; o nó mostra então `(+N)`.
-- **Esquema:** `auto` (física, predefinido), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Esquema:**
+- **Limpeza automática:** nós mais compactos (20 px), arestas mais finas/translúcidas, parâmetros cose escalados com o número de dispositivos; etiquetas visíveis apenas a partir de zoom ≥ 0,85; acima de 40 dispositivos os grupos de sub-rede ativam-se automaticamente (continuam comutáveis).
+ `auto` (física, predefinido), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Repor** limpa as posições guardadas.
 - Nós virtuais: **🌐 Internet** (com IP WAN do TR-064, senão «?»), **🏠 Gateway** (se o gateway
   não estiver na lista) e **📶 wlan:…** para dispositivos WLAN sem nó próprio.
@@ -115,7 +117,7 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
 
 ![Registo](screenshots/04-log.svg)
 
-A vista **Registo** mostra o `netmap.log` (rotativo, 1 MB × 3) com atualização automática a cada
+A vista **Registo** mostraOs níveis são coloridos (INFO azul, WARN âmbar, ERROR vermelho).  o `netmap.log` (rotativo, 1 MB × 3) com atualização automática a cada
 5 s, filtro por nível e transferência do ficheiro completo. O mesmo é fornecido por `/api/logs` e
 `/api/logs/download`.
 

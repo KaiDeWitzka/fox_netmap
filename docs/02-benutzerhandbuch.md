@@ -89,7 +89,9 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   gruppe-zu-gruppe.
 - **Kinder aus-/einblenden:** Im Detail-Panel von Router/Switch blendet ein Button alle direkt
   angebundenen Geräte aus; der Knoten zeigt dann `(+N)`.
-- **Layout:** `auto` (Physik, Default), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Layout:**
+- **Automatisch aufgeräumt:** kompaktere Knoten (20 px), dünnere/transparente Kanten, cose-Parameter skalieren mit der Gerätemenge; Labels erst ab Zoom ≥ 0,85 sichtbar; ab > 40 Geräten werden Subnetz-Gruppen automatisch aktiviert (weiterhin manuell umschaltbar).
+ `auto` (Physik, Default), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Reset** setzt gespeicherte Positionen zurück.
 - Virtuelle Knoten: **🌐 Internet** (mit WAN-IP aus TR-064, sonst „?“), **🏠 Gateway** (falls das
   Gateway selbst nicht in der Geräteliste ist) und **📶 wlan:…** für WLAN-Geräte ohne eigenen Knoten.
@@ -116,7 +118,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
 
 ![Log](screenshots/04-log.svg)
 
-Die **Log**-Ansicht zeigt `netmap.log` (rotierend, 1 MB × 3) mit Auto-Refresh alle 5 s,
+Die **Log**-Ansicht zeigtDie Level werden farbig dargestellt (INFO blau, WARN amber, ERROR rot).  `netmap.log` (rotierend, 1 MB × 3) mit Auto-Refresh alle 5 s,
 Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-Endpunkte
 `/api/logs` und `/api/logs/download`.
 

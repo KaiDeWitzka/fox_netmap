@@ -88,7 +88,9 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   `subred · sitio (nº)`). Las aristas entre subredes distintas van de grupo a grupo.
 - **Plegar/desplegar hijos:** en el panel de detalles de un router/switch, un botón oculta todos
   los dispositivos conectados directamente; el nodo muestra entonces `(+N)`.
-- **Diseño:** `auto` (física, por defecto), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Diseño:**
+- **Despeje automático:** nodos más compactos (20 px), aristas más finas/translúcidas, parámetros cose escalados según el número de dispositivos; etiquetas visibles solo desde zoom ≥ 0,85; con más de 40 dispositivos los grupos de subred se activan automáticamente (seguen conmutables).
+ `auto` (física, por defecto), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Restablecer** borra las posiciones guardadas.
 - Nodos virtuales: **🌐 Internet** (con IP WAN de TR-064, si no «?»), **🏠 Pasarela** (si la
   pasarela no está en la lista) y **📶 wlan:…** para dispositivos WLAN sin nodo propio.
@@ -115,7 +117,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
 
 ![Registro](screenshots/04-log.svg)
 
-La vista **Registro** muestra `netmap.log` (rotativo, 1 MB × 3) con auto-refresco cada 5 s,
+La vista **Registro** muestraLos niveles se colorean (INFO azul, WARN ámbar, ERROR rojo).  `netmap.log` (rotativo, 1 MB × 3) con auto-refresco cada 5 s,
 filtro por nivel y descarga del archivo completo. Lo mismo ofrecen `/api/logs` y
 `/api/logs/download`.
 
