@@ -6,6 +6,6 @@
     "test:ui": "node tests/ui_dom_check.mjs"
   },
   "devDependencies": {
-    "jsdom": "^24.1.0"
+    "jsdom": "^31.0.1"
   }
 }
