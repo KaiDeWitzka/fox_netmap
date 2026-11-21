@@ -558,3 +558,19 @@ def test_oui_online_fallback(tmp_path, monkeypatch):
     assert oui.lookup_online("DE:AD:BE:EF:00:02", settings, conn, {"left": 5}) == "JsonVendor"
     assert db.get_oui_cache(conn, "DEADBE") == "JsonVendor"
     conn.close()
+def test_discover_mixed_v4_v6_sort(monkeypatch):
+    """Regression: gemischte v4/v6-Live-Mengen duerfen sorted() nicht crashen (TypeError: not of the same version)."""
+    import ipaddress
+
+    monkeypatch.setattr(discover, "arp_table", lambda: {"192.168.178.34": "aa:bb:cc:00:00:01"})
+    monkeypatch.setattr(discover, "neigh6_table", lambda: {"fdf1:3afe:ed39:0:27a:a4ff:fe9b:d968": "aa:bb:cc:00:00:02"})
+    monkeypatch.setattr(discover, "ping_sweep", lambda subnet, timeout=1.0, max_hosts=0: {"192.168.178.34"})
+    monkeypatch.setattr(discover, "tcp_probe_sweep", lambda subnet, skip, timeout=0.8, max_hosts=0: set())
+    monkeypatch.setattr(discover, "ping_host", lambda ip, timeout: True)
+    monkeypatch.setattr(discover.topology, "gateway_ip6", lambda: "fdf1:3afe:ed39::1")
+    devs = discover.discover(["192.168.178.0/24", "fdf1:3afe:ed39::/64"], timeout=0.1)
+    ips = [d["ip"] for d in devs]
+    assert "192.168.178.34" in ips
+    assert any(i.startswith("fdf1:") for i in ips)
+    assert ips == sorted(ips, key=lambda s: (ipaddress.ip_address(s).version, int(ipaddress.ip_address(s))))
+    assert discover.ip_sort_key("10.0.0.2") < discover.ip_sort_key("fdf1::1")

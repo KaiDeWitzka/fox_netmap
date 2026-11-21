@@ -78,6 +78,12 @@ def neigh6_table() -> dict[str, str]:
         return {}
 
 
+def ip_sort_key(s: str):
+    """Sortierschluessel, der gemischte IPv4/IPv6-Listen erlaubt (v4 vor v6, dann numerisch)."""
+    a = ipaddress.ip_address(s)
+    return (a.version, int(a))
+
+
 def in_net(ip: str, net) -> bool:
     try:
         return ipaddress.ip_address(ip) in net
@@ -183,7 +189,7 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
             for ip in probed:
                 live.setdefault(ip, "tcp")
     devices: list[dict] = []
-    for ip in sorted(live, key=lambda s: ipaddress.ip_address(s)):
+    for ip in sorted(live, key=ip_sort_key):
         source = live[ip]
         v6 = ":" in ip
         mac = neigh6.get(ip) if v6 else arp.get(ip)
