@@ -766,14 +766,24 @@ function bindSidebar() {
       lang: document.getElementById("st-lang").value,
       scan_interval: parseInt(document.getElementById("st-interval").value, 10),
       subnets: document.getElementById("st-subnets").value,
+      scan_timeout: parseFloat(document.getElementById("st-scantimeout").value),
       port_top: parseInt(document.getElementById("st-porttop").value, 10),
+      ports: document.getElementById("st-ports").value,
       history_hours: parseInt(document.getElementById("st-history").value, 10),
       device_retention_days: parseInt(document.getElementById("st-retention").value, 10),
       snmp_enabled: document.getElementById("st-snmp").checked,
       snmp_switches: document.getElementById("st-switches").value,
+      snmp_community: document.getElementById("st-snmpcommunity").value,
+      fritz_url: document.getElementById("st-fritzurl").value,
+      fritz_urls: document.getElementById("st-fritzurls").value,
+      fritz_user: document.getElementById("st-fritzuser").value,
+      notify_webhook: document.getElementById("st-notifywebhook").value,
+      notify_gotify: document.getElementById("st-notifygotify").value,
+      notify_ntfy: document.getElementById("st-notifyntfy").value,
       auth_enabled: document.getElementById("st-auth").checked,
       auto_export: document.getElementById("st-autoexport").checked,
       auto_export_interval_hours: parseInt(document.getElementById("st-autoexport-interval").value, 10),
+      auto_export_dir: document.getElementById("st-autoexportdir").value,
       mdns_enabled: document.getElementById("st-mdns").checked,
       alarm_whitelist: document.getElementById("st-whitelist").value,
       sites: document.getElementById("st-sites").value,
@@ -852,6 +862,21 @@ function validateSettings(v) {
   const errs = [];
   if (!Number.isInteger(v.scan_interval) || v.scan_interval < 30 || v.scan_interval > 86400)
     errs.push(t("err.interval"));
+  if (!isFinite(v.scan_timeout) || v.scan_timeout < 0.2 || v.scan_timeout > 10)
+    errs.push(t("err.scanTimeout"));
+  for (const p of String(v.ports || "").split(",").map((x) => x.trim()).filter(Boolean))
+    if (!/^\d+$/.test(p) || Number(p) < 1 || Number(p) > 65535) errs.push(t("err.ports", { v: p }));
+  for (const key of ["fritz_url", "fritz_urls"]) {
+    for (const e of String(v[key] || "").split(",").map((x) => x.trim()).filter(Boolean))
+      if (!/^(https?:\/\/|\/?[a-zA-Z0-9.\-]+(:\d+)?$)/.test(e)) errs.push(t("err.endpoint", { v: e }));
+  }
+  for (const key of ["notify_webhook", "notify_gotify", "notify_ntfy"]) {
+    const u = String(v[key] || "").trim();
+    if (u && !/^https?:\/\/.+/.test(u)) errs.push(t("err.url", { v: u }));
+  }
+  if (String(v.snmp_community || "").trim() && /\s/.test(String(v.snmp_community).trim())) errs.push(t("err.community"));
+  const aed = String(v.auto_export_dir || "").trim();
+  if (aed && (aed.startsWith("/") || aed.split("/").includes(".."))) errs.push(t("err.exportdir"));
   if (!Number.isInteger(v.port_top) || v.port_top < 0 || v.port_top > 65535)
     errs.push(t("err.porttop"));
   if (!Number.isInteger(v.history_hours) || v.history_hours < 1 || v.history_hours > 87600)
@@ -928,7 +953,17 @@ async function loadSettings() {
   document.getElementById("st-lang").value = s.lang || "de";
   document.getElementById("st-interval").value = s.scan_interval;
   document.getElementById("st-subnets").value = s.subnets;
+  document.getElementById("st-scantimeout").value = s.scan_timeout;
   document.getElementById("st-porttop").value = s.port_top;
+  document.getElementById("st-ports").value = s.ports || "";
+  document.getElementById("st-snmpcommunity").value = s.snmp_community || "";
+  document.getElementById("st-fritzurl").value = s.fritz_url || "";
+  document.getElementById("st-fritzurls").value = s.fritz_urls || "";
+  document.getElementById("st-fritzuser").value = s.fritz_user || "";
+  document.getElementById("st-notifywebhook").value = s.notify_webhook || "";
+  document.getElementById("st-notifygotify").value = s.notify_gotify || "";
+  document.getElementById("st-notifyntfy").value = s.notify_ntfy || "";
+  document.getElementById("st-autoexportdir").value = s.auto_export_dir || "";
   document.getElementById("st-history").value = s.history_hours;
   document.getElementById("st-retention").value = s.device_retention_days;
   document.getElementById("st-snmp").checked = String(s.snmp_enabled) === "true" || s.snmp_enabled === true;

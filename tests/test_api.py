@@ -201,6 +201,23 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"theme": "blue"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"lang": "xx"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"lang": "pt"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"scan_timeout": 0.1}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"scan_timeout": 2.5}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"ports": "80,abc"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"ports": "80,443,8080"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"fritz_url": "192.168.178.1:49000"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"fritz_url": "kein endpoint!"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"fritz_urls": "http://192.168.178.14:49000, 192.168.178.16:49000"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"notify_webhook": "keine-url"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"notify_webhook": "https://hook.example/x"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"notify_ntfy": "https://ntfy.example/t"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"snmp_community": "mit leerzeichen"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"snmp_community": "public"}).status_code == 200
+    body = auth_client.get("/api/settings").json()
+    for secret in ("fritz_pass", "auth_pass", "notify_gotify_token", "notify_ntfy_token"):
+        assert secret not in body, secret
+    assert body["fritz_url"] == "192.168.178.1:49000"
+    assert body["scan_timeout"] in (2.5, "2.5")
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "/abs"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": -1}).status_code == 422

@@ -29,6 +29,16 @@ OVERRIDABLE = {
     "alarm_whitelist": str,
     "sites": str,
     "lang": str,
+    "scan_timeout": float,
+    "ports": str,
+    "fritz_url": str,
+    "fritz_urls": str,
+    "fritz_user": str,
+    "snmp_community": str,
+    "notify_webhook": str,
+    "notify_gotify": str,
+    "notify_ntfy": str,
+    "auto_export_dir": str,
 }
 
 

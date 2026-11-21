@@ -91,6 +91,16 @@ w.fetch = async (url, opts = {}) => {
         alarm_whitelist: "",
         sites: "",
         lang: "de",
+        scan_timeout: 1.0,
+        ports: "",
+        fritz_url: "",
+        fritz_urls: "",
+        fritz_user: "",
+        snmp_community: "public",
+        notify_webhook: "",
+        notify_gotify: "",
+        notify_ntfy: "",
+        auto_export_dir: "exports",
       };
     if (String(url).includes("/api/tokens")) return [];
     if (String(url).includes("/api/logs"))
@@ -427,6 +437,30 @@ $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Settings: IPv6-Subnetz 2003:db8::/64 gueltig -> PATCH", patchCount() === patchBase5 + 1);
 $("#st-subnets").value = "";
+
+check(
+  "Settings: Compose-Felder vorhanden (fritz/snmp/notify/ports/timeout/exportdir)",
+  ["#st-fritzurl", "#st-fritzurls", "#st-fritzuser", "#st-snmpcommunity", "#st-notifywebhook", "#st-notifygotify", "#st-notifyntfy", "#st-ports", "#st-scantimeout", "#st-autoexportdir"].every((s) => !!$(s))
+);
+const patchBase6 = patchCount();
+$("#st-notifywebhook").value = "keine-url";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("Settings: Webhook 'keine-url' -> kein PATCH, Fehlermeldung", patchCount() === patchBase6 && $("#settings-msg").textContent.length > 0);
+$("#st-notifywebhook").value = "https://hook.example/x";
+$("#st-fritzurl").value = "192.168.178.1:49000";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+const lastPatch6 = [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");
+check(
+  "Settings: gueltig -> PATCH enthaelt fritz_url + notify_webhook + scan_timeout + ports",
+  patchCount() === patchBase6 + 1 &&
+    !!lastPatch6 &&
+    lastPatch6.body.includes('"fritz_url":"192.168.178.1:49000"') &&
+    lastPatch6.body.includes('"notify_webhook":"https://hook.example/x"') &&
+    lastPatch6.body.includes("scan_timeout") &&
+    lastPatch6.body.includes("ports")
+);
 
 check("Layout: Select vorhanden, Default 'auto'", $("#layout-select").value === "auto");
 $("#layout-select").value = "grid";

@@ -1,5 +1,6 @@
 import ipaddress
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -34,6 +35,15 @@ SAFE_SETTINGS = [
     "alarm_whitelist",
     "sites",
     "lang",
+    "scan_timeout",
+    "ports",
+    "fritz_url",
+    "fritz_urls",
+    "fritz_user",
+    "snmp_community",
+    "notify_webhook",
+    "notify_gotify",
+    "notify_ntfy",
 ]
 
 
@@ -224,7 +234,22 @@ class SettingsPatch(BaseModel):
     alarm_whitelist: str | None = None
     sites: str | None = None
     lang: str | None = None
+    scan_timeout: float | None = None
+    ports: str | None = None
+    fritz_url: str | None = None
+    fritz_urls: str | None = None
+    fritz_user: str | None = None
+    snmp_community: str | None = None
+    notify_webhook: str | None = None
+    notify_gotify: str | None = None
+    notify_ntfy: str | None = None
     auth_enabled: bool | None = None
+
+
+def _valid_endpoint(s: str) -> bool:
+    if s.startswith(("http://", "https://")):
+        return True
+    return bool(re.match(r"^[a-zA-Z0-9.\-]+(:\d+)?$", s))
 
 
 def validate_settings(body: SettingsPatch) -> str | None:
@@ -240,6 +265,26 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "theme muss 'dark' oder 'light' sein"
     if body.lang is not None and body.lang not in ("de", "en", "fr", "es", "it", "pt"):
         return "lang muss de, en, fr, es, it oder pt sein"
+    if body.scan_timeout is not None and not 0.2 <= body.scan_timeout <= 10:
+        return "scan_timeout muss zwischen 0.2 und 10 Sekunden liegen"
+    if body.ports is not None and body.ports.strip():
+        for p in body.ports.split(","):
+            p = p.strip()
+            if not p.isdigit() or not 1 <= int(p) <= 65535:
+                return f"ungueltiger Port in eigener Portliste: {p!r}"
+    if body.fritz_url is not None and body.fritz_url.strip() and not _valid_endpoint(body.fritz_url.strip()):
+        return f"ungueltiges TR-064-Hauptgeraet: {body.fritz_url.strip()!r} (URL oder host:port erwartet)"
+    if body.fritz_urls is not None and body.fritz_urls.strip():
+        for u in body.fritz_urls.split(","):
+            u = u.strip()
+            if u and not _valid_endpoint(u):
+                return f"ungueltiger weiterer TR-064-Endpunkt: {u!r} (URL oder host:port erwartet)"
+    for key in ("notify_webhook", "notify_gotify", "notify_ntfy"):
+        val = getattr(body, key)
+        if val is not None and val.strip() and not val.strip().startswith(("http://", "https://")):
+            return f"{key} muss eine http(s)-URL sein: {val.strip()!r}"
+    if body.snmp_community is not None and body.snmp_community.strip() and re.search(r"\s", body.snmp_community.strip()):
+        return "snmp_community darf keine Leerzeichen enthalten"
     if body.subnets is not None and body.subnets.strip():
         for sn in body.subnets.split(","):
             try:
