@@ -2,6 +2,8 @@
 
 Version 1.3.x · Stand: November 2026
 
+> Sprachen / Languages : [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
+
 fox_netmap ist eine interaktive, durchsuchbare Netzwerkkarte für das Heimnetz: bis zu ~200 Geräte
 über mehrere Subnetze/VLANs, mit Topologie („Verbunden mit“), offenen Ports, Verlauf, Alarmen und
 Exporten (JSON/CSV/PDF-Druck). Daten liegen persistent in SQLite, Scans laufen zyklisch oder manuell.
