@@ -58,6 +58,15 @@ w.fetch = async (url, opts = {}) => {
       return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
       const mac = String(url).split("/api/device/")[1];
+      if (mac === "66:66:66:66:66:66")
+        return {
+          mac, ip: "192.168.178.66", hostname: '<img src=x onerror="window.__xss=1">', vendor: "<script>window.__xss=2</script>",
+          category: "Client", status: "online", subnet: "192.168.178.0/24", source: "mdns", note: '" autofocus onfocus="window.__xss=3',
+          first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
+          ports: [{ port: 80, proto: "tcp", service: "<b onmouseover=window.__xss=4>http</b>" }],
+          connection: "lan", layout: { connected_to: "", connected_manual: 0 }, history: [],
+          events: [{ ts: "2026-01-01", type: "new", detail: "<svg onload=window.__xss=5>" }],
+        };
       if (mac === "d8:47:32:8e:ee:06")
         return {
           mac, ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
@@ -617,8 +626,22 @@ cyInstance._handlers["tap:node"]({ target: switchFakeNode });
 await sleep(80);
 check("A11y: Angeschlossene Geräte als <button class=dev-link>", !!$("#detail-content button.dev-link[data-mac='ip:192.168.179.20']"));
 
+// Sicherheit (v1.4.1): Werte aus dem Netz duerfen in der Detailansicht kein HTML/JS erzeugen.
+const xssNode = { data(k) { return k === "id" ? "66:66:66:66:66:66" : undefined; }, closedNeighborhood() { return { addClass() {} }; } };
+cyInstance._handlers["tap:node"]({ target: xssNode });
+await sleep(80);
+const det = $("#detail-content");
+check(
+  "Sicherheit: Detailansicht escaped Hostname/Hersteller/Notiz/Dienst/Event (kein XSS)",
+  !det.querySelector("img, script, svg, b") && w.__xss === undefined &&
+    det.textContent.includes('<img src=x onerror="window.__xss=1">') && det.textContent.includes("<script>window.__xss=2</script>")
+);
+check("Sicherheit: Notiz bleibt im value-Attribut gekapselt", !!$("#ed-note") && $("#ed-note").value.includes("onfocus") && !$("#ed-note").hasAttribute("onfocus"));
+check("Bugfix: Kategorie-Optionen tragen den kanonischen Wert (sprachunabhaengig)", [...doc.querySelectorAll("#ed-cat option")].every((o) => o.value && !o.value.startsWith("cat.")));
+
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));
+check("Sicherheit: login.html ohne Inline-Skript (CSP script-src 'self')", !/<script>/.test(loginHtml) && loginHtml.includes('src="/static/login.js"'));
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

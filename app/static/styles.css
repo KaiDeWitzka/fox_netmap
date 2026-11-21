@@ -127,8 +127,9 @@ aside#detail {
 #detail-content h2 { font-size: 15px; margin: 4px 0 8px; }
 #detail-content h3 { font-size: 13px; margin: 14px 0 4px; color: var(--muted); }
 #detail-content table { width: 100%; border-collapse: collapse; font-size: 12px; }
-#detail-content td { border-bottom: 1px solid var(--border); padding: 3px 4px; vertical-align: top; word-break: break-all; }
-#detail-content td:first-child { color: var(--muted); width: 40%; }
+#detail-content td, #detail-content th[scope="row"] { border-bottom: 1px solid var(--border); padding: 3px 4px; vertical-align: top; word-break: break-all; }
+#detail-content th[scope="row"] { color: var(--muted); width: 40%; text-align: left; font-weight: normal; word-break: normal; }
+.ext-link { color: var(--accent); }
 .chips span {
   display: inline-block;
   background: var(--bg);

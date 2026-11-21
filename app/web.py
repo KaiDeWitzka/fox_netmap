@@ -8,6 +8,7 @@ from . import api, db
 from .auth import ensure_default_user, is_valid_session
 from .config import Settings, get_settings
 from .logsetup import get_logger
+from .security import LoginThrottle, security_headers
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -29,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="fox_netmap", version=settings.app_version)
     app.state.settings = settings
     app.state.db_path = db.db_path(settings.data_dir)
+    app.state.login_throttle = LoginThrottle()
     conn = db.connect(app.state.db_path)
     db.init_db(conn)
     ensure_default_user(conn, settings)
@@ -36,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(api.router)
 
+    # Reihenfolge: zuletzt registrierte Middleware laeuft aussen -> Header auch auf 401/303-Antworten.
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
         path = request.url.path
@@ -48,6 +51,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if path.startswith("/api/"):
             return JSONResponse({"detail": "unauthorized"}, status_code=401)
         return RedirectResponse("/login", status_code=303)
+
+    @app.middleware("http")
+    async def security_headers_middleware(request: Request, call_next):
+        response = await call_next(request)
+        for name, value in security_headers(request.url.path, settings.embed_ancestors).items():
+            response.headers.setdefault(name, value)
+        return response
 
     static_dir = os.path.join(os.path.dirname(__file__), "static")
 

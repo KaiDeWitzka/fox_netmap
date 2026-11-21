@@ -36,6 +36,18 @@ const QP = new URLSearchParams(location.search);
 let LANG = QP.get("lang") || localStorage.getItem("fox_lang") || "de";
 if (!LANGS.some(([c]) => c === LANG)) LANG = "de";
 
+// Sicherheit: Alle Werte, die per innerHTML eingesetzt werden, MUESSEN durch esc() laufen.
+// Hostnamen, Hersteller, Notizen, Dienst- und Event-Texte stammen aus dem Netz (mDNS, DNS,
+// TR-064, OUI-Online-Lookup) bzw. aus Benutzereingaben und sind nicht vertrauenswuerdig.
+const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;" };
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"'`]/g, (c) => ESC_MAP[c]);
+}
+
+function safeUrl(u) {
+  return /^https?:\/\//i.test(String(u || "")) ? String(u) : "#";
+}
+
 function t(key, vars) {
   let s = (I18N[LANG] && I18N[LANG][key]) || I18N.de[key] || key;
   if (vars) for (const k of Object.keys(vars)) s = s.split("{" + k + "}").join(String(vars[k]));
@@ -192,7 +204,7 @@ function activateTab(tab) {
 function fillCategoryOptions() {
   const sel = document.getElementById("filter-category");
   const cur = sel.value;
-  sel.innerHTML = `<option value="">${t("filter.allCategories")}</option>`;
+  sel.innerHTML = `<option value="">${esc(t("filter.allCategories"))}</option>`;
   for (const c of categories) {
     const o = document.createElement("option");
     o.value = c;
@@ -435,30 +447,30 @@ async function showDetail(mac) {
     cy.edges().filter((e) => e.data("source") === c.mac).addClass("hl");
   }
   const el = document.getElementById("detail-content");
-  const hostLinks = webLinks(d).map((l) => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">${l.label}</a>`).join(", ");
+  const hostLinks = webLinks(d).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" class="ext-link">${esc(l.label)}</a>`).join(", ");
   const rows = [
-    [t("d.hostname"), (d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", d.ip], [t("d.mac"), (d.mac || "").startsWith("ip:") ? t("d.macUnknown") : d.mac], [t("d.vendor"), d.vendor],
-    [t("d.category"), t("cat." + d.category)], [t("d.status"), d.status], [t("d.subnet"), d.subnet], [t("d.site"), d.site || "–"], [t("d.source"), d.source],
-    [t("d.connection"), d.connection ? d.connection.toUpperCase() : "–"], [t("d.connected"), d.layout.connected_to || t("d.auto")], [t("d.note"), d.note],
-    [t("d.firstSeen"), d.first_seen], [t("d.lastSeen"), d.last_seen],
+    [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
+    [t("d.category"), esc(t("cat." + d.category))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
+    [t("d.connection"), esc(d.connection ? d.connection.toUpperCase() : "–")], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
+    [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
   ];
-  let html = `<h2>${d.hostname || d.ip}</h2><table>` + rows.map(([k, v]) => `<tr><td>${k}</td><td>${v ?? ""}</td></tr>`).join("") + "</table>";
-  html += `<h3>${t("d.ports", { n: d.ports.length })}</h3><div class="chips">` + (d.ports.map((p) => `<span>${p.port}${p.service ? " " + p.service : ""}</span>`).join("") || "–") + "</div>";
+  let html = `<h2>${esc(d.hostname || d.ip)}</h2><table>` + rows.map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${v ?? ""}</td></tr>`).join("") + "</table>";
+  html += `<h3>${t("d.ports", { n: d.ports.length })}</h3><div class="chips">` + (d.ports.map((p) => `<span>${esc(p.port)}${p.service ? " " + esc(p.service) : ""}</span>`).join("") || "–") + "</div>";
   if (children.length) {
-    html += `<h3>${t("d.children", { n: children.length })}</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${c.mac}">${c.hostname || c.ip}</button> (${t("cat." + c.category)})</li>`).join("") + "</ul>";
+    html += `<h3>${t("d.children", { n: children.length })}</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${esc(c.mac)}">${esc(c.hostname || c.ip)}</button> (${esc(t("cat." + c.category))})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
-    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option ${c === d.category ? "selected" : ""}>${t("cat." + c)}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${t("cols.note")}" value="${(d.note || "").replace(/"/g, "&quot;")}"><button id="ed-save">${t("btn.save")}</button></div>`;
+    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}"><button id="ed-save">${t("btn.save")}</button></div>`;
     const parents = devices.filter((x) => x.category === "Router" || x.category === "Switch");
     const cur = d.layout.connected_to || "";
-    html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${x.mac}"${cur === x.mac ? " selected" : ""}>${x.hostname || x.ip} (${x.ip})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
+    html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${esc(x.mac)}"${cur === x.mac ? " selected" : ""}>${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
     if (isNet) {
       const kids = childCount(mac);
       html += `<div class="edit-row"><button id="ed-collapse">${collapsed.has(mac) ? t("collapse.show", { n: kids }) : t("collapse.hide", { n: kids })}</button></div>`;
     }
   }
-  html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${h.ts} – ${h.status}</li>`).join("") + "</ul>";
-  html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${e.ts} – ${e.type}${e.detail ? " " + e.detail : ""}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${esc(h.ts)} – ${esc(h.status)}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${esc(e.ts)} – ${esc(e.type)}${e.detail ? " " + esc(e.detail) : ""}</li>`).join("") + "</ul>";
   el.innerHTML = html;
   el.querySelectorAll(".dev-link").forEach((n) => n.addEventListener("click", () => showDetail(n.dataset.mac)));
   const save = document.getElementById("ed-save");
@@ -494,9 +506,9 @@ function renderTable() {
   const cols = colOrder.map((k) => { const pair = TABLE_COLS.find(([key]) => key === k); return [k, t(pair[1])]; });
   const colgroup = document.querySelector("#device-table colgroup");
   if (colgroup) {
-    colgroup.innerHTML = colOrder.map((k) => `<col data-key="${k}"${colWidths[k] ? ` style="width:${colWidths[k]}px"` : ""}>`).join("");
+    colgroup.innerHTML = colOrder.map((k) => `<col data-key="${esc(k)}"${colWidths[k] ? ` style="width:${Number(colWidths[k]) || 0}px"` : ""}>`).join("");
   }
-  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${k}" scope="col" draggable="true">${label}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
+  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${esc(k)}" scope="col" draggable="true">${esc(label)}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
   thead.querySelectorAll("th").forEach((th) => {
     th.addEventListener("click", () => {
       if (suppressSortClick) { suppressSortClick = false; return; }
@@ -572,7 +584,10 @@ function webLinks(d) {
 function buildCell(d, key) {
   const td = document.createElement("td");
   if (key === "status") {
-    td.innerHTML = `<span class="status-dot status-${d.status}"></span>${d.status}`;
+    const dot = document.createElement("span");
+    dot.className = "status-dot status-" + String(d.status || "").replace(/[^a-z]/gi, "");
+    td.appendChild(dot);
+    td.appendChild(document.createTextNode(d.status ?? ""));
   } else if (key === "hostname") {
     const label = d.hostname || d.ip || "";
     td.textContent = label;
@@ -588,7 +603,7 @@ function buildCell(d, key) {
         a.rel = "noopener noreferrer";
         a.textContent = l.label;
         a.title = l.url;
-        a.style.color = "var(--accent)";
+        a.className = "ext-link";
         td.appendChild(a);
       });
       td.appendChild(document.createTextNode(")"));

@@ -243,6 +243,9 @@ gateway, più sweep per quelle piccole; gateway-v6 per la topologia; link web co
 
 ## 14. Sicurezza
 
+- **Dalla v1.4.1:** tutti i dati di rete e utente vengono codificati in HTML prima della visualizzazione (protezione XSS); header di sicurezza (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) su tutte le risposte; blocco del login per 15 minuti dopo 5 tentativi falliti (IP+utente) o 20 (IP) (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` stabilisce quali siti possono incorporare `/embed` in un iframe (predefinito `*`; consigliato: indicare i propri domini).
+- Dettagli (in tedesco): [concetto di sicurezza](03-sicherheit.md).
 - Login di sessione (PBKDF2, cookie `fox_session`), attivo predefinito; `NETZ_AUTH_ENABLED=false` lo disattiva.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sono solo env; password vuota → password casuale registrata una volta.
 - `GET /api/settings` **non restituisce segreti** (coperto da test): né `auth_pass`, né
@@ -297,6 +300,8 @@ percorsi a token.
 
 | Sintomo | Causa / soluzione |
 |---|---|
+| «Troppi tentativi falliti» al login | Blocco attivo (HTTP 429). Attendere 15 minuti o riavviare il container (`docker compose restart netmap`). |
+| L'embed non appare nell'iframe | `NETZ_EMBED_ANCESTORS` non contiene il sito che incorpora. Aggiungere il dominio ed eseguire `docker compose up -d`. |
 | Dispositivo mancante nella sottorete VPN | ICMP bloccato → la sonda TCP interviene automaticamente; visibile nel log (`WARN … TCP probe ok`). Aggiungi la sottorete nelle Impostazioni. |
 | Errori TR-064 nel log | il fallback https→http è automatico; controlla URL/utente/password nelle Impostazioni. I fault SOAP sono registrados in chiaro. |
 | Switch senza vicini | TL-SG108E ecc. senza SNMP → solo porta 80; imposta la topologia manualmente nel pannello dettagli. |

@@ -238,6 +238,9 @@ plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8:
 
 ## 14. Security
 
+- **Since v1.4.1:** all network and user data is HTML-encoded before display (XSS protection); security headers (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) on all responses; login lockout for 15 minutes after 5 failed attempts (IP+user) or 20 (IP) (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` defines which sites may embed `/embed` in an iframe (default `*`; recommended: list your own domains).
+- Details (German): [security concept](03-sicherheit.md).
 - Session login (PBKDF2, cookie `fox_session`), on by default; `NETZ_AUTH_ENABLED=false` disables it.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` are env-only; empty password → a random password is logged once.
 - `GET /api/settings` returns **no secrets** (test-covered): no `auth_pass`, `fritz_pass` or
@@ -291,6 +294,8 @@ Auth: session cookie after `POST /api/login`; embed token instead of session for
 
 | Symptom | Cause / fix |
 |---|---|
+| “Too many failed attempts” at login | Login lockout active (HTTP 429). Wait 15 minutes or restart the container (`docker compose restart netmap`). |
+| Embed not shown in iframe | `NETZ_EMBED_ANCESTORS` does not include the embedding site. Add the domain and run `docker compose up -d`. |
 | Device missing in the VPN subnet | ICMP blocked → TCP probe kicks in automatically; visible in the log (`WARN … TCP probe ok`). Add the subnet in Settings. |
 | TR-064 errors in the log | https→http fallback is automatic; check URL/user/password in Settings (password write-only). SOAP faults are logged as plain text. |
 | Switch without neighbours | TL-SG108E etc. without SNMP → port 80 only; set topology manually in the detail panel. |

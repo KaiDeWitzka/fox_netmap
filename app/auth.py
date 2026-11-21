@@ -6,7 +6,7 @@ import time
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import db
 
@@ -50,20 +50,28 @@ def ensure_default_user(conn, settings) -> None:
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=128)
+    password: str = Field(max_length=1024)
 
 
 @router.post("/api/login")
 def login(body: LoginRequest, request: Request, response: Response):
+    throttle = request.app.state.login_throttle
+    client_ip = request.client.host if request.client else "unknown"
+    wait = throttle.retry_after(client_ip, body.username)
+    if wait:
+        log.warning("Login gesperrt (zu viele Fehlversuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
+        return JSONResponse({"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)})
     conn = db.connect(request.app.state.db_path)
     try:
         user = db.get_user(conn, body.username)
     finally:
         conn.close()
     if not user or not verify_password(body.password, user["pass_hash"]):
-        log.warning("Login fehlgeschlagen fuer Benutzer '%s'", body.username)
+        throttle.register_failure(client_ip, body.username)
+        log.warning("Login fehlgeschlagen fuer Benutzer '%s' von IP %s", body.username, client_ip)
         return JSONResponse({"detail": "invalid credentials"}, status_code=401)
+    throttle.register_success(client_ip, body.username)
     log.info("Login ok: %s", body.username)
     token = secrets.token_urlsafe(32)
     SESSIONS[token] = (body.username, time.time() + SESSION_TTL)

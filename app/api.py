@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import db, exporters
 from .auth import is_valid_session
@@ -145,7 +145,7 @@ def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_
 
 class DevicePatch(BaseModel):
     category: str | None = None
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=2000)
     connected_to: str | None = None
     x: float | None = None
     y: float | None = None

@@ -133,6 +133,7 @@ const I18N = {
     "login.pass": "Passwort",
     "login.btn": "Login",
     "login.fail": "Login fehlgeschlagen",
+    "login.locked": "Zu viele Fehlversuche – bitte in 15 Minuten erneut versuchen",
   },
   en: {
     "app.title": "fox_netmap",
@@ -268,6 +269,7 @@ const I18N = {
     "login.pass": "Password",
     "login.btn": "Login",
     "login.fail": "Login failed",
+    "login.locked": "Too many failed attempts – please try again in 15 minutes",
   },
   fr: {
     "app.title": "fox_netmap",
@@ -403,6 +405,7 @@ const I18N = {
     "login.pass": "Mot de passe",
     "login.btn": "Connexion",
     "login.fail": "Échec de la connexion",
+    "login.locked": "Trop de tentatives échouées – veuillez réessayer dans 15 minutes",
   },
   es: {
     "app.title": "fox_netmap",
@@ -538,6 +541,7 @@ const I18N = {
     "login.pass": "Contraseña",
     "login.btn": "Entrar",
     "login.fail": "Error de inicio de sesión",
+    "login.locked": "Demasiados intentos fallidos: inténtelo de nuevo en 15 minutos",
   },
   it: {
     "app.title": "fox_netmap",
@@ -673,6 +677,7 @@ const I18N = {
     "login.pass": "Password",
     "login.btn": "Accedi",
     "login.fail": "Login non riuscito",
+    "login.locked": "Troppi tentativi falliti – riprova tra 15 minuti",
   },
   pt: {
     "app.title": "fox_netmap",
@@ -808,6 +813,7 @@ const I18N = {
     "login.pass": "Senha",
     "login.btn": "Entrar",
     "login.fail": "Falha no login",
+    "login.locked": "Demasiadas tentativas falhadas – tente novamente dentro de 15 minutos",
   },
 };
 

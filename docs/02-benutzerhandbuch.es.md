@@ -245,6 +245,9 @@ como `[2003:db8::10]:8080`.
 
 ## 14. Seguridad
 
+- **Desde v1.4.1:** todos los datos de red y de usuario se codifican en HTML antes de mostrarse (protección XSS); cabeceras de seguridad (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) en todas las respuestas; bloqueo del inicio de sesión durante 15 minutos tras 5 intentos fallidos (IP+usuario) o 20 (IP) (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` define qué sitios pueden incrustar `/embed` en un iframe (por defecto `*`; recomendado: indicar sus propios dominios).
+- Detalles (en alemán): [concepto de seguridad](03-sicherheit.md).
 - Login por sesión (PBKDF2, cookie `fox_session`), activado por defecto; `NETZ_AUTH_ENABLED=false` lo desactiva.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` son solo env; contraseña vacía → se registra una aleatoria una vez.
 - `GET /api/settings` **no devuelve secretos** (cubierto por test): ni `auth_pass`, ni
@@ -298,6 +301,8 @@ Auth: cookie de sesión tras `POST /api/login`; token de embed en lugar de sesi�
 
 | Síntoma | Causa / solución |
 |---|---|
+| «Demasiados intentos fallidos» al iniciar sesión | Bloqueo activo (HTTP 429). Esperar 15 minutos o reiniciar el contenedor (`docker compose restart netmap`). |
+| El embed no se muestra en el iframe | `NETZ_EMBED_ANCESTORS` no incluye el sitio que incrusta. Añadir el dominio y ejecutar `docker compose up -d`. |
 | Falta un dispositivo en la subred VPN | ICMP bloqueado → la sonda TCP actúa automáticamente; visible en el registro (`WARN … TCP probe ok`). Añade la subred en Configuración. |
 | Errores TR-064 en el registro | el fallback https→http es automático; revisa URL/usuario/contraseña en Configuración. Los fallos SOAP se registran en texto plano. |
 | Switch sin vecinos | TL-SG108E etc. sin SNMP → solo puerto 80; define la topología manualmente en el panel de detalles. |

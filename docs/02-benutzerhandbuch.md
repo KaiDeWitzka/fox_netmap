@@ -244,6 +244,9 @@ bei kleinen zusätzlich Sweep; Gateway-v6 für die Topologie; Web-Links als `[20
 
 ## 14. Sicherheit
 
+- **Seit v1.4.1:** Alle Netz- und Benutzerdaten werden vor der Anzeige HTML-codiert (XSS-Schutz); Security-Header (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) auf allen Antworten; Login-Sperre nach 5 Fehlversuchen (IP+Benutzer) bzw. 20 (IP) für 15 Minuten (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` legt fest, welche Seiten `/embed` per iframe einbinden dürfen (Default `*`; Empfehlung: eigene Domains eintragen).
+- Details: [Sicherheitskonzept](03-sicherheit.md).
 - Session-Login (PBKDF2, Cookie `fox_session`), default an; `NETZ_AUTH_ENABLED=false` schaltet ab.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sind env-only; leeres Passwort → zufälliges Passwort wird
   einmalig geloggt.
@@ -298,6 +301,8 @@ Auth: Session-Cookie nach `POST /api/login`; Embed-Token statt Session für die 
 
 | Symptom | Ursache / Lösung |
 |---|---|
+| „Zu viele Fehlversuche“ beim Login | Login-Sperre aktiv (HTTP 429). 15 Minuten warten oder Container neu starten (`docker compose restart netmap`). |
+| Embed wird im iframe nicht angezeigt | `NETZ_EMBED_ANCESTORS` enthält die einbettende Seite nicht. Domain ergänzen und `docker compose up -d`. |
 | Gerät fehlt im VPN-Subnetz | ICMP blockiert → TCP-Probe greift automatisch; im Log (`WARN … TCP-Probe ok`) sichtbar. Subnetz in den Settings eintragen. |
 | TR-064-Fehler im Log | https→http-Fallback automatisch; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. |
 | Switch ohne Nachbarn | TL-SG108E o. Ä. ohne SNMP → Port 80 only; Topologie dann manuell im Detail-Panel setzen. |

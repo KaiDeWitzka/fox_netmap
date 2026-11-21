@@ -44,7 +44,9 @@ class Settings(BaseSettings):
     oui_online_max: int = 10
     oui_online_url: str = "https://api.macvendors.com"
     alarm_whitelist: str = ""
-    app_version: str = "1.4.0"
+    # Erlaubte Einbetter fuer /embed (CSP frame-ancestors), z. B. "https://wiki.example.org 'self'". "*" = alle.
+    embed_ancestors: str = "*"
+    app_version: str = "1.4.1"
 
     @property
     def subnet_list(self) -> list[str]:

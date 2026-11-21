@@ -242,6 +242,9 @@ gateway, mais varrimento em redes pequenas; gateway-v6 para a topologia; ligaç�
 
 ## 14. Segurança
 
+- **Desde a v1.4.1:** todos os dados de rede e de utilizador são codificados em HTML antes de serem mostrados (proteção XSS); cabeçalhos de segurança (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) em todas as respostas; bloqueio do login durante 15 minutos após 5 tentativas falhadas (IP+utilizador) ou 20 (IP) (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` define que sites podem incorporar `/embed` num iframe (predefinição `*`; recomendado: indicar os seus próprios domínios).
+- Detalhes (em alemão): [conceito de segurança](03-sicherheit.md).
 - Login por sessão (PBKDF2, cookie `fox_session`), ativo por defeito; `NETZ_AUTH_ENABLED=false` desativa-o.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` são só env; palavra-passe vazia → uma aleatória é registada uma vez.
 - `GET /api/settings` **não devolve segredos** (coberto por teste): nem `auth_pass`, nem
@@ -295,6 +298,8 @@ Auth: cookie de sessão após `POST /api/login`; token de embed em vez de sessã
 
 | Sintoma | Causa / solução |
 |---|---|
+| «Demasiadas tentativas falhadas» no login | Bloqueio ativo (HTTP 429). Aguardar 15 minutos ou reiniciar o contentor (`docker compose restart netmap`). |
+| O embed não aparece no iframe | `NETZ_EMBED_ANCESTORS` não inclui o site que incorpora. Adicionar o domínio e executar `docker compose up -d`. |
 | Dispositivo em falta na sub-rede VPN | ICMP bloqueado → a sonda TCP entra automaticamente; visível no registo (`WARN … TCP probe ok`). Adiciona a sub-rede em Definições. |
 | Erros TR-064 no registo | a passagem https→http é automática; verifica URL/utilizador/palavra-passe em Definições. As falhas SOAP são registadas em texto simples. |
 | Switch sem vizinhos | TL-SG108E etc. sem SNMP → apenas porta 80; define a topologia manualmente no painel de detalhes. |
