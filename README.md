@@ -3,6 +3,12 @@ scan am visualize a network as a map
 
 - [Anforderungen & Zielarchitektur](docs/01-anforderungen.md)
 
+## Lizenz
+
+[MIT License](LICENSE) — Copyright (c) 2026 KaiDeWitzka.
+
+fox_netmap darf frei genutzt, verändert und weitergegeben werden (auch kommerziell). Einzige Bedingung: Der Copyright- und Lizenzhinweis muss in allen Kopien/wesentlichen Teilen erhalten bleiben — wer den Code verwendet, soll das also kenntlich machen.
+
 ## Dokumentation
 
 - [Benutzerhandbuch](docs/02-benutzerhandbuch.md) — in 6 Sprachen: [de](docs/02-benutzerhandbuch.md) · [en](docs/02-benutzerhandbuch.en.md) · [fr](docs/02-benutzerhandbuch.fr.md) · [es](docs/02-benutzerhandbuch.es.md) · [it](docs/02-benutzerhandbuch.it.md) · [pt](docs/02-benutzerhandbuch.pt.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
