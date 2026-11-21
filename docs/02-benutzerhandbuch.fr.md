@@ -246,6 +246,9 @@ liens web sous la forme `[2003:db8::10]:8080`.
 
 ## 14. Sécurité
 
+- **Depuis la v1.4.1 :** toutes les données réseau et utilisateur sont encodées en HTML avant affichage (protection XSS) ; en-têtes de sécurité (CSP, `X-Frame-Options`, `Referrer-Policy: no-referrer`) sur toutes les réponses ; blocage de la connexion pendant 15 minutes après 5 échecs (IP+utilisateur) ou 20 (IP) (HTTP 429).
+- `NETZ_EMBED_ANCESTORS` définit les sites autorisés à intégrer `/embed` dans une iframe (par défaut `*` ; recommandé : indiquer vos propres domaines).
+- Détails (en allemand) : [concept de sécurité](03-sicherheit.md).
 - Login par session (PBKDF2, cookie `fox_session`), activé par défaut ; `NETZ_AUTH_ENABLED=false` le désactive.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sont env-only ; mot de passe vide → un mot de passe aléatoire
   est journalisé une fois.
@@ -301,6 +304,8 @@ les chemins à jeton.
 
 | Symptôme | Cause / solution |
 |---|---|
+| « Trop de tentatives échouées » à la connexion | Blocage actif (HTTP 429). Attendre 15 minutes ou redémarrer le conteneur (`docker compose restart netmap`). |
+| L'intégration ne s'affiche pas dans l'iframe | `NETZ_EMBED_ANCESTORS` ne contient pas le site intégrant. Ajouter le domaine puis `docker compose up -d`. |
 | Appareil absent du sous-réseau VPN | ICMP bloqué → la sonde TCP prend le relais automatiquement ; visible dans le journal (`WARN … TCP probe ok`). Ajouter le sous-réseau dans les Paramètres. |
 | Erreurs TR-064 dans le journal | le repli https→http est automatique ; vérifier URL/utilisateur/mot de passe dans les Paramètres. Les fautes SOAP sont journalisées en clair. |
 | Switch sans voisins | TL-SG108E etc. sans SNMP → port 80 uniquement ; définir la topologie manuellement dans le panneau de détails. |
