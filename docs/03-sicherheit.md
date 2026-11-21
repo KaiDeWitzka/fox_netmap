@@ -149,6 +149,7 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 | OPS.1.1.3 Patch- und Änderungsmanagement | Dependabot, wöchentlicher Nachscan, Patch-Releases |
 | SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung | Basis-Image per Digest, eigenes Image in GHCR mit Provenance |
 | APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release |
+| CON.2 Datenschutz, CON.6 Löschen | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Retention |
 | OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |
 
 ## 4. Bekannte Restrisiken
@@ -160,6 +161,8 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 | Sessions nur im Speicher | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte |
 | Scanner ohne `no-new-privileges` | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt |
 | `style-src 'unsafe-inline'` in der CSP | Nötig für Cytoscape; Styles können kein JavaScript ausführen |
+| Ereignisse aktiver Geräte ohne Löschfrist | Geplant v1.6.0: Frist analog zum Verlauf (Datenschutz, Speicherbegrenzung) |
+| Gotify-Token in der URL (`?token=`) | Geplant v1.6.0: Header `X-Gotify-Key` statt Query-Parameter |
 | Paket in GHCR privat | Solange das Repository privat ist; Pull nur mit Token (`read:packages`). Für eine Runtipi-App müsste das Paket öffentlich werden |
 | Fixlose Schwachstellen im Basis-Image | Werden gemeldet, aber nicht als Gate gewertet (`--ignore-unfixed`); Abhilfe über Dependabot-Digest-Updates |
 

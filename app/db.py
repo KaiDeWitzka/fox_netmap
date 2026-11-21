@@ -285,6 +285,17 @@ def get_device(conn: sqlite3.Connection, mac: str) -> dict | None:
     return out
 
 
+DEVICE_TABLES = ("device_ports", "device_layout", "device_history", "device_events", "devices")
+
+
+def delete_device(conn: sqlite3.Connection, mac: str) -> None:
+    """Löscht ein Gerät mit allen zugehörigen Daten (Ports, Layout, Verlauf, Ereignisse) – Art. 17 DSGVO.
+    Manuelle Zuordnungen anderer Geräte zu diesem Gerät werden gelöst."""
+    for table in DEVICE_TABLES:
+        conn.execute(f"DELETE FROM {table} WHERE mac = ?", (mac,))
+    conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE connected_to = ?", (mac,))
+
+
 def get_layout(conn: sqlite3.Connection, mac: str) -> dict | None:
     row = conn.execute("SELECT * FROM device_layout WHERE mac = ?", (mac,)).fetchone()
     return dict(row) if row else None

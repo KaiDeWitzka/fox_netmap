@@ -281,9 +281,7 @@ def apply_retention(conn, settings: Settings, now: str) -> int:
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
     rows = conn.execute("SELECT mac FROM devices WHERE status = 'offline' AND last_seen < ?", (cutoff,)).fetchall()
     for r in rows:
-        mac = r["mac"]
-        for table in ("device_ports", "device_layout", "device_history", "device_events", "devices"):
-            conn.execute(f"DELETE FROM {table} WHERE mac = ?", (mac,))
+        db.delete_device(conn, r["mac"])
     if rows:
         log.info("Retention: %s Geraete entfernt (offline seit > %s Tagen)", len(rows), days)
     return len(rows)

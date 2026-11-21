@@ -471,6 +471,10 @@ async function showDetail(mac) {
   }
   html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${esc(h.ts)} – ${esc(h.status)}</li>`).join("") + "</ul>";
   html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${esc(e.ts)} – ${esc(e.type)}${e.detail ? " " + esc(e.detail) : ""}</li>`).join("") + "</ul>";
+  // Endgültige Aktion bewusst am Ende des Panels, getrennt von den Bearbeiten-Funktionen
+  if (!EMBED) {
+    html += `<h3>${t("d.deleteTitle")}</h3><p class="muted" id="ed-delete-hint">${t("d.deleteHint")}</p><div class="edit-row"><button id="ed-delete" class="danger" aria-describedby="ed-delete-hint">${t("btn.deleteDevice")}</button></div>`;
+  }
   el.innerHTML = html;
   el.querySelectorAll(".dev-link").forEach((n) => n.addEventListener("click", () => showDetail(n.dataset.mac)));
   const save = document.getElementById("ed-save");
@@ -487,6 +491,17 @@ async function showDetail(mac) {
       await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ connected_to: document.getElementById("ed-parent").value }) });
       await loadDevices();
       showDetail(mac);
+    });
+  }
+  const delBtn = document.getElementById("ed-delete");
+  if (delBtn) {
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(t("d.deleteConfirm", { name: d.hostname || d.ip || mac }))) return;
+      const res = await api("/api/device/" + mac, { method: "DELETE" });
+      if (!res.ok) return;
+      hideSidebar();
+      await loadDevices();
+      document.getElementById("main")?.focus();
     });
   }
   const collapseBtn = document.getElementById("ed-collapse");
@@ -988,10 +1003,12 @@ async function pollScanStatus() {
   const s = await r.json();
   const el = document.getElementById("scan-status");
   el.classList.toggle("running", !!s.scanning);
-  el.textContent =
+  const text =
     (s.scanning ? t("scan.running") : "") +
     (s.last_scan ? t("scan.last") + s.last_scan : t("scan.none")) +
     (s.next_scan ? t("scan.next") + s.next_scan : "");
+  // Live-Region nur bei echter Änderung neu schreiben, sonst lesen Screenreader alle 5 s dasselbe vor.
+  if (el.textContent !== text) el.textContent = text;
   if (!s.scanning && (wasScanning || (s.last_scan && s.last_scan !== lastScanSeen))) loadDevices();
   wasScanning = !!s.scanning;
   if (s.last_scan) lastScanSeen = s.last_scan;

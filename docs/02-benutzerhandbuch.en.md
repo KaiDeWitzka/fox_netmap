@@ -195,7 +195,7 @@ with `?theme=dark|light` and `?lang=…`.
 Two compose services share the `./data` volume:
 
 - `netmap` — web/API (port 8399)
-- `netmap-scanner` — `command: ["scanner"]`, `network_mode: host`, caps `NET_RAW`/`NET_ADMIN`
+- `netmap-scanner` — `command: ["scanner"]`, `network_mode: host`, caps `NET_RAW`
 
 **Sources per scan (merge priority):** ping sweep + ARP (`/proc/net/arp`) + TCP probe
 (80/443/22/445/8080) for ICMP-blocked hosts (e.g. VPN subnet) → TR-064 (main device +
@@ -249,7 +249,8 @@ plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8:
   `notify_*_token`. The TR-064 password is write-only in Settings.
 - Embed tokens: expirable, filterable, read-only; token-authenticated API paths are only
   `/api/devices`, `/api/device/…`, `/api/export/…`.
-- The scanner runs with minimal caps (`NET_RAW`, `NET_ADMIN`), read-only towards the network.
+- The scanner runs with minimal caps (`NET_RAW`), read-only towards the network.
+- **Privacy:** which data is collected, stored and sent outside is described in the [privacy notice](04-datenschutz.md) (German). Since v1.5.2 individual devices can be removed in the detail panel under **Delete device**, including history, ports and events (with confirmation). If the device is still on the network, it reappears with the next scan.
 
 ---
 
@@ -262,7 +263,7 @@ docker compose down                    # stop (data stays)
 docker compose down -v                 # WARNING: deletes ./data (DB, log, exports)!
 ```
 
-- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.1" }`
+- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.2" }`
 - Since v1.5.0 containers **no longer run as root** but as UID/GID `10001`. The web UI has no capabilities and a read-only root filesystem; the scanner keeps only `NET_RAW` for ping.
 - On the first start after the update, the container automatically hands over existing files in `./data` to UID 10001. On the host, use `sudo` to read them or add your user to a group with GID 10001.
 - Docker healthcheck: `docker compose ps` shows `healthy`/`unhealthy` (web: `/api/health`, scanner: scan loop running).
@@ -282,6 +283,7 @@ docker compose down -v                 # WARNING: deletes ./data (DB, log, expor
 | `GET /api/health` | health + version (public) |
 | `GET /api/devices?q=&category=&status=&subnet=&site=` | device list, filterable |
 | `PATCH /api/device/{mac}` | edit category/note/"connected to"/position |
+| `DELETE /api/device/{mac}` | delete device incl. history, ports and events (login required) |
 | `GET /api/device/{mac}` | details incl. ports/history/events |
 | `POST /api/scan` · `GET /api/scan/status` | trigger scan / status |
 | `GET /api/settings` · `PATCH /api/settings` | read settings (no secrets) / change (422 if invalid) |
@@ -321,6 +323,8 @@ The **Log** tab + `docker compose logs netmap-scanner` show every scan step.
 - Contrasts checked in dark/light theme; status also textual ("online/offline"), not color-only.
 - aria-labels on icon-only buttons, live region for status messages.
 - Full BITV 2.1 conformance is the goal — feedback welcome (repo issue).
+- **Reduce motion (since v1.5.2):** if “reduce motion” is enabled in the operating system (`prefers-reduced-motion`), fox_netmap shows no animations or transitions; a running scan is shown as a steady dot plus text. Otherwise the dot pulses only three times (under 5 seconds) and then stays still (WCAG 2.2.2, 2.3.3). The map is always laid out without animation.
+- The scan status is announced to screen readers only when it actually changes, not on every poll.
 
 ---
 
