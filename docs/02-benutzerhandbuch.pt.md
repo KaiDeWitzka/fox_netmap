@@ -89,7 +89,7 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
 - **Ocultar/mostrar filhos:** no painel de detalhes de um router/switch, um botão oculta todos os
   dispositivos ligados diretamente; o nó mostra então `(+N)`.
 - **Esquema:**
-- **Limpeza automática:** nós mais compactos (20 px), arestas mais finas/translúcidas, parâmetros cose escalados com o número de dispositivos; etiquetas visíveis apenas a partir de zoom ≥ 0,85; acima de 40 dispositivos os grupos de sub-rede ativam-se automaticamente (continuam comutáveis).
+- **Limpeza automática:** nós mais compactos (20 px), arestas mais finas/translúcidas, parâmetros cose escalados com o número de dispositivos; etiquetas totalmente visíveis apenas a partir de zoom ≥ 0,85 (abaixo disso, apenas hubs: router/switch/gateway/internet); acima de 25 dispositivos os grupos de sub-rede ativam-se automaticamente; «Apenas online» está ativo por defeito (comutável, guardado).
  `auto` (física, predefinido), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Repor** limpa as posições guardadas.
 - Nós virtuais: **🌐 Internet** (com IP WAN do TR-064, senão «?»), **🏠 Gateway** (se o gateway

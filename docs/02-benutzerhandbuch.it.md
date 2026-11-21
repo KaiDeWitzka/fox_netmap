@@ -90,7 +90,7 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
 - **Comprimi/espandi figli:** nel pannello dettagli di router/switch, un pulsante nasconde tutti
   i dispositivi collegati direttamente; il nodo mostra poi `(+N)`.
 - **Layout:**
-- **Pulizia automatica:** nodi più compatti (20 px), archi più sottili/trasparenti, parametri cose scalati in base al numero di dispositivi; etichette visibili solo da zoom ≥ 0,85; oltre 40 dispositivi i gruppi di sottorete si attivano automaticamente (sempre disattivabili).
+- **Pulizia automatica:** nodi più compatti (20 px), archi più sottili/trasparenti, parametri cose scalati in base al numero di dispositivi; etichette visibili solo da zoom ≥ 0,85 (sotto, solo gli hub: router/switch/gateway/internet); oltre 25 dispositivi i gruppi di sottorete si attivano automaticamente; «Solo online» è attivo di default (disattivabile, memorizzato).
  `auto` (fisica, predefinito), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Ripristina** cancella le posizioni salvate.
 - Nodi virtuali: **🌐 Internet** (con IP WAN da TR-064, altrimenti «?»), **🏠 Gateway** (se il
