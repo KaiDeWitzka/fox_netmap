@@ -113,7 +113,7 @@ w.fetch = async (url, opts = {}) => {
     if (String(url).includes("/api/scan")) return { last_scan: null, next_scan: null, scanning: 0 };
     return {};
   };
-  return { ok: true, status: 200, json, cookies: {} };
+  return { ok: true, status: 200, json, cookies: {}, blob: async () => new w.Blob(["%PDF-1.4 mock"], { type: "application/pdf" }) };
 };
 let cyInstance = null;
 w.cytoscape = () => {
@@ -140,10 +140,13 @@ w.cytoscape = () => {
     nodes() { return { removeClass() {} }; },
     edges() { return { removeClass() {}, filter: () => ({ addClass() {} }) }; },
     getElementById: () => ({ addClass() {}, removeClass() {} }),
+    png: () => "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   };
   return cyInstance;
 };
 w.print = () => calls.push({ url: "window.print", method: "CALL" });
+w.URL.createObjectURL = () => "blob:mock-pdf";
+w.URL.revokeObjectURL = () => {};
 
 w.eval(
   fs.readFileSync(path.join(repo, "app/static/i18n.js"), "utf8") +
@@ -209,6 +212,17 @@ check("Drucken: wechselt auf Tabelle + window.print", vis($("#view-table")) && c
 
 check("Header: Export-Link JSON", doc.querySelector("a[href='/api/export/json']") !== null);
 check("Header: Export-Link CSV", doc.querySelector("a[href*='/api/export/csv']") !== null);
+check("Header: PDF-Button vorhanden", !!$("#btn-pdf"));
+const origAnchorClick = w.HTMLAnchorElement.prototype.click;
+w.HTMLAnchorElement.prototype.click = function () {};
+$("#btn-pdf").click();
+await sleep(60);
+w.HTMLAnchorElement.prototype.click = origAnchorClick;
+const pdfCall = [...calls].reverse().find((c) => c.url.includes("/api/export/pdf"));
+check(
+  "Header: PDF-Button -> POST /api/export/pdf mit Karten-Snapshot (data:image/png)",
+  !!pdfCall && pdfCall.method === "POST" && !!pdfCall.body && pdfCall.body.includes('"image":"data:image/png;base64,')
+);
 check("Header: Suche + 2 Filter vorhanden", $("#search") && $("#filter-category") && $("#filter-status"));
 
 $("#search").value = "nas";

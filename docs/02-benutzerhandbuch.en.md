@@ -182,7 +182,8 @@ with `?theme=dark|light` and `?lang=…`.
 - **JSON / CSV** in the header: full export of all devices incl. ports, history, connections,
   sites. CSV with selectable separator (`/api/export/csv?sep=;`).
 - **Print → PDF:** print-optimized view (browser "Save as PDF").
-- **Auto export:** enable in Settings; writes JSON+CSV after each interval into the export
+- **Auto export:**
+- **PDF (server-side):** **PDF** button in the header — map snapshot (PNG) + device table as a real PDF via `POST /api/export/pdf` (also with an embed token, filters via query params). enable in Settings; writes JSON+CSV after each interval into the export
   folder (relative to the data volume, default `exports`).
 
 ---

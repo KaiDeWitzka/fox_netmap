@@ -1083,3 +1083,37 @@ const I18N_EXTRA3 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA3[lang] || {});
+
+const I18N_EXTRA4 = {
+  "de": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Karte + Tabelle serverseitig als PDF exportieren",
+    "err.pdf": "PDF-Export fehlgeschlagen"
+  },
+  "en": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Export map + table as PDF (server-side)",
+    "err.pdf": "PDF export failed"
+  },
+  "fr": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Exporter la carte + le tableau en PDF (côté serveur)",
+    "err.pdf": "Échec de l'export PDF"
+  },
+  "es": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Exportar mapa + tabla como PDF (en el servidor)",
+    "err.pdf": "Error al exportar el PDF"
+  },
+  "it": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Esporta mappa + tabella come PDF (lato server)",
+    "err.pdf": "Esportazione PDF non riuscita"
+  },
+  "pt": {
+    "btn.pdf": "PDF",
+    "btn.pdfTitle": "Exportar mapa + tabela como PDF (no servidor)",
+    "err.pdf": "Falha na exportação do PDF"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA4[lang] || {});

@@ -751,6 +751,33 @@ function bindFilters() {
     document.querySelector('[data-view="table"]').click();
     setTimeout(() => window.print(), 100);
   });
+  document.getElementById("btn-pdf").addEventListener("click", async () => {
+    const btn = document.getElementById("btn-pdf");
+    btn.disabled = true;
+    try {
+      let image = null;
+      if (cy && typeof cy.png === "function") {
+        const bg = document.documentElement.dataset.theme === "light" ? "#f8fafc" : "#0f172a";
+        image = cy.png({ output: "datauri", full: true, scale: 2, bg });
+      }
+      const r = await api("/api/export/pdf", { method: "POST", body: JSON.stringify({ image, title: "Netzwerkkarte" }) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "fox_netmap-" + new Date().toISOString().replace(/[:.]/g, "-") + ".pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      console.error("PDF-Export fehlgeschlagen", e);
+      btn.textContent = t("err.pdf");
+      setTimeout(() => { btn.textContent = t("btn.pdf"); }, 2500);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 }
 
 function bindSidebar() {

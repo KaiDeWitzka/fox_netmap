@@ -114,3 +114,75 @@ def auto_export(settings, conn) -> list[str]:
         fh.write(to_csv(rows, ";"))
     written.append(csv_path)
     return written
+
+
+def build_pdf(settings, rows: list[dict], conn, image_bytes: bytes | None = None, title: str = "") -> bytes:
+    """Serverseitiges PDF: Kopf (Version/Zeit/Statistik) + optional Karten-Snapshot (PNG/JPEG) + Geräte-Tabelle."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, leftMargin=14 * mm, rightMargin=14 * mm, topMargin=14 * mm, bottomMargin=14 * mm,
+        title=title or "fox_netmap Export",
+    )
+    styles = getSampleStyleSheet()
+    online = sum(1 for r in rows if r.get("status") == "online")
+    story = [Paragraph(f"fox_netmap — {title or 'Netzwerk-Export'}", styles["Title"])]
+    meta = (
+        f"Version {settings.app_version} · erstellt {db.utcnow()} · "
+        f"Geräte: {len(rows)} (online {online}, offline {len(rows) - online})"
+    )
+    story.append(Paragraph(meta, styles["Normal"]))
+    story.append(Spacer(1, 6 * mm))
+
+    max_w = A4[0] - 28 * mm
+    if image_bytes:
+        img = Image(io.BytesIO(image_bytes))
+        ratio = img.imageHeight / float(img.imageWidth or 1)
+        img.drawWidth = max_w
+        img.drawHeight = max_w * ratio
+        max_h = A4[1] - 70 * mm
+        if img.drawHeight > max_h:
+            img.drawHeight = max_h
+            img.drawWidth = max_h / ratio
+        story.append(img)
+        story.append(Spacer(1, 6 * mm))
+
+    header = ["Hostname", "IP", "MAC", "Hersteller", "Kategorie", "Status", "Subnetz", "Verbunden mit", "Ports"]
+    data = [header]
+    for r in rows:
+        data.append([
+            r.get("hostname") or "",
+            r.get("ip") or "",
+            r.get("mac") or "",
+            r.get("vendor") or "",
+            r.get("category") or "",
+            r.get("status") or "",
+            r.get("subnet") or "",
+            r.get("connected_to") or "",
+            r.get("ports_str") or "",
+        ])
+    widths = [32 * mm, 24 * mm, 30 * mm, 22 * mm, 20 * mm, 15 * mm, 26 * mm, 24 * mm, max_w - 193 * mm]
+    t = Table(data, repeatRows=1, colWidths=widths)
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#075985")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 7),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f1f5f9")]),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#94a3b8")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
+    story.append(t)
+    doc.build(story)
+    return buf.getvalue()
