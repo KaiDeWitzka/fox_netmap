@@ -90,7 +90,7 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
 - **Replier/déplier les enfants :** dans le panneau de détails d'un routeur/switch, un bouton
   masque tous les appareils directement connectés ; le nœud affiche alors `(+N)`.
 - **Disposition :**
-- **Allègement automatique :** nœuds plus compacts (20 px), arêtes plus fines/translucides, paramètres cose adaptés au nombre d'appareils ; étiquettes visibles seulement à partir du zoom ≥ 0,85 ; au-delà de 40 appareils, les groupes de sous-réseaux s'activent automatiquement (toujours désactivables).
+- **Allègement automatique :** nœuds plus compacts (20 px), arêtes plus fines/translucides, paramètres cose adaptés au nombre d'appareils ; étiquettes pleinement visibles seulement à partir du zoom ≥ 0,85 (en dessous, seulement les concentrateurs : routeur/switch/passerelle/internet) ; au-delà de 25 appareils, les groupes de sous-réseaux s'activent automatiquement ; « En ligne uniquement » est actif par défaut (modifiable, mémorisé).
  `auto` (physique, défaut), `force`, `tree`, `concentric`, `circle`, `grid` ;
   **Réinitialiser** efface les positions enregistrées.
 - Nœuds virtuels : **🌐 Internet** (avec l'IP WAN via TR-064, sinon « ? »), **🏠 Passerelle**

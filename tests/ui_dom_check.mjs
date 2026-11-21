@@ -361,9 +361,6 @@ check(
 );
 check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
 
-const macThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "mac");
-const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("remote-plug"));
-check("MAC-less (VPN-remote): MAC-Zelle zeigt Strich", !!remoteRow && remoteRow.children[macThIdx].textContent.trim() === "–");
 
 check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._els.some((e) => e.data && e.data.id === "wlan:192.168.178.1" && e.data.virtual));
 check(
@@ -385,12 +382,13 @@ check("Karte: Knoten kompakt (width 20) + Kanten duenn/transparent (width 1, opa
 })());
 cyInstance._zoom = 0.5;
 cyInstance._handlers["zoom"]();
-check("Karte: Zoom < 0.85 -> Labels ausgeblendet", cyInstance._labelStyle === "");
+check("Karte: Zoom < 0.85 -> Label-Funktion (nur Hubs)", typeof cyInstance._labelStyle === "function" && cyInstance._labelStyle({ data: (k) => (k === "hub" ? true : "HubLabel") }) === "HubLabel" && cyInstance._labelStyle({ data: (k) => (k === "hub" ? false : "ClientLabel") }) === "");
 cyInstance._zoom = 2;
 cyInstance._handlers["zoom"]();
-check("Karte: Zoom >= 0.85 -> Labels sichtbar", cyInstance._labelStyle === "data(label)");
+check("Karte: Zoom >= 0.85 -> alle Labels sichtbar", cyInstance._labelStyle === "data(label)");
 cyInstance._zoom = 1;
-check("Karte: Auto-Gruppe aus bei <=40 Geraeten; shouldAutoGroup(4)=false, (50)=true", $("#chk-groups").checked === false && w.eval("shouldAutoGroup(4)") === false && w.eval("shouldAutoGroup(50)") === true);
+check("Karte: Hub-Flags (Switch/Internet hub, Client nicht)", cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && !e.data.hub));
+check("Karte: Auto-Gruppe aus bei <=25 Geraeten; shouldAutoGroup(4)=false, (30)=true", $("#chk-groups").checked === false && w.eval("shouldAutoGroup(4)") === false && w.eval("shouldAutoGroup(30)") === true);
 check(
   "Karte: Kanten gerendert + virtueller Gateway-Knoten (Gateway nicht in Geraeteliste)",
   !!cyInstance &&
@@ -563,16 +561,20 @@ $("#btn-layout-reset").click();
 await sleep(60);
 check("Layout: Reset -> POST /api/layout/reset", calls.some((c) => c.url.includes("/api/layout/reset") && c.method === "POST"));
 
-check("Nur online: initial 4 Zeilen", doc.querySelectorAll("#device-table tbody tr").length === 4);
+check("Nur online: Default AN (initial status=online, 3 Zeilen, Button toggled, fox_online=1)", $("#filter-status").value === "online" && doc.querySelectorAll("#device-table tbody tr").length === 3 && $("#btn-online").classList.contains("toggled") && w.localStorage.getItem("fox_online") === "1");
 $("#btn-online").click();
 await sleep(80);
-const lastDevs = [...calls].reverse().find((c) => c.url.includes("/api/devices"));
-check("Nur online: Klick -> GET /api/devices mit status=online", !!lastDevs && lastDevs.url.includes("status=online"));
-check("Nur online: nur noch 3 Zeilen (offline raus)", doc.querySelectorAll("#device-table tbody tr").length === 3);
-check("Nur online: Button als aktiv markiert", $("#btn-online").classList.contains("toggled"));
+check("Nur online: Klick -> alle 4 Zeilen, GET ohne status=online, fox_online=0", doc.querySelectorAll("#device-table tbody tr").length === 4 && ![...calls].reverse().find((c) => c.url.includes("/api/devices")).url.includes("status=online") && w.localStorage.getItem("fox_online") === "0");
 $("#btn-online").click();
 await sleep(80);
-check("Nur online: erneuter Klick -> wieder alle 4 Zeilen", doc.querySelectorAll("#device-table tbody tr").length === 4);
+check("Nur online: erneuter Klick -> wieder nur 3 Zeilen (online)", doc.querySelectorAll("#device-table tbody tr").length === 3);
+$("#btn-online").click();
+await sleep(80);
+check("Nur online: danach wieder alle 4 (Filter reset fuer Gruppen-Checks)", doc.querySelectorAll("#device-table tbody tr").length === 4);
+
+const macThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "mac");
+const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("remote-plug"));
+check("MAC-less (VPN-remote): MAC-Zelle zeigt Strich", !!remoteRow && remoteRow.children[macThIdx].textContent.trim() === "–");
 
 const fakeNode = {
   data(k) { return k === "id" ? "aa:bb:cc:dd:ee:ff" : undefined; },

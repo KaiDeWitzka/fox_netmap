@@ -87,7 +87,7 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
 - **Collapse/expand children:** in the detail panel of a router/switch, a button hides all
   directly attached devices; the node then shows `(+N)`.
 - **Layout:**
-- **Auto declutter:** more compact nodes (20 px), thinner/translucent edges, cose parameters scale with device count; labels only visible from zoom ≥ 0.85; above 40 devices subnet groups are enabled automatically (still toggleable).
+- **Auto declutter:** more compact nodes (20 px), thinner/translucent edges, cose parameters scale with device count; labels fully visible only from zoom ≥ 0.85 (below that only hubs: router/switch/gateway/internet); above 25 devices subnet groups are enabled automatically; “Only online” is on by default (toggleable, persisted).
  `auto` (physics, default), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Reset** clears saved positions.
 - Virtual nodes: **🌐 Internet** (with WAN IP from TR-064, otherwise "?"), **🏠 Gateway** (if the

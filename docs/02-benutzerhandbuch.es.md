@@ -89,7 +89,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
 - **Plegar/desplegar hijos:** en el panel de detalles de un router/switch, un botón oculta todos
   los dispositivos conectados directamente; el nodo muestra entonces `(+N)`.
 - **Diseño:**
-- **Despeje automático:** nodos más compactos (20 px), aristas más finas/translúcidas, parámetros cose escalados según el número de dispositivos; etiquetas visibles solo desde zoom ≥ 0,85; con más de 40 dispositivos los grupos de subred se activan automáticamente (seguen conmutables).
+- **Despeje automático:** nodos más compactos (20 px), aristas más finas/translúcidas, parámetros cose escalados según el número de dispositivos; etiquetas visibles solo desde zoom ≥ 0,85 (debajo, solo concentradores: router/switch/pasarela/internet); con más de 25 dispositivos los grupos de subred se activan automáticamente; «Solo en línea» está activo por defecto (conmutable, se recuerda).
  `auto` (física, por defecto), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Restablecer** borra las posiciones guardadas.
 - Nodos virtuales: **🌐 Internet** (con IP WAN de TR-064, si no «?»), **🏠 Pasarela** (si la

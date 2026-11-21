@@ -90,7 +90,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
 - **Kinder aus-/einblenden:** Im Detail-Panel von Router/Switch blendet ein Button alle direkt
   angebundenen Geräte aus; der Knoten zeigt dann `(+N)`.
 - **Layout:**
-- **Automatisch aufgeräumt:** kompaktere Knoten (20 px), dünnere/transparente Kanten, cose-Parameter skalieren mit der Gerätemenge; Labels erst ab Zoom ≥ 0,85 sichtbar; ab > 40 Geräten werden Subnetz-Gruppen automatisch aktiviert (weiterhin manuell umschaltbar).
+- **Automatisch aufgeräumt:** kompaktere Knoten (20 px), dünnere/transparente Kanten, cose-Parameter skalieren mit der Gerätemenge; Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs: Router/Switch/Gateway/Internet); ab > 25 Geräten werden Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist default aktiv (in localStorage umschaltbar).
  `auto` (Physik, Default), `force`, `tree`, `concentric`, `circle`, `grid`;
   **Reset** setzt gespeicherte Positionen zurück.
 - Virtuelle Knoten: **🌐 Internet** (mit WAN-IP aus TR-064, sonst „?“), **🏠 Gateway** (falls das

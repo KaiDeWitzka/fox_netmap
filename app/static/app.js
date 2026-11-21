@@ -147,8 +147,8 @@ function applyLayout() {
       const big = devices.length > 60;
       opts = {
         name: "cose", animate: false, padding: 30,
-        idealEdgeLength: big ? 90 : 130,
-        nodeRepulsion: big ? 22000 : 12000,
+        idealEdgeLength: big ? 90 : 110,
+        nodeRepulsion: big ? 22000 : 15000,
         nodeOverlap: big ? 30 : 20,
         spacingFactor: big ? 1.25 : 1.1,
       };
@@ -232,7 +232,7 @@ async function loadCategories() {
 }
 
 function shouldAutoGroup(n) {
-  return !localStorage.getItem("fox_groups") && n > 40;
+  return !localStorage.getItem("fox_groups") && n > 25;
 }
 
 function maybeAutoGroup() {
@@ -331,6 +331,7 @@ function buildElements() {
         status: d.status,
         color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
         ports: d.port_count || 0,
+        hub: d.category === "Router" || d.category === "Switch",
       },
       position: { x, y },
     };
@@ -347,6 +348,7 @@ function buildElements() {
         status: "online",
         color: CATEGORY_COLORS.Internet,
         virtual: true,
+        hub: true,
       },
       position: { x: -R * 1.6, y: 0 },
     });
@@ -375,7 +377,7 @@ function buildElements() {
 
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
-    addNode({ data: { id: w, label: t("wlan.node"), category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true } });
+    addNode({ data: { id: w, label: t("wlan.node"), category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true, hub: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
     edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
   }
@@ -393,6 +395,7 @@ function buildElements() {
           status: "online",
           color: CATEGORY_COLORS.Gateway,
           virtual: true,
+          hub: true,
         },
       });
     }
@@ -419,8 +422,9 @@ function clearSpotlight() {
 
 function updateZoomLabels() {
   if (!cy) return;
-  const show = cy.zoom() >= 0.85;
-  cy.style().selector("node").style("label", show ? "data(label)" : "").update();
+  const showAll = cy.zoom() >= 0.85;
+  const label = showAll ? "data(label)" : (ele) => (ele.data("hub") ? ele.data("label") : "");
+  cy.style().selector("node").style("label", label).update();
 }
 
 function renderMap() {
@@ -816,7 +820,9 @@ function bindFilters() {
     const on = statusSel.value === "online";
     btnOnline.classList.toggle("toggled", on);
     btnOnline.setAttribute("aria-pressed", String(on));
+    localStorage.setItem("fox_online", on ? "1" : "0");
   };
+  statusSel.value = localStorage.getItem("fox_online") === "0" ? "" : "online";
   btnOnline.addEventListener("click", () => {
     statusSel.value = statusSel.value === "online" ? "" : "online";
     syncOnline();
