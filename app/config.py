@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     oui_online_max: int = 10
     oui_online_url: str = "https://api.macvendors.com"
     alarm_whitelist: str = ""
-    app_version: str = "1.3.2"
+    app_version: str = "1.4.0"
 
     @property
     def subnet_list(self) -> list[str]:
