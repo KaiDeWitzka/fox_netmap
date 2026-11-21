@@ -503,10 +503,12 @@ def test_effective_settings_neue_compose_keys(tmp_path):
     db.set_setting(conn, "scan_timeout", "3.5")
     db.set_setting(conn, "ports", "80,443")
     db.set_setting(conn, "notify_webhook", "https://hook.example/x")
+    db.set_setting(conn, "fritz_pass", "geheim123")
     conn.commit()
     eff = effective_settings(conn, settings)
     assert eff.fritz_url == "http://192.168.178.1:49000"
     assert eff.scan_timeout == 3.5
     assert eff.ports == "80,443"
     assert eff.notify_webhook == "https://hook.example/x"
+    assert eff.fritz_pass == "geheim123"
     conn.close()

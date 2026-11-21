@@ -1049,3 +1049,37 @@ const I18N_EXTRA2 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA2[lang] || {});
+
+const I18N_EXTRA3 = {
+  "de": {
+    "st.fritzPass": "TR-064 Passwort",
+    "st.fritzPassPh": "unverändert, wenn leer",
+    "err.fritzPass": "TR-064-Passwort: max. 256 Zeichen"
+  },
+  "en": {
+    "st.fritzPass": "TR-064 password",
+    "st.fritzPassPh": "leave empty to keep unchanged",
+    "err.fritzPass": "TR-064 password: max 256 chars"
+  },
+  "fr": {
+    "st.fritzPass": "Mot de passe TR-064",
+    "st.fritzPassPh": "laisser vide pour ne pas changer",
+    "err.fritzPass": "Mot de passe TR-064 : 256 caractères max"
+  },
+  "es": {
+    "st.fritzPass": "Contraseña TR-064",
+    "st.fritzPassPh": "déjalo vacío para no cambiarla",
+    "err.fritzPass": "Contraseña TR-064: máx. 256 caracteres"
+  },
+  "it": {
+    "st.fritzPass": "Password TR-064",
+    "st.fritzPassPh": "lascia vuoto per non modificarla",
+    "err.fritzPass": "Password TR-064: max 256 caratteri"
+  },
+  "pt": {
+    "st.fritzPass": "Senha TR-064",
+    "st.fritzPassPh": "deixe vazio para manter",
+    "err.fritzPass": "Senha TR-064: máx. 256 caracteres"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA3[lang] || {});

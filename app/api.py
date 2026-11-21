@@ -239,6 +239,7 @@ class SettingsPatch(BaseModel):
     fritz_url: str | None = None
     fritz_urls: str | None = None
     fritz_user: str | None = None
+    fritz_pass: str | None = None
     snmp_community: str | None = None
     notify_webhook: str | None = None
     notify_gotify: str | None = None
@@ -285,6 +286,8 @@ def validate_settings(body: SettingsPatch) -> str | None:
             return f"{key} muss eine http(s)-URL sein: {val.strip()!r}"
     if body.snmp_community is not None and body.snmp_community.strip() and re.search(r"\s", body.snmp_community.strip()):
         return "snmp_community darf keine Leerzeichen enthalten"
+    if body.fritz_pass is not None and len(body.fritz_pass) > 256:
+        return "fritz_pass darf hoechstens 256 Zeichen haben"
     if body.subnets is not None and body.subnets.strip():
         for sn in body.subnets.split(","):
             try:
