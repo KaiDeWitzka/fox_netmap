@@ -187,7 +187,8 @@ kann über `?theme=dark|light` und `?lang=…` angepasst werden.
 - **JSON / CSV** im Header: kompletter Export aller Geräte inkl. Ports, Verlauf, Verbindungen,
   Standorte. CSV mit wählbarem Trennzeichen (`/api/export/csv?sep=;`).
 - **Drucken → PDF:** druckoptimierte Ansicht (Browser „Als PDF speichern“).
-- **Auto-Export:** in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
+- **Auto-Export:**
+- **PDF (serverseitig):** Button **PDF** im Header — Karten-Snapshot (PNG) + Geräte-Tabelle als echtes PDF via `POST /api/export/pdf` (auch mit Embed-Token, Filter via Query-Parameter). in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
   den Export-Ordner (relativ zum Daten-Volume, Default `exports`).
 
 ---

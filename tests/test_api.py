@@ -297,3 +297,34 @@ def test_fritz_pass_write_only(auth_client, app):
     assert db.get_setting(conn, "fritz_pass") == "geheim123"
     conn.close()
     assert auth_client.patch("/api/settings", json={"fritz_pass": "x" * 257}).status_code == 422
+
+
+def test_export_pdf(auth_client, client, app):
+    import base64 as b64
+
+    png_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    r = auth_client.post("/api/export/pdf", json={"image": "data:image/png;base64," + png_b64, "title": "Testkarte"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/pdf")
+    assert r.content.startswith(b"%PDF")
+    assert "fox_netmap.pdf" in r.headers.get("content-disposition", "")
+    # ohne Bild -> nur Kopf + Tabelle
+    r2 = auth_client.post("/api/export/pdf", json={})
+    assert r2.status_code == 200 and r2.content.startswith(b"%PDF")
+    # ungueltiges base64
+    assert auth_client.post("/api/export/pdf", json={"image": "data:image/png;base64,!!!"}).status_code == 422
+    # falsches Format (GIF-Magic)
+    gif = b64.b64encode(b"GIF89a").decode()
+    assert auth_client.post("/api/export/pdf", json={"image": "data:image/gif;base64," + gif}).status_code == 422
+    # kaputtes PNG (Magic ok, Daten Muell)
+    bad = b64.b64encode(b"\x89PNG\r\n\x1a\n" + b"garbage").decode()
+    assert auth_client.post("/api/export/pdf", json={"image": "data:image/png;base64," + bad}).status_code == 422
+    # ohne Session -> 401; mit gueltigem Token -> 200 (TOKEN_PATHS deckt /api/export/ ab)
+    from fastapi.testclient import TestClient
+
+    anon0 = TestClient(app)
+    assert anon0.post("/api/export/pdf", json={}).status_code == 401
+    insert_device(app)
+    tok = auth_client.post("/api/tokens", json={"expires_hours": 24}).json()["token"]
+    r3 = anon0.post(f"/api/export/pdf?token={tok}", json={})
+    assert r3.status_code == 200 and r3.content.startswith(b"%PDF")

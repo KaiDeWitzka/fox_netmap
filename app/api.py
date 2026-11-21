@@ -1,10 +1,11 @@
+import base64
 import ipaddress
 import os
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
@@ -187,6 +188,55 @@ def scan_status(conn=Depends(get_conn)):
 def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", token: str = "", conn=Depends(get_conn)):
     rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
     return exporters.devices_payload(request.app.state.settings, rows, conn)
+
+
+class PdfExport(BaseModel):
+    image: str | None = None
+    title: str | None = None
+
+
+@router.post("/api/export/pdf")
+def export_pdf(
+    request: Request,
+    payload: PdfExport,
+    q: str = "",
+    category: str = "",
+    status: str = "",
+    subnet: str = "",
+    site: str = "",
+    token: str = "",
+    conn=Depends(get_conn),
+):
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
+    image_bytes = None
+    if payload.image:
+        data = payload.image
+        if data.startswith("data:"):
+            data = data.split(",", 1)[1] if "," in data else ""
+        try:
+            image_bytes = base64.b64decode(data, validate=True)
+        except Exception:
+            raise HTTPException(422, "image ist kein gueltiges base64") from None
+        if not image_bytes:
+            raise HTTPException(422, "image ist leer")
+        if len(image_bytes) > 12 * 1024 * 1024:
+            raise HTTPException(422, "image zu gross (max 12 MB)")
+        if not (image_bytes.startswith(b"\x89PNG") or image_bytes.startswith(b"\xff\xd8")):
+            raise HTTPException(422, "image muss PNG oder JPEG sein")
+    title = (payload.title or "").strip()[:120]
+    try:
+        pdf = exporters.build_pdf(request.app.state.settings, rows, conn, image_bytes=image_bytes, title=title)
+    except HTTPException:
+        raise
+    except Exception:
+        if image_bytes:
+            raise HTTPException(422, "image konnte nicht gelesen werden (PNG/JPEG erwartet)") from None
+        raise
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="fox_netmap.pdf"'},
+    )
 
 
 @router.get("/api/export/csv")
