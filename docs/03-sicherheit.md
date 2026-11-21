@@ -1,6 +1,6 @@
 # fox_netmap – Sicherheitskonzept
 
-Stand: v1.4.1. Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
+Stand: v1.5.0. Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
 BSI IT-Grundschutz und die bekannten Restrisiken. Es wird mit jedem sicherheitsrelevanten
 Release fortgeschrieben.
 
@@ -63,7 +63,46 @@ Einbettungen). Empfehlung: auf die eigenen Seiten einschränken, z. B.
 - Hinter einem Reverse Proxy sieht fox_netmap nur die Proxy-IP; `X-Forwarded-For` wird bewusst
   nicht ausgewertet (fälschbar). Dann greift faktisch die Grenze pro Benutzer über alle Clients.
 
-### 2.4 Eingabeprüfung
+### 2.4 Passwort-Hash und Sessions (seit v1.5.0)
+
+- PBKDF2-HMAC-SHA256 mit **600.000 Iterationen** (OWASP Password Storage Cheat Sheet), 128-Bit-Salt.
+  Format `pbkdf2_sha256$<iterationen>$<salt>$<hash>`. Hashes aus v1.4.x (100.000 Iterationen) bleiben
+  gültig und werden beim nächsten erfolgreichen Login automatisch neu berechnet.
+- Unbekannte Benutzer werden gegen einen Dummy-Hash geprüft: gleiche Antwortzeit, keine User-Enumeration.
+- Sessions: 12 h Laufzeit, abgelaufene Einträge werden bei jedem Login und spätestens minütlich entfernt,
+  höchstens 200 gleichzeitig (älteste zuerst verdrängt). Logout entwertet die Session serverseitig.
+- Session-Cookie `fox_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` gemäß
+  `NETZ_COOKIE_SECURE` – `auto` (Default) setzt `Secure`, sobald die Anfrage per HTTPS kommt oder ein
+  Reverse Proxy `X-Forwarded-Proto: https` meldet; `true`/`false` erzwingen bzw. unterdrücken es.
+- Startpasswort: Ohne `NETZ_AUTH_PASS` wird **nur beim ersten Start** ein Zufallspasswort erzeugt und in
+  `<data>/initial-admin-password.txt` mit Rechten `0600` abgelegt, nicht im Log. Spätere Starts behalten
+  das Passwort. Sobald `NETZ_AUTH_PASS` gesetzt ist, wird die Datei gelöscht.
+
+### 2.5 Container-Härtung (seit v1.5.0)
+
+| Maßnahme | Web-Oberfläche (`netmap`) | Scanner (`netmap-scanner`) |
+|---|---|---|
+| Benutzer | UID/GID 10001 | UID/GID 10001 |
+| Capabilities (Bounding-Set) | keine | nur `NET_RAW` (für ping) |
+| `no-new-privileges` | ja | nein – ping erhält `NET_RAW` über eine Datei-Capability |
+| Root-Dateisystem | schreibgeschützt, `/tmp` als tmpfs | schreibgeschützt, `/tmp` als tmpfs |
+| Netzwerk | Bridge, nur Port 8399 | Host-Netzwerk (nötig für ARP/NDP) |
+| Healthcheck | `GET /api/health` | Scan-Schleife darf nicht > 5 min überfällig sein |
+
+Ablauf: Der Container startet als root nur für den Entrypoint (`docker/entrypoint.sh`). Dieser übergibt
+Bestandsdaten im Daten-Volume einmalig an UID 10001 (Upgrade von v1.4.x), entfernt alle nicht benötigten
+Capabilities aus dem Bounding-Set und startet die Anwendung per `setpriv` als UID 10001. `NET_ADMIN`
+wird nicht mehr vergeben. Läuft der Container bereits mit `user:` als Nicht-root, startet die App direkt.
+Die CI prüft UID, Capabilities, `NoNewPrivs`, Schreibschutz und ping im laufenden Compose-Stack.
+
+### 2.6 Datenschutz (Privacy by Default, seit v1.5.0)
+
+Die Online-Herstellerabfrage (`NETZ_OUI_ONLINE_ENABLED`) ist standardmäßig **aus**. Eingeschaltet
+sendet der Scanner die ersten drei Bytes unbekannter MAC-Adressen an den konfigurierten Dienst
+(Default `https://api.macvendors.com`). Wer die Funktion bereits in den Einstellungen gespeichert
+hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale OUI-Datenbank.
+
+### 2.7 Eingabeprüfung
 
 - Login: Benutzername max. 128, Passwort max. 1024 Zeichen (Schutz vor teuren PBKDF2-Läufen).
 - Gerätenotiz: max. 2000 Zeichen.
@@ -71,14 +110,12 @@ Einbettungen). Empfehlung: auf die eigenen Seiten einschränken, z. B.
   URLs nur `http(s)` (siehe `validate_settings` in `app/api.py`).
 - SQL ausschließlich parametrisiert.
 
-### 2.5 Bestehende Maßnahmen (vor v1.4.1)
+### 2.8 Bestehende Maßnahmen (vor v1.4.1)
 
-- Passwörter als PBKDF2-SHA256 mit Salt, Vergleich zeitkonstant (`hmac.compare_digest`).
-- Session-Cookie `fox_session`: `HttpOnly`, `SameSite=Lax`, 12 h Laufzeit.
+- Passwortvergleich zeitkonstant (`hmac.compare_digest`).
 - `GET /api/settings` liefert keine Secrets; FRITZ!Box-Passwort ist write-only.
 - Embed-Tokens: zufällig (192 Bit), ablauffähig, filterbar, nur lesend.
-- Scanner-Container mit minimalen Capabilities (`NET_RAW`, `NET_ADMIN`); die Web-Oberfläche
-  läuft ohne Host-Netzwerk und ohne Zusatzrechte.
+- Die Web-Oberfläche läuft ohne Host-Netzwerk.
 
 ## 3. Bezug zum IT-Grundschutz
 
@@ -89,19 +126,21 @@ Einbettungen). Empfehlung: auf die eigenen Seiten einschränken, z. B.
 | APP.3.1.A21 Sichere HTTP-Konfiguration | Security-Header, CSP |
 | CON.10.A1 / A6 Webentwicklung: Ausgabe-Kodierung | `esc()`, `textContent`, UI-Test |
 | ORP.4.A13 Schutz gegen Brute Force | Login-Drosselung |
+| ORP.4.A8 Passwortgebrauch / Speicherung | PBKDF2 mit 600.000 Iterationen, Startpasswort nicht im Log |
+| SYS.1.6.A3 / A8 / A21 Container: Rechte, Ressourcen, Härtung | Nicht-root, minimale Capabilities, Read-only-Root-FS, Healthcheck |
+| DSGVO Art. 25 Privacy by Default | Online-Herstellerabfrage standardmäßig aus |
 | OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |
 
-## 4. Bekannte Restrisiken (geplant für v1.5.0)
+## 4. Bekannte Restrisiken
 
-| Risiko | Geplante Maßnahme |
+| Risiko | Bewertung / geplante Maßnahme |
 |---|---|
-| Sessions nur im Speicher, ohne Aufräumen; Cookie ohne `Secure`-Flag | Ablauf-Bereinigung, `Secure` bei HTTPS |
-| PBKDF2 mit 100.000 Runden (OWASP 2023: 600.000) | Rundenzahl erhöhen bzw. Argon2id, transparente Migration |
-| Embed-Token in der URL und im Klartext in der DB | Token gehasht speichern |
-| Container läuft als root, kein Healthcheck | Non-root-User für die Web-Oberfläche, `HEALTHCHECK` |
-| Online-OUI-Lookup standardmäßig an (MAC-Präfixe an macvendors.com) | Default aus (Privacy by Default), Datenschutzhinweis |
-| Startpasswort im Klartext im Container-Log | Einmal-Datei im Daten-Volume statt Log |
-| SNMP-Community-Default `public` | Kein Default, Hinweis in der UI |
+| Embed-Token in der URL und im Klartext in der DB | Geplant v1.6.0: Token gehasht speichern, nur einmal anzeigen |
+| SNMP-Community-Default `public` | Geplant v1.6.0: kein Default, Hinweis in der UI |
+| Sessions nur im Speicher | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte |
+| Scanner ohne `no-new-privileges` | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt |
+| `style-src 'unsafe-inline'` in der CSP | Nötig für Cytoscape; Styles können kein JavaScript ausführen |
+| Image-Build, Schwachstellen-Scan, SBOM | Geplant (Punkt 3): GHCR-Veröffentlichung, Trivy, Dependabot, SBOM |
 
 ## 5. Sicherheitslücken melden
 

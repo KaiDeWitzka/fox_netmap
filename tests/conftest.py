@@ -11,6 +11,16 @@ from app.config import Settings
 from app.web import create_app
 
 
+@pytest.fixture(autouse=True)
+def fast_password_hashing(monkeypatch):
+    """600.000 PBKDF2-Runden kosten ~0,3 s pro Hash. Für die übrigen Tests reichen wenige Runden;
+    test_hardening.py prüft den Produktionswert explizit."""
+    from app import auth
+
+    monkeypatch.setattr(auth, "PBKDF2_ITERATIONS", 1_000)
+    monkeypatch.setattr(auth, "_DUMMY_HASH", None)
+
+
 @pytest.fixture()
 def settings(tmp_path):
     return Settings(

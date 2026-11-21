@@ -26,6 +26,8 @@ x-netz-env: &netz-env
   NETZ_THEME: ${NETZ_THEME:-dark}
   NETZ_AUTO_EXPORT: ${NETZ_AUTO_EXPORT:-false}
   NETZ_EMBED_ANCESTORS: ${NETZ_EMBED_ANCESTORS:-*}
+  NETZ_COOKIE_SECURE: ${NETZ_COOKIE_SECURE:-auto}
+  NETZ_OUI_ONLINE_ENABLED: ${NETZ_OUI_ONLINE_ENABLED:-false}
   TZ: ${TZ:-Europe/Berlin}
 
 services:
@@ -38,6 +40,12 @@ services:
     environment: *netz-env
     volumes:
       - ./data:/data
+    # Härtung (v1.5.0): Prozess läuft als UID 10001 ohne Capabilities (siehe docker/entrypoint.sh)
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
 
   netmap-scanner:
     build: .
@@ -45,9 +53,14 @@ services:
     restart: unless-stopped
     command: ["scanner"]
     network_mode: host
+    # NET_RAW für ping (ICMP). NET_ADMIN wird seit v1.5.0 nicht mehr benötigt.
     cap_add:
       - NET_RAW
-      - NET_ADMIN
     environment: *netz-env
     volumes:
       - ./data:/data
+    # Prozess läuft als UID 10001, Bounding-Set nur NET_RAW (siehe docker/entrypoint.sh).
+    # Kein no-new-privileges: ping erhält NET_RAW über eine Datei-Capability.
+    read_only: true
+    tmpfs:
+      - /tmp

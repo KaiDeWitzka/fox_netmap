@@ -40,13 +40,16 @@ class Settings(BaseSettings):
     auto_export_dir: str = "exports"
     auto_export_interval_hours: int = 24
     mdns_enabled: bool = True
-    oui_online_enabled: bool = True
+    # Privacy by Default (DSGVO Art. 25): MAC-Präfixe gehen nur nach ausdrücklichem Einschalten an Dritte.
+    oui_online_enabled: bool = False
     oui_online_max: int = 10
     oui_online_url: str = "https://api.macvendors.com"
     alarm_whitelist: str = ""
     # Erlaubte Einbetter fuer /embed (CSP frame-ancestors), z. B. "https://wiki.example.org 'self'". "*" = alle.
     embed_ancestors: str = "*"
-    app_version: str = "1.4.1"
+    # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
+    cookie_secure: str = "auto"
+    app_version: str = "1.5.0"
 
     @property
     def subnet_list(self) -> list[str]:

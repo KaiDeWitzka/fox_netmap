@@ -2,7 +2,7 @@
 
 ## Unterstützte Versionen
 
-Sicherheitsupdates gibt es nur für die jeweils neueste Minor-Version (aktuell 1.4.x).
+Sicherheitsupdates gibt es nur für die jeweils neueste Minor-Version (aktuell 1.5.x).
 
 ## Sicherheitslücke melden
 
