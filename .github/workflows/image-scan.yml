@@ -1,0 +1,41 @@
+name: image-scan
+
+# Wöchentlicher Nachscan des veröffentlichten Images: findet CVEs, die nach dem Release bekannt wurden.
+# Bei Treffern schlägt der Lauf fehl (GitHub benachrichtigt) – Abhilfe: Dependabot-PR mergen bzw. Patch-Release.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/kaidewitzka/fox_netmap:latest
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Bei GHCR anmelden und Image holen
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: docker pull "$IMAGE"
+      - name: Trivy-Scan
+        run: |
+          mkdir -p reports ~/.cache/trivy
+          scripts/trivy.sh image --scanners vuln --format table --output reports/trivy-latest.txt "$IMAGE"
+          scripts/trivy.sh image --scanners vuln --ignore-unfixed --severity CRITICAL,HIGH \
+            --ignorefile .trivyignore --exit-code 1 "$IMAGE"
+      - name: Bericht sichern
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trivy-latest
+          path: reports/
+          retention-days: 30

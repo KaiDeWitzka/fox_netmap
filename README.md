@@ -39,14 +39,40 @@ OUI-Datenbank aktualisieren: `python scripts/update_oui.py ./data` (lädt die IE
 
 ## Releases
 
-- Version steht in `app/__init__.py` (`__version__`), `pyproject.toml` und `app/config.py` (`app_version`). Aktuell: **v1.5.0**
+- Version steht in `app/__init__.py` (`__version__`), `pyproject.toml` und `app/config.py` (`app_version`). Aktuell: **v1.5.1**
 - SemVer ab v1.0.0: Releases tragen Tags im Format `vMAJOR.MINOR.PATCH` (z. B. `v1.0.0`, `v1.1.0`, `v2.0.0`) auf `main`
-- Tag pushen (`git tag v1.1.0 && git push origin v1.1.0`) → Workflow `release.yml` testet (ruff + pytest + UI-DOM) und erstellt automatisch ein GitHub-Release
+- Tag pushen (`git tag v1.1.0 && git push origin v1.1.0`) → Workflow `release.yml` testet (ruff + pytest + UI-DOM), baut das Multi-Arch-Image (amd64/arm64), prüft es mit Trivy, veröffentlicht es in der GitHub Container Registry und erstellt ein GitHub-Release mit SBOM (CycloneDX, SPDX) und Trivy-Bericht
+- Tag muss zu `app.__version__` passen, sonst bricht der Release ab
+
+## Fertiges Container-Image (GHCR, seit v1.5.1)
+
+Statt lokal zu bauen, kann das veröffentlichte Image genutzt werden (`linux/amd64`, `linux/arm64`):
+
+```bash
+docker pull ghcr.io/kaidewitzka/fox_netmap:latest     # oder :1.5.1, :1.5, :1
+```
+
+Tags: `X.Y.Z`, `X.Y`, `X`, `latest` und `sha-<commit>`. Solange das Repository privat ist, ist auch das Paket privat: vorher `docker login ghcr.io -u <github-name>` mit einem Personal Access Token (nur Recht `read:packages`). In `docker-compose.yml` bei beiden Diensten `build: .` durch `image: ghcr.io/kaidewitzka/fox_netmap:1.5.1` ersetzen, dann `docker compose pull && docker compose up -d`.
+
+Herkunft prüfen: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_netmap:1.5.1 --format '{{json .Provenance}}'` (Provenance- und SBOM-Attestierung hängen am Image).
+
+## Lieferkette (Supply Chain)
+
+- **Abhängigkeiten hash-gepinnt:** `requirements.in` / `requirements-dev.in` enthalten die zulässigen Versionsbereiche, `requirements.txt` / `requirements-dev.txt` die exakt aufgelösten Versionen mit SHA-256 (Installation mit `--require-hashes`). Aktualisieren:
+  ```bash
+  pip install pip-tools
+  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements.txt requirements.in
+  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements-dev.txt requirements-dev.in
+  ```
+- **Basis-Image und GitHub Actions per Digest/SHA gepinnt**, Trivy läuft über `scripts/trivy.sh` aus einem gepinnten Image.
+- **Trivy-Gate:** CI und Release brechen bei Schwachstellen `CRITICAL`/`HIGH` ab, für die ein Fix existiert. Ausnahmen nur begründet in `.trivyignore`. Lokal: `scripts/trivy.sh image <image>` (Docker nötig).
+- **Dependabot** (`.github/dependabot.yml`) schlägt wöchentlich Updates für pip, npm, Docker-Basis-Image und Actions vor; `image-scan.yml` prüft `latest` jeden Montag erneut.
+- Details und Grundschutz-Bezug: [Sicherheitskonzept, Abschnitt Lieferkette](docs/03-sicherheit.md#29-lieferkette-supply-chain-seit-v151).
 
 ## Entwicklung
 
 ```bash
-pip install -r requirements-dev.txt
+pip install --require-hashes --no-deps -r requirements-dev.txt
 ruff check .
 python -m pytest -q
 python -m app web       # Web/API lokal (NETZ_DATA_DIR=./data)

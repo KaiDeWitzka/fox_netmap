@@ -268,7 +268,7 @@ docker compose down               # Stop (Daten bleiben)
 docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
 ```
 
-- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.0" }`
+- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.1" }`
 - Container laufen seit v1.5.0 **nicht mehr als root**, sondern als UID/GID `10001`. Die Web-Oberfläche hat keine Capabilities und ein schreibgeschütztes Root-Dateisystem; der Scanner behält nur `NET_RAW` für ping.
 - Beim ersten Start nach dem Update übernimmt der Container vorhandene Dateien in `./data` automatisch für UID 10001. Auf dem Host danach `sudo` zum Lesen nutzen oder den eigenen Benutzer in eine Gruppe mit GID 10001 aufnehmen.
 - Docker-Healthcheck: `docker compose ps` zeigt `healthy`/`unhealthy` (Web: `/api/health`, Scanner: Scan-Schleife läuft).
@@ -277,6 +277,7 @@ docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
 - Zeitzone: `TZ=Europe/Berlin`
 - Releases: SemVer-Tags `vX.Y.Z` laufen durch `release.yml` (ruff + pytest + UI-Tests) und
   erzeugen automatisch ein GitHub-Release.
+- Fertiges Image (seit v1.5.1): `docker pull ghcr.io/kaidewitzka/fox_netmap:latest` (amd64/arm64). Bei privatem Repository vorher `docker login ghcr.io` mit Token (`read:packages`). In der Compose `build: .` durch `image: ghcr.io/kaidewitzka/fox_netmap:<version>` ersetzen. Jedes Image ist mit Trivy geprüft; SBOM und Scan-Bericht hängen am GitHub-Release.
 
 ---
 

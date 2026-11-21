@@ -1,0 +1,5 @@
+# Entwicklungs- und Testabhängigkeiten. Laufzeit-Versionen sind über requirements.txt festgelegt.
+-c requirements.txt
+-r requirements.in
+pytest>=8
+ruff>=0.6

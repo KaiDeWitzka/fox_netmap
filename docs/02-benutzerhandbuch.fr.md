@@ -270,7 +270,7 @@ docker compose down                    # arrêt (données conservées)
 docker compose down -v                 # ATTENTION : supprime ./data (BDD, log, exports) !
 ```
 
-- Santé : `GET /api/health` → `{ "status": "ok", "version": "1.5.0" }`
+- Santé : `GET /api/health` → `{ "status": "ok", "version": "1.5.1" }`
 - Depuis la v1.5.0, les conteneurs **ne tournent plus en root** mais avec l'UID/GID `10001`. L'interface web n'a aucune capability et un système de fichiers racine en lecture seule ; le scanner ne garde que `NET_RAW` pour ping.
 - Au premier démarrage après la mise à jour, le conteneur attribue automatiquement les fichiers existants de `./data` à l'UID 10001. Sur l'hôte, utiliser `sudo` pour les lire ou ajouter votre utilisateur à un groupe de GID 10001.
 - Healthcheck Docker : `docker compose ps` affiche `healthy`/`unhealthy` (web : `/api/health`, scanner : boucle de scan active).
@@ -279,6 +279,7 @@ docker compose down -v                 # ATTENTION : supprime ./data (BDD, log, 
 - Fuseau horaire : `TZ=Europe/Berlin`
 - Releases : les tags SemVer `vX.Y.Z` passent par `release.yml` (ruff + pytest + tests UI) et
   créent automatiquement une release GitHub.
+- Image prête à l'emploi (depuis v1.5.1) : `docker pull ghcr.io/kaidewitzka/fox_netmap:latest` (amd64/arm64). Tant que le dépôt est privé, exécuter d'abord `docker login ghcr.io` avec un jeton (`read:packages`). Dans le Compose, remplacer `build: .` par `image: ghcr.io/kaidewitzka/fox_netmap:<version>`. Chaque image est analysée avec Trivy ; le SBOM et le rapport sont joints à la release GitHub.
 
 ---
 
