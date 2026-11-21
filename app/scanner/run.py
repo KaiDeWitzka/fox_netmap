@@ -26,6 +26,9 @@ OVERRIDABLE = {
     "auto_export": lambda v: str(v).lower() in ("1", "true", "yes"),
     "auto_export_interval_hours": int,
     "mdns_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "oui_online_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "oui_online_max": int,
+    "oui_online_url": str,
     "alarm_whitelist": str,
     "sites": str,
     "lang": str,
@@ -131,6 +134,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
     oui_table = load_oui_table(settings)
+    oui_budget = {"left": settings.oui_online_max}
     gateway = topology.gateway_ip()
     if gateway:
         db.set_setting(conn, "gateway", gateway)
@@ -191,6 +195,8 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             continue
         d["mac"] = oui.normalize_mac(d["mac"])
         d["vendor"] = oui.lookup(d["mac"], oui_table)
+        if not d["vendor"]:
+            d["vendor"] = oui.lookup_online(d["mac"], settings, conn, oui_budget)
         if not d.get("hostname") and d.get("ip"):
             d["hostname"] = hostnames.get(d["ip"], "")
         if "tr064_active" in d:

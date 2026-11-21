@@ -159,6 +159,7 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 | Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
 | Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | Hostnamen per mDNS-PTR als Fallback |
+| Online-OUI-Fallback / max. Lookups pro Scan / API-URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | Hersteller unbekannter MACs online nachschlagen (Default `https://api.macvendors.com`), gecacht in der DB |
 | Login aktiv | `NETZ_AUTH_ENABLED` | Session-Login an/aus (User/Pass bleiben env-only) |
 | Theme / Sprache | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 

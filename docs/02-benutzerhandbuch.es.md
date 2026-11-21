@@ -159,6 +159,7 @@ vacío = valor por defecto del entorno).
 | Historial / retención | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historial en horas; borrar dispositivos sin conexión tras N días (0 = nunca) |
 | Auto-exportación / intervalo / carpeta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automático; intervalo en h (0 = tras cada escaneo) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames vía mDNS PTR como respaldo |
+| Respaldo OUI en línea / máx. consultas por escaneo / URL de API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MAC desconocidas se busca en línea (por defecto `https://api.macvendors.com`), caché en la BD |
 | Login activado | `NETZ_AUTH_ENABLED` | login por sesión on/off (usuario/contraseña siguen siendo solo env) |
 | Tema / idioma | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 

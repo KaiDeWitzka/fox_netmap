@@ -110,7 +110,7 @@ Scanner (zyklisch/manuell)
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle): umgesetzt — `POST /api/export/pdf` (Karten-Snapshot als PNG/JPEG aus dem Frontend + Geräte-Tabelle, reportlab), Button **PDF** im Header, auch mit Embed-Token; Filter wie bei JSON/CSV via Query-Parameter
 - Gruppieren der Geräte nach Räumen/Etagen in der Karte
 - Weitere Sprachen: umgesetzt — de/en/fr/es/it/pt (`NETZ_LANG`, Sprachwahl im Header + Settings, `?lang=` für Embed, Login-Seite mehrsprachig; Kategorie-Schlüssel bleiben kanonisch englisch, Anzeige lokalisiert)
-- Online-OUI-Fallback
+- Online-OUI-Fallback: umgesetzt — `NETZ_OUI_ONLINE_ENABLED` (Default an), `NETZ_OUI_ONLINE_MAX` (max. Lookups pro Scan, Default 10), `NETZ_OUI_ONLINE_URL` (Default `https://api.macvendors.com`); nur bei lokalem Fehltreffer, Ergebnis gecacht in DB-Tabelle `oui_cache`; in den Einstellungen änderbar
 
 ## 6. Out of Scope (bestätigt)
 

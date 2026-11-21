@@ -159,6 +159,7 @@ predefinito env).
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostname via mDNS PTR come fallback |
+| Fallback OUI online / max lookup per scansione / URL API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | produttore di MAC sconosciuti cercato online (predefinito `https://api.macvendors.com`), in cache nel DB |
 | Login attivo | `NETZ_AUTH_ENABLED` | login di sessione on/off (utente/password restano solo env) |
 | Tema / lingua | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 

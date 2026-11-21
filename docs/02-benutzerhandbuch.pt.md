@@ -157,6 +157,7 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 | Histórico / retenção | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | histórico em horas; apagar dispositivos offline após N dias (0 = nunca) |
 | Auto-exportação / intervalo / pasta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automáticos; intervalo em h (0 = após cada scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR como recurso |
+| Fallback OUI online / máx. consultas por scan / URL da API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MACs desconhecidos procurado online (predefinição `https://api.macvendors.com`), em cache na BD |
 | Login ativo | `NETZ_AUTH_ENABLED` | login por sessão on/off (utilizador/palavra-passe ficam só em env) |
 | Tema / idioma | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 

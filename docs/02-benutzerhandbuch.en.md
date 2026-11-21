@@ -155,6 +155,7 @@ Everything changed here takes effect **on the next scan without restarting the c
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR as fallback |
+| Online OUI fallback / max lookups per scan / API URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | look up vendors of unknown MACs online (default `https://api.macvendors.com`), cached in the DB |
 | Login enabled | `NETZ_AUTH_ENABLED` | session login on/off (user/pass stay env-only) |
 | Theme / language | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
 

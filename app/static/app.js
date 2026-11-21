@@ -812,6 +812,9 @@ function bindSidebar() {
       auto_export_interval_hours: parseInt(document.getElementById("st-autoexport-interval").value, 10),
       auto_export_dir: document.getElementById("st-autoexportdir").value,
       mdns_enabled: document.getElementById("st-mdns").checked,
+      oui_online_enabled: document.getElementById("st-ouionline").checked,
+      oui_online_max: parseInt(document.getElementById("st-ouimax").value, 10),
+      oui_online_url: document.getElementById("st-ouiurl").value,
       alarm_whitelist: document.getElementById("st-whitelist").value,
       sites: document.getElementById("st-sites").value,
     };
@@ -905,6 +908,10 @@ function validateSettings(v) {
   }
   if (String(v.snmp_community || "").trim() && /\s/.test(String(v.snmp_community).trim())) errs.push(t("err.community"));
   if (String(v.fritz_pass || "").length > 256) errs.push(t("err.fritzPass"));
+  if (!Number.isInteger(v.oui_online_max) || v.oui_online_max < 0 || v.oui_online_max > 200)
+    errs.push(t("err.ouiMax"));
+  const ouiUrl = String(v.oui_online_url || "").trim();
+  if (ouiUrl && !/^https?:\/\/.+/.test(ouiUrl)) errs.push(t("err.url", { v: ouiUrl }));
   const aed = String(v.auto_export_dir || "").trim();
   if (aed && (aed.startsWith("/") || aed.split("/").includes(".."))) errs.push(t("err.exportdir"));
   if (!Number.isInteger(v.port_top) || v.port_top < 0 || v.port_top > 65535)
@@ -994,6 +1001,9 @@ async function loadSettings() {
   document.getElementById("st-notifygotify").value = s.notify_gotify || "";
   document.getElementById("st-notifyntfy").value = s.notify_ntfy || "";
   document.getElementById("st-autoexportdir").value = s.auto_export_dir || "";
+  document.getElementById("st-ouionline").checked = !!s.oui_online_enabled;
+  document.getElementById("st-ouimax").value = s.oui_online_max ?? 10;
+  document.getElementById("st-ouiurl").value = s.oui_online_url || "";
   document.getElementById("st-history").value = s.history_hours;
   document.getElementById("st-retention").value = s.device_retention_days;
   document.getElementById("st-snmp").checked = String(s.snmp_enabled) === "true" || s.snmp_enabled === true;
