@@ -141,7 +141,18 @@ function applyLayout() {
   const hasPos = devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
   let opts;
   if (choice === "auto") {
-    opts = hasPos ? { name: "preset" } : { name: "cose", animate: false, idealEdgeLength: 130, nodeRepulsion: 9000, spacingFactor: 1.1 };
+    if (hasPos) {
+      opts = { name: "preset" };
+    } else {
+      const big = devices.length > 60;
+      opts = {
+        name: "cose", animate: false, padding: 30,
+        idealEdgeLength: big ? 90 : 130,
+        nodeRepulsion: big ? 22000 : 12000,
+        nodeOverlap: big ? 30 : 20,
+        spacingFactor: big ? 1.25 : 1.1,
+      };
+    }
   } else if (choice === "tree") {
     opts = { name: "breadthfirst", directed: true, spacingFactor: 1.3, animate: false };
   } else {
@@ -220,10 +231,24 @@ async function loadCategories() {
   fillCategoryOptions();
 }
 
+function shouldAutoGroup(n) {
+  return !localStorage.getItem("fox_groups") && n > 40;
+}
+
+function maybeAutoGroup() {
+  if (shouldAutoGroup(devices.length)) {
+    groupMode = "subnet";
+    localStorage.setItem("fox_groups", "subnet");
+    const chk = document.getElementById("chk-groups");
+    if (chk) chk.checked = true;
+  }
+}
+
 async function loadDevices() {
   const r = await api("/api/devices?" + currentFilters());
   if (!r.ok) return;
   devices = await r.json();
+  maybeAutoGroup();
   renderMap();
   renderTable();
 }
@@ -392,6 +417,12 @@ function clearSpotlight() {
   cy.fit(undefined, 40);
 }
 
+function updateZoomLabels() {
+  if (!cy) return;
+  const show = cy.zoom() >= 0.85;
+  cy.style().selector("node").style("label", show ? "data(label)" : "").update();
+}
+
 function renderMap() {
   const container = document.getElementById("map");
   spotlightNode = null;
@@ -399,13 +430,13 @@ function renderMap() {
     cy = cytoscape({
       container,
       style: [
-        { selector: "node", style: { label: "data(label)", "font-size": 10, "text-valign": "bottom", "text-margin-y": 5, width: 26, height: 26, "background-color": "data(color)", color: "#e2e8f0", "text-background-color": "#0f172a", "text-background-opacity": 0.7, "text-background-padding": 2 } },
+        { selector: "node", style: { label: "data(label)", "font-size": 9, "text-valign": "bottom", "text-margin-y": 4, width: 20, height: 20, "background-color": "data(color)", color: "#e2e8f0", "text-background-color": "#0f172a", "text-background-opacity": 0.7, "text-background-padding": 2 } },
         { selector: "node[subnet]", style: { "background-color": "#38bdf8", "background-opacity": 0.07, "border-width": 1.5, "border-color": "#38bdf8", "border-opacity": 0.55, label: "data(label)", "text-valign": "top", "text-margin-y": -8, "font-size": 12, "font-weight": 600, color: "#94a3b8", padding: 22 } },
         { selector: "node[status='offline']", style: { opacity: 0.4 } },
         { selector: "node:selected", style: { "border-width": 3, "border-color": "#fff" } },
         { selector: "node.hl", style: { "border-width": 4, "border-color": "#facc15" } },
         { selector: "node.spot", style: { "border-width": 5, "border-color": "#facc15" } },
-        { selector: "edge", style: { "line-color": "#64748b", width: 1.5, "curve-style": "bezier" } },
+        { selector: "edge", style: { "line-color": "#64748b", width: 1, opacity: 0.45, "curve-style": "bezier" } },
         { selector: "edge.hl", style: { "line-color": "#facc15", width: 3 } },
         { selector: "edge.spot", style: { "line-color": "#facc15", width: 3.5 } },
         { selector: ".dim", style: { opacity: 0.12 } },
@@ -428,6 +459,8 @@ function renderMap() {
       const p = e.target.position();
       api("/api/device/" + e.target.data("id"), { method: "PATCH", body: JSON.stringify({ x: p.x, y: p.y }) });
     });
+    cy.on("zoom", updateZoomLabels);
+    updateZoomLabels();
   }
   cy.elements().remove();
   cy.add(buildElements());
@@ -737,13 +770,31 @@ function startLogTimer() {
   }
 }
 
+const LOG_LV_RE = /^(\S+ \S+)\s+(DEBUG|INFO|WARNING|WARN|ERROR|CRITICAL)\b(.*)$/;
+
+function renderLogLines(lines) {
+  const el = document.getElementById("log-view");
+  if (!lines.length) {
+    el.textContent = t("log.empty");
+    return;
+  }
+  el.innerHTML = lines
+    .map((l) => {
+      const m = LOG_LV_RE.exec(l);
+      if (!m) return `<div class="log-line">${esc(l)}</div>`;
+      const lv = m[2] === "WARNING" ? "WARN" : m[2];
+      return `<div class="log-line"><span class="log-ts">${esc(m[1])}</span> <span class="lv lv-${lv}">${lv}</span> <span class="log-msg">${esc(m[3])}</span></div>`;
+    })
+    .join("");
+}
+
 async function loadLogs() {
   const lines = document.getElementById("log-lines").value;
   const level = document.getElementById("log-level").value;
   const r = await api(`/api/logs?lines=${lines}&level=${level}`);
   if (!r.ok) return;
   const data = await r.json();
-  document.getElementById("log-view").textContent = data.lines.join("\n") || t("log.empty");
+  renderLogLines(data.lines);
   document.getElementById("log-status").textContent = t("log.meta", { ret: data.returned, total: data.total, file: data.file });
 }
 

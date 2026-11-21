@@ -120,7 +120,7 @@ w.fetch = async (url, opts = {}) => {
         file: "/data/netmap.log",
         total: 2,
         returned: 2,
-        lines: ["2026-01-01 10:00:00 INFO fox_netmap: Scan fertig: 3 Geraete, 0 neu", "2026-01-01 10:00:01 ERROR fox_netmap scanner: Scan-Fehler: boom"],
+        lines: ["2026-01-01 10:00:00 INFO fox_netmap: Scan fertig: 3 Geraete, 0 neu", "2026-01-01 10:00:01 ERROR fox_netmap scanner: Scan-Fehler: <b>boom</b>"],
       };
     if (String(url).includes("/api/scan")) return { last_scan: null, next_scan: null, scanning: 0 };
     return {};
@@ -128,9 +128,16 @@ w.fetch = async (url, opts = {}) => {
   return { ok: true, status: 200, json, cookies: {}, blob: async () => new w.Blob(["%PDF-1.4 mock"], { type: "application/pdf" }) };
 };
 let cyInstance = null;
-w.cytoscape = () => {
+w.cytoscape = (opts) => {
   cyInstance = {
     _els: [],
+    _style: (opts && opts.style) || [],
+    _zoom: 1,
+    zoom() { return this._zoom; },
+    style() {
+      const self = this;
+      return { selector() { return { style(k, v) { if (k === "label") self._labelStyle = v; return { update() {} }; } }; } };
+    },
     _handlers: {},
     on(ev, sel, fn) {
       if (typeof sel === "function") this._handlers[ev] = sel;
@@ -371,6 +378,19 @@ check(
   devNodes.length >= 3 && new Set(devNodes.slice(0, 4).map((e) => `${Math.round(e.position.x)},${Math.round(e.position.y)}`)).size > 1
 );
 check("Karte: Kategorie-Icons im Label", devNodes.some((e) => /^[\u{1F300}-\u{1FAFF}❓]/u.test(e.data.label)));
+check("Karte: Knoten kompakt (width 20) + Kanten duenn/transparent (width 1, opacity 0.45)", (() => {
+  const n = cyInstance._style.find((x) => x.selector === "node");
+  const e = cyInstance._style.find((x) => x.selector === "edge");
+  return !!n && n.style.width === 20 && !!e && e.style.width === 1 && e.style.opacity === 0.45;
+})());
+cyInstance._zoom = 0.5;
+cyInstance._handlers["zoom"]();
+check("Karte: Zoom < 0.85 -> Labels ausgeblendet", cyInstance._labelStyle === "");
+cyInstance._zoom = 2;
+cyInstance._handlers["zoom"]();
+check("Karte: Zoom >= 0.85 -> Labels sichtbar", cyInstance._labelStyle === "data(label)");
+cyInstance._zoom = 1;
+check("Karte: Auto-Gruppe aus bei <=40 Geraeten; shouldAutoGroup(4)=false, (50)=true", $("#chk-groups").checked === false && w.eval("shouldAutoGroup(4)") === false && w.eval("shouldAutoGroup(50)") === true);
 check(
   "Karte: Kanten gerendert + virtueller Gateway-Knoten (Gateway nicht in Geraeteliste)",
   !!cyInstance &&
@@ -393,6 +413,8 @@ await sleep(100);
 check("Log: Log-Ansicht sichtbar, Karte versteckt", vis($("#view-log")) && !vis($("#view-map")));
 check("Log: GET /api/logs wurde abgesetzt", calls.some((c) => c.url.includes("/api/logs")));
 check("Log: Inhalt gerendert (ERROR-Zeile sichtbar)", $("#log-view").textContent.includes("Scan-Fehler"));
+check("Log: Level-Farben als Spans (lv-INFO + lv-ERROR)", !!$("#log-view .lv-INFO") && !!$("#log-view .lv-ERROR"));
+check("Log: HTML in Logzeilen wird escaped (kein <b>-Element)", $("#log-view").querySelector("b") === null && $("#log-view").textContent.includes("<b>boom</b>"));
 
 const logCallsBefore = calls.filter((c) => c.url.includes("/api/logs")).length;
 $("#btn-log-refresh").click();
