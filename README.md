@@ -3,6 +3,10 @@ scan am visualize a network as a map
 
 - [Anforderungen & Zielarchitektur](docs/01-anforderungen.md)
 
+## Dokumentation
+
+- [Benutzerhandbuch](docs/02-benutzerhandbuch.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
+- [Anforderungen & Architektur](docs/01-anforderungen.md)
 ## Quickstart (standalone Docker)
 
 ```bash

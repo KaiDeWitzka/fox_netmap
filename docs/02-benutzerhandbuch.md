@@ -1,0 +1,332 @@
+# fox_netmap — Benutzerhandbuch
+
+Version 1.3.x · Stand: November 2026
+
+fox_netmap ist eine interaktive, durchsuchbare Netzwerkkarte für das Heimnetz: bis zu ~200 Geräte
+über mehrere Subnetze/VLANs, mit Topologie („Verbunden mit“), offenen Ports, Verlauf, Alarmen und
+Exporten (JSON/CSV/PDF-Druck). Daten liegen persistent in SQLite, Scans laufen zyklisch oder manuell.
+
+> Die Abbildungen in diesem Handbuch (`docs/screenshots/*.svg`) sind schematische Darstellungen der
+> echten Oberfläche (Dark Theme) — Aufbau und Elemente entsprechen der App 1:1.
+
+**Inhaltsverzeichnis**
+
+1. [Schnellstart](#1-schnellstart)
+2. [Die Oberfläche](#2-die-oberfläche)
+3. [Karte bedienen](#3-karte-bedienen)
+4. [Tabelle](#4-tabelle)
+5. [Log-Ansicht](#5-log-ansicht)
+6. [Gerätedetails](#6-gerätedetails)
+7. [Suchen & Filtern](#7-suchen--filtern)
+8. [Einstellungen](#8-einstellungen)
+9. [Embed (einbettbar, read-only)](#9-embed-einbettbar-read-only)
+10. [Exporte](#10-exporte)
+11. [Scanner & Datenmodell](#11-scanner--datenmodell)
+12. [Topologie („Verbunden mit“)](#12-topologie-verbunden-mit)
+13. [Mehrere Standorte & IPv6](#13-mehrere-standorte--ipv6)
+14. [Sicherheit](#14-sicherheit)
+15. [Betrieb & Deployment](#15-betrieb--deployment)
+16. [REST-API (Kurzüberblick)](#16-rest-api-kurzüberblick)
+17. [Fehlerbehebung](#17-fehlerbehebung)
+18. [Barrierefreiheit](#18-barrierefreiheit)
+19. [Glossar](#19-glossar)
+
+---
+
+## 1. Schnellstart
+
+**Voraussetzungen:** Docker + Docker Compose auf dem Host (Scanner braucht `network_mode: host`,
+damit ARP/Ping im echten Netz arbeiten).
+
+```bash
+git clone https://github.com/KaiDeWitzka/fox_netmap.git
+cd fox_netmap
+cp docker-compose.yml .   # liegt schon im Repo
+# optional: .env anlegen, z. B.
+#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
+#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
+docker compose up -d --build
+```
+
+- Web-UI: **http://localhost:8399**
+- Beim ersten Start mit leerem `NETZ_AUTH_PASS` wird einmalig ein zufälliges Passwort im
+  Container-Log ausgegeben (`docker compose logs netmap | grep Passwort`). Login default: `admin`.
+- Erster Scan läuft automatisch nach `NETZ_SCAN_INTERVAL` (Default 900 s) oder sofort über
+  **▶ Scan** im Header.
+- Daten liegen im Volume `./data` (SQLite `netmap.db`, Log `netmap.log`, Exporte) und überleben
+  `docker compose up -d --build` (Recreate). **`down -v` löscht die Daten!**
+
+> Nach Code-Updates immer `docker compose up -d --build` ausführen (neues Image + Recreate).
+
+---
+
+## 2. Die Oberfläche
+
+![Karte mit Subnetz-Gruppen und Detail-Panel](screenshots/01-karte.svg)
+
+Der Header enthält (v. l. n. r.): Logo/Version, Navigation **Karte / Tabelle / Log**, Suche,
+Filter (Kategorie, Status, Standort), **Nur online**, Layout-Auswahl, Exporte (JSON/CSV),
+**▶ Scan**, Drucken (PDF), Theme (🌙/☀), **⚙ Einstellungen**, Logout.
+
+Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste mit den Tabs
+**Details** und **Einstellungen**.
+
+---
+
+## 3. Karte bedienen
+
+- **Zoom/Pan:** Mausrad zoomen, Hintergrund ziehen verschiebt. Positionen der Geräte werden
+  gespeichert (Ziehen eines Knotens → wird per API persistiert).
+- **Klick auf Gerät:** Spotlight — das Gerät und seine direkten Verbindungen werden hervorgehoben,
+  der Rest wird abgedunkelt; Details öffnen sich rechts. Erneuter Klick auf Hintergrund hebt auf.
+- **„Nur online":** Blendet offline-Geräte aus (persistiert in localStorage).
+- **„Subnetze gruppieren":** Geräte werden pro Subnetz in einen Rahmen gruppiert
+  (Label `Subnetz · Standort (Anzahl)`). Kanten zwischen verschiedenen Subnetzen laufen
+  gruppe-zu-gruppe.
+- **Kinder aus-/einblenden:** Im Detail-Panel von Router/Switch blendet ein Button alle direkt
+  angebundenen Geräte aus; der Knoten zeigt dann `(+N)`.
+- **Layout:** `auto` (Physik, Default), `force`, `tree`, `concentric`, `circle`, `grid`;
+  **Reset** setzt gespeicherte Positionen zurück.
+- Virtuelle Knoten: **🌐 Internet** (mit WAN-IP aus TR-064, sonst „?“), **🏠 Gateway** (falls das
+  Gateway selbst nicht in der Geräteliste ist) und **📶 wlan:…** für WLAN-Geräte ohne eigenen Knoten.
+- Kategorie-Emoji auf den Knoten: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Drucker ·
+  💡 Smart-Home/IoT · ❓ Unbekannt.
+
+---
+
+## 4. Tabelle
+
+![Tabelle](screenshots/02-tabelle.svg)
+
+- **Spalten verschieben:** Header-Zelle ziehen — Reihenfolge wird gespeichert (localStorage).
+- **Spaltenbreite:** Trennlinie im Header ziehen — Breite wird gespeichert.
+- **Sortieren:** Klick auf Spaltenkopf.
+- **Kategorie direkt ändern:** Dropdown in der Kategorie-Spalte.
+- Hostname/IP mit Web-UI-Ports (80/8080/443/8443) werden als klickbare Links (http + https,
+  IPv6 in `[…]`) angezeigt.
+- Geräte ohne MAC (z. B. reine IP-Funde aus dem VPN-Subnetz) zeigen als MAC „–“.
+
+---
+
+## 5. Log-Ansicht
+
+![Log](screenshots/04-log.svg)
+
+Die **Log**-Ansicht zeigt `netmap.log` (rotierend, 1 MB × 3) mit Auto-Refresh alle 5 s,
+Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-Endpunkte
+`/api/logs` und `/api/logs/download`.
+
+---
+
+## 6. Gerätedetails
+
+Rechts im Tab **Details**: Kategorie (änderbar), IP/MAC/Hostname/Hersteller (OUI), Status,
+Subnetz, Standort, Quelle(n) des Scans (z. B. `arp,tr064`), „Verbunden mit“ (manuell wählbar,
+leer = automatisch), offene Ports mit Dienstnamen, Notiz, Verlauf (online/offline/Ports) und
+Ereignisse. **Speichern** persistiert Kategorie/Notiz/manuelle Verbindung.
+
+---
+
+## 7. Suchen & Filtern
+
+- **Suche:** durchsucht Hostname, IP, MAC, Hersteller, Notiz (Live-Filter).
+- **Filter:** Kategorie, Status (online/offline), Standort — kombinierbar, wirken auf Karte
+  und Tabelle.
+- **Nur online:** quick toggle im Header.
+
+---
+
+## 8. Einstellungen
+
+![Einstellungen](screenshots/03-einstellungen.svg)
+
+Alle hier änderbaren Werte wirken **beim nächsten Scan ohne Container-Neustart** (die Compose-
+Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
+
+| Feld | Env-Äquivalent | Bedeutung |
+|---|---|---|
+| Subnetze | `NETZ_SUBNETS` | kommagetrennt, IPv4- und IPv6-CIDR (z. B. `192.168.178.0/24, 2003:db8::/64`) |
+| Scan-Intervall / Timeout | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | Sekunden; Intervall 30–86400 |
+| Port-Umfang / Eigene Ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | Top-N (0 = alle) oder eigene Liste `80,443,…` |
+| SNMP aktiv / Switches / Community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM-Tabelle + LLDP der Switches (161/udp) |
+| TR-064 Hauptgerät / weitere Endpunkte / Benutzer / Passwort | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL oder `host:port`; Repeater als weitere Endpunkte; Passwort ist **write-only** (wird nie per GET ausgeliefert, leer = unverändert) |
+| Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
+| Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
+| Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.168.178.0/24; Remote:192.168.179.0/24` |
+| Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
+| Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
+| mDNS | `NETZ_MDNS_ENABLED` | Hostnamen per mDNS-PTR als Fallback |
+| Login aktiv | `NETZ_AUTH_ENABLED` | Session-Login an/aus (User/Pass bleiben env-only) |
+| Theme / Sprache | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
+
+**Plausibilitätsprüfung:** Ungültige Eingaben (z. B. `keine-ip` als Subnetz, Port `abc`,
+Webhook ohne `https://`) werden sofort im Frontend gemeldet und vom Backend mit HTTP 422
+abgewiesen.
+
+---
+
+## 9. Embed (einbettbar, read-only)
+
+In den Einstellungen (Bereich **Embed-Tokens**) Token anlegen — optional mit Ablaufdatum und
+Filtern (Subnetze/Kategorien). Einbettung per:
+
+```html
+<iframe src="https://netmap.example.de/embed?token=ABC123&lang=de" width="100%" height="600"></iframe>
+```
+
+Der Embed ist read-only (keine Bearbeitung, keine Settings), respektiert die Token-Filter und
+kann über `?theme=dark|light` und `?lang=…` angepasst werden.
+
+---
+
+## 10. Exporte
+
+- **JSON / CSV** im Header: kompletter Export aller Geräte inkl. Ports, Verlauf, Verbindungen,
+  Standorte. CSV mit wählbarem Trennzeichen (`/api/export/csv?sep=;`).
+- **Drucken → PDF:** druckoptimierte Ansicht (Browser „Als PDF speichern“).
+- **Auto-Export:** in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
+  den Export-Ordner (relativ zum Daten-Volume, Default `exports`).
+
+---
+
+## 11. Scanner & Datenmodell
+
+Zwei Compose-Services teilen sich das Volume `./data`:
+
+- `netmap` — Web/API (Port 8399)
+- `netmap-scanner` — `command: ["scanner"]`, `network_mode: host`, Caps `NET_RAW`/`NET_ADMIN`
+
+**Quellen pro Scan (Merge-Priorität):** Ping-Sweep + ARP (`/proc/net/arp`) + TCP-Probe
+(80/443/22/445/8080) für ICMP-blockierte Hosts (z. B. VPN-Subnetz) → TR-064 (Hauptgerät +
+`NETZ_FRITZ_URLS`, Merge nach IP, Repeater via `tr064_parent`) → SNMP (CAM/LLDP) → mDNS/DNS.
+MAC-Konflikte: ARP-MAC gewinnt. Duplikate (gleiche IP) werden beim Start automatisch zusammengeführt.
+
+**Zyklus:** Default alle 900 s + manueller Trigger (▶ Scan). Jeder Scan schreibt Verlauf
+(`device_history`), Ereignisse (`device_events`, inkl. online/offline/Port-Änderungen/neu) und
+löst Alarme aus (Webhook/Gotify/Ntfy bei neuem Gerät — außer Whitelist).
+
+**Retention:** offline-Geräte werden nach `NETZ_DEVICE_RETENTION_DAYS` (Default 30, 0 = nie)
+gelöscht.
+
+---
+
+## 12. Topologie („Verbunden mit“)
+
+Priorität: **manuell** (Detail-Panel) > **SNMP** (CAM+LLDP) > **TR-064** (Repeater/Hotspot-Geräte) >
+**WLAN** (`wlan:…`, wenn TR-064 den Host als WLAN markiert) > **Gateway**.
+Verbindungsart `lan`/`wlan` wird mitgespeichert. Kanten im UI entsprechend; Cross-Subnetz-Kanten
+laufen gruppe-zu-gruppe (bei aktivierten Subnetz-Gruppen).
+
+---
+
+## 13. Mehrere Standorte & IPv6
+
+Beispiel (VPN-Standort wie im eigenen Netz):
+
+```env
+NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
+NETZ_SITES=Zuhause:192.168.178.0/24; Remote:192.168.179.0/24
+```
+
+→ Standort-Filter im Header, Spalte „Standort“ in der Tabelle, Standort-Label in den
+Subnetz-Gruppen, `site`-Feld im Export. Das Remote-Subnetz wird per TCP-Probe gefunden, auch
+wenn ICMP blockiert ist.
+
+IPv6: v6-CIDR einfach in die Subnetze aufnehmen; Fund bei großen Netzen via NDP + Gateway-Ping,
+bei kleinen zusätzlich Sweep; Gateway-v6 für die Topologie; Web-Links als `[2003:db8::10]:8080`.
+
+---
+
+## 14. Sicherheit
+
+- Session-Login (PBKDF2, Cookie `fox_session`), default an; `NETZ_AUTH_ENABLED=false` schaltet ab.
+- `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sind env-only; leeres Passwort → zufälliges Passwort wird
+  einmalig geloggt.
+- `GET /api/settings` liefert **keine Secrets** (Test abgesichert): weder `auth_pass`,
+  `fritz_pass` noch `notify_*_token`. TR-064-Passwort ist write-only in den Settings.
+- Embed-Tokens: ablauffähig, filterbar, read-only; token-geschützte API-Pfade nur
+  `/api/devices`, `/api/device/…`, `/api/export/…`.
+- Scanner läuft mit minimalen Caps (`NET_RAW`, `NET_ADMIN`), read-only auf das Netz.
+
+---
+
+## 15. Betrieb & Deployment
+
+```bash
+docker compose up -d --build     # nach jedem Update (Recreate, Daten bleiben in ./data)
+docker compose logs -f netmap-scanner   # Scanner-Log live
+docker compose down               # Stop (Daten bleiben)
+docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
+```
+
+- Health: `GET /api/health` → `{ "status": "ok", "version": "1.3.1" }`
+- Volumes: `./data:/data` (SQLite-WAL, `netmap.log` rotierend, `exports/`)
+- Ports: `NETMAP_PORT` (Host) → 8399 (Container)
+- Zeitzone: `TZ=Europe/Berlin`
+- Releases: SemVer-Tags `vX.Y.Z` laufen durch `release.yml` (ruff + pytest + UI-Tests) und
+  erzeugen automatisch ein GitHub-Release.
+
+---
+
+## 16. REST-API (Kurzüberblick)
+
+| Endpunkt | Zweck |
+|---|---|
+| `GET /api/health` | Health + Version (öffentlich) |
+| `GET /api/devices?q=&category=&status=&subnet=&site=` | Geräteliste, filterbar |
+| `PATCH /api/device/{mac}` | Kategorie/Notiz/„Verbunden mit“/Position bearbeiten |
+| `GET /api/device/{mac}` | Details inkl. Ports/Verlauf/Ereignisse |
+| `POST /api/scan` · `GET /api/scan/status` | Scan auslösen / Status |
+| `GET /api/settings` · `PATCH /api/settings` | Settings lesen (ohne Secrets) / ändern (422 bei ungültig) |
+| `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | Embed-Tokens verwalten |
+| `GET /api/export/json` · `GET /api/export/csv?sep=,` | Exporte |
+| `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | Log |
+| `GET /api/meta` | WAN-IP, Gateway, Version, Subnetze (öffentlich) |
+| `GET /api/sites` · `GET /api/categories` | Standorte / Kategorien (öffentlich) |
+| `POST /api/layout/reset` | gespeicherte Knoten-Positionen löschen |
+
+Auth: Session-Cookie nach `POST /api/login`; Embed-Token statt Session für die Token-Pfade.
+
+---
+
+## 17. Fehlerbehebung
+
+| Symptom | Ursache / Lösung |
+|---|---|
+| Gerät fehlt im VPN-Subnetz | ICMP blockiert → TCP-Probe greift automatisch; im Log (`WARN … TCP-Probe ok`) sichtbar. Subnetz in den Settings eintragen. |
+| TR-064-Fehler im Log | https→http-Fallback automatisch; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. |
+| Switch ohne Nachbarn | TL-SG108E o. Ä. ohne SNMP → Port 80 only; Topologie dann manuell im Detail-Panel setzen. |
+| „Doppeltes“ Gerät | Gleiche IP mit zwei MACs → ARP-MAC gewinnt, Rest wird beim Start dedupliziert. |
+| Alte Geräte verschwinden | Retention aktiv (Default 30 Tage offline) — in den Settings auf `0` = nie stellen. |
+| Karte unübersichtlich | „Subnetze gruppieren“ + Router/Switch „Kinder ausblenden“ + Layout `tree`/`grid` testen. |
+| Login vergessen | `NETZ_AUTH_PASS` in der Compose/.env setzen und `docker compose up -d --build`. |
+| Alles neu aufsetzen | `docker compose down -v && docker compose up -d --build` — löscht DB! Exporte vorher sichern. |
+
+Log-Seite (Tab **Log**) + `docker compose logs netmap-scanner` zeigen jeden Scan-Schritt.
+
+---
+
+## 18. Barrierefreiheit
+
+- Tastaturbedienung: Tab-Navigation durch Header/Views, Enter aktiviert; Fokus-Ringe sichtbar.
+- Kontraste im Dark/Light Theme geprüft, Status zusätzlich zur Farbe textlich („online/offline“).
+- aria-labels auf icon-only-Buttons, Live-Region für Statusmeldungen.
+- Restliche BITV-2.1-Konformität ist Ziel, Feedback willkommen (Issue im Repo).
+
+---
+
+## 19. Glossar
+
+- **OUI** — Herstellerkennung anhand der ersten 3 MAC-Bytes (lokale DB `app/data/oui_seed.txt`).
+- **TR-064** — AVM-SOAP-Schnittstelle der FRITZ!Box (Hostliste, WAN-IP, WLAN-Clients).
+- **CAM-Tabelle** — Switch-MAC-Port-Tabelle via SNMP (Q-BRIDGE/BRIDGE-MIB).
+- **LLDP** — Nachbarerkennung via SNMP (LLDP-MIB), z. B. `lldpRemChassisId`.
+- **Retention** — automatische Löschung lange offline gewesener Geräte.
+- **Spotlight** — Hervorhebung eines Geräts + seiner direkten Verbindungen auf der Karte.
+- **Standort** — benannter Name für ein Subnetz (`NETZ_SITES`), z. B. „Remote“ für das VPN-Netz.
+
+---
+
+*Fragen oder Fehler? Issue im Repo `KaiDeWitzka/fox_netmap` anlegen — Anforderungen stehen in
+`docs/01-anforderungen.md`.*
