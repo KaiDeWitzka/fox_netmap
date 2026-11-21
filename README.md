@@ -5,7 +5,7 @@ scan am visualize a network as a map
 
 ## Dokumentation
 
-- [Benutzerhandbuch](docs/02-benutzerhandbuch.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
+- [Benutzerhandbuch](docs/02-benutzerhandbuch.md) — in 6 Sprachen: [de](docs/02-benutzerhandbuch.md) · [en](docs/02-benutzerhandbuch.en.md) · [fr](docs/02-benutzerhandbuch.fr.md) · [es](docs/02-benutzerhandbuch.es.md) · [it](docs/02-benutzerhandbuch.it.md) · [pt](docs/02-benutzerhandbuch.pt.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
 - [Anforderungen & Architektur](docs/01-anforderungen.md)
 ## Quickstart (standalone Docker)
 
