@@ -4,6 +4,20 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.2] – 2026-11-22
+
+Versionsnummer im UI-Header und IPv6-Adresse pro Gerät (PR #67).
+
+### Neu
+- **Versionsnummer im Header:** `fox_netmap vX.Y.Z` neben dem Titel; die Nummer kommt aus `/api/meta`
+  und ändert sich mit jedem Release automatisch.
+- **IPv6 pro Gerät:** IPv6-Adresse aus dem NDP-Cache über die MAC-Adresse zugeordnet (Link-Local-Adressen
+  `fe80::` ausgeschlossen) in neuer Spalte `devices.ip6`. Sichtbar im Detail-Panel, in JSON/CSV-Export
+  und API. Die Datenbank-Migration legt die Spalte beim Start automatisch an.
+
+### Hinweise zum Update
+- Keine Konfigurationsänderung nötig; bestehende Datenbanken werden migriert (`devices.ip6`).
+
 ## [1.6.1] – 2026-11-22
 
 Neues Knotendesign der Karte nach dem Soll-Entwurf ([Plan](docs/plaene/v1.6.1-knotendesign.md)).
