@@ -137,6 +137,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
 - **Kategorie direkt ändern:** Dropdown in der Kategorie-Spalte.
 - Hostname/IP mit Web-UI-Ports (80/8080/443/8443) werden als klickbare Links (http + https,
   IPv6 in `[…]`) angezeigt.
+- **IPv6-Spalte:** gefundene v6-Adresse (NDP-MAC-Match, Spalte „IPv6“) direkt in der Tabelle, „–“ wenn keine bekannt.
 - Geräte ohne MAC (z. B. reine IP-Funde aus dem VPN-Subnetz) zeigen als MAC „–“.
 
 ---

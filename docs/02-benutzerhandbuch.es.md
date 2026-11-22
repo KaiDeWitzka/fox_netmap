@@ -139,6 +139,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
 - **Cambiar categoría en línea:** desplegable en la columna de categoría.
 - Host/IP con puertos de interfaz web (80/8080/443/8443) se muestran como enlaces clicables
   (http + https, IPv6 entre `[…]`).
+- **Columna IPv6:** dirección v6 encontrada (coincidencia MAC NDP, columna «IPv6») directamente en la tabla, «–» si no se conoce ninguna.
 - Los dispositivos sin MAC (p. ej. IPs sueltas de la subred VPN) muestran «–» como MAC.
 
 ---

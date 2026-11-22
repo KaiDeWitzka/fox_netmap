@@ -134,6 +134,7 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
 - **Change category inline:** dropdown in the category column.
 - Hostname/IP with web UI ports (80/8080/443/8443) render as clickable links (http + https,
   IPv6 in `[…]`).
+- **IPv6 column:** discovered v6 address (NDP MAC match, column “IPv6”) directly in the table, “–” if none known.
 - Devices without a MAC (e.g. pure IP finds from the VPN subnet) show "–" as MAC.
 
 ---

@@ -138,6 +138,7 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
 - **Modifier la catégorie en ligne :** liste déroulante dans la colonne catégorie.
 - Hôte/IP avec des ports d'interface web (80/8080/443/8443) rendus comme liens cliquables
   (http + https, IPv6 entre `[…]`).
+- **Colonne IPv6 :** adresse v6 trouvée (correspondance MAC NDP, colonne « IPv6 ») directement dans le tableau, « – » si inconnue.
 - Les appareils sans MAC (p. ex. IP seules du sous-réseau VPN) affichent « – » comme MAC.
 
 ---

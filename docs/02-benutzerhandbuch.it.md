@@ -139,6 +139,7 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
 - **Cambia categoria in linea:** menu a discesa nella colonna categoria.
 - Host/IP con porte di interfaccia web (80/8080/443/8443) sono resi come link cliccabili
   (http + https, IPv6 tra `[…]`).
+- **Colonna IPv6:** indirizzo v6 trovato (corrispondenza MAC NDP, colonna "IPv6") direttamente nella tabella, "–" se non noto.
 - I dispositivi senza MAC (p. es. IP sole dalla sottorete VPN) mostrano «–» come MAC.
 
 ---
