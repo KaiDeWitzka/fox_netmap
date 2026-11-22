@@ -229,6 +229,8 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             tr064_parent[h["mac"]] = h["endpoint"]
 
     devices = merge_sources(found, tr064_hosts, conn)
+    # IPv6 bei grossen Netzen (/64): SLAAC/EUI-64-Kandidaten pro bekannter MAC per ping6 testen
+    v6_by_mac = discover.v6_slaac_probe(subnets, {d.get("mac", "") for d in devices}, settings.scan_timeout, base=v6_by_mac)
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
     port_plan = ports.port_list(settings.port_top, settings.ports)
     if not settings.ports.strip() and settings.port_top > 0:
@@ -263,6 +265,13 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             continue
         d["mac"] = oui.normalize_mac(d["mac"])
         d["ip6"] = v6_by_mac.get(d["mac"], "")
+        if not d["ip6"] and d.get("hostname"):
+            # Fallback: DNS-AAAA des Hostnamens (z. B. FRITZ!Box-DNS), per ping6 verifizieren
+            cand = names.resolve_aaaa(d["hostname"])
+            if cand and any(discover.in_net(cand, ipaddress.ip_network(sn, strict=False)) for sn in subnets if ":" in sn):
+                if discover.ping_host(cand, settings.scan_timeout):
+                    d["ip6"] = cand
+                    v6_by_mac[d["mac"]] = cand
         d["vendor"] = oui.lookup(d["mac"], oui_table)
         if not d["vendor"]:
             d["vendor"] = oui.lookup_online(d["mac"], settings, conn, oui_budget)

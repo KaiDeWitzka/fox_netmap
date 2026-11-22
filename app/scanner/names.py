@@ -16,6 +16,21 @@ def resolve_hostname(ip: str) -> str:
         return ""
 
 
+def resolve_aaaa(hostname: str) -> str:
+    """AAAA-Adresse eines Hostnamens per DNS (z. B. FRITZ!Box-DNS fuer bekannte Geraete), ohne Link-Local."""
+    if not hostname:
+        return ""
+    try:
+        infos = socket.getaddrinfo(hostname, None, socket.AF_INET6)
+    except (socket.herror, socket.gaierror, OSError, TimeoutError):
+        return ""
+    for info in infos:
+        addr = info[4][0]
+        if addr and not addr.lower().startswith("fe80:"):
+            return addr
+    return ""
+
+
 def ptr_name(ip: str) -> str | None:
     try:
         addr = ipaddress.ip_address(ip)

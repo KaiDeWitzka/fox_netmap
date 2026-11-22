@@ -3,6 +3,7 @@ import logging
 import re
 import socket
 import subprocess
+from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
 from . import topology
@@ -90,6 +91,68 @@ def v6_by_mac(neigh6: dict[str, str]) -> dict[str, str]:
     for ip6, mac in (neigh6 or {}).items():
         if mac and not ip6.lower().startswith("fe80:"):
             out.setdefault(mac.lower(), ip6)
+    return out
+
+
+def eui64_candidates(mac: str, net) -> list[str]:
+    """SLAAC/EUI-64-Kandidat einer MAC in einem IPv6-Subnetz: ff:fe in die Mitte, U/L-Bit kippen."""
+    try:
+        m = bytes(int(x, 16) for x in mac.split(":"))
+        if len(m) != 6:
+            return []
+        iid = bytes([m[0] ^ 0x02, m[1], m[2], 0xFF, 0xFE, m[3], m[4], m[5]])
+        addr = ipaddress.IPv6Address(int(net.network_address) | int.from_bytes(iid, "big"))
+        return [str(addr)]
+    except ValueError:
+        return []
+
+
+def ping6_all_nodes(timeout: float = 2.0) -> list[str]:
+    """ping6 ff02::1 (all nodes am Link): antwortende v6-Hosts, fuellt anschliessend die NDP-Tabelle."""
+    try:
+        result = subprocess.run(
+            ["ping", "-6", "-c", "2", "-W", str(max(1, round(timeout))), "ff02::1"],
+            capture_output=True, text=True, timeout=timeout + 8,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return sorted({m.group(1).lower() for m in re.finditer(r"from\s+([0-9a-fA-F:]+)", result.stdout)})
+
+
+def v6_slaac_probe(subnets, macs, timeout: float = 1.0, base: dict | None = None, workers: int = 16) -> dict[str, str]:
+    """MAC -> globale v6-Adresse via SLAAC/EUI-64: Kandidaten pro bekannter MAC in grossen v6-Netzen per ping6 testen."""
+    out = {k.lower(): v for k, v in (base or {}).items()}
+    nets6 = []
+    for sn in subnets or []:
+        try:
+            n = ipaddress.ip_network(sn, strict=False)
+        except ValueError:
+            continue
+        if n.version == 6 and n.num_addresses > SWEEP_NET_LIMIT:
+            nets6.append(n)
+    if not nets6:
+        return out
+    jobs = []
+    for mac in macs or []:
+        m = (mac or "").lower()
+        if not m or m.startswith("ip:") or m in out:
+            continue
+        for n in nets6:
+            for cand in eui64_candidates(m, n):
+                jobs.append((m, cand))
+    found = 0
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(ping_host, cand, timeout): (mac, cand) for mac, cand in jobs}
+        for fut in futures.as_completed(futs):
+            mac, cand = futs[fut]
+            try:
+                if fut.result() and mac not in out:
+                    out[mac] = cand
+                    found += 1
+            except Exception:  # noqa: BLE001 - einzelner Fehlschlag soll den Scan nicht stoppen
+                pass
+    if found:
+        log.info("IPv6: %s SLAAC/EUI-64-Adresse(n) per ping6 bestaetigt", found)
     return out
 
 
@@ -183,9 +246,12 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
                 for ip in probed:
                     live.setdefault(ip, "tcp")
             else:
+                replies = ping6_all_nodes(max(2.0, timeout))
+                neigh6 = neigh6_table()  # nach dem Multicast-Ping aktualisierte NDP-Tabelle
+                ndp = [ip for ip in neigh6 if in_net(ip, net)]
                 log.info(
-                    "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> NDP + Gateway (%s NDP-Eintraege)",
-                    subnet, net.num_addresses, len(ndp),
+                    "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege)",
+                    subnet, net.num_addresses, len(replies), len(ndp),
                 )
         else:
             pinged = ping_sweep(subnet, timeout)

@@ -297,7 +297,7 @@ sottorete, campo `site` nelle esportazioni. La sottorete remota è scoperta via 
 se ICMP è bloccato.
 
 IPv6: basta aggiungere un CIDR v6 alle sottoreti; scoperta nelle reti grandi via NDP + ping del
-gateway, più sweep per quelle piccole; gateway-v6 per la topologia; link web come `[2003:db8::10]:8080`.
+gateway, più sweep per quelle piccole; gateway-v6 per la topologia; link web come `[2003:db8::10]:8080`. Nelle reti grandi (es. /64) in più: ping multicast ff02::1, candidati SLAAC/EUI-64 per MAC nota (ping6) e DNS AAAA per hostname — gli indirizzi v6 globali trovati vanno in `devices.ip6` (tabella, dettagli, esportazione).
 
 **Client VPN (es. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 segnala le connessioni VPN con tipo
 di interfaccia «VPN»: questi dispositivi vengono marcati automaticamente come VPN (badge «VPN» in

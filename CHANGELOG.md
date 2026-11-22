@@ -4,6 +4,16 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Neu
+- **IPv6-Fund bei großen Netzen verbessert:** zusätzlich zu NDP/Gateway jetzt `ff02::1`-Multicast-Ping,
+  **SLAAC/EUI-64-Kandidaten pro bekannter MAC** (aus ARP/TR-064) im konfigurierten v6-Subnetz per `ping6`
+  und **DNS-AAAA pro Hostname** (per ping6 verifiziert). Gefundene globale v6-Adressen landen in
+  `devices.ip6` und erscheinen in Tabelle, Detail-Panel und Export. (Bisher war die NDP-Tabelle oft nur
+  mit Link-Local-Einträgen gefüllt → scheinbar „keine IPv6“.)
+- **README zweisprachig:** `README.md` (Deutsch) + `README.en.md` (Englisch), mit gegenseitigem Sprach-Link.
+
 ## [1.6.4] – 2026-11-22
 
 App-Icon (Fuchs + Netzwerk) und IPv6-Spalte in der Tabelle (PR #74).
