@@ -239,6 +239,8 @@ The connection type `lan`/`wlan`/`plc` is stored as well. Edges point from the p
 (basis of the tree layout). If `connected to` is an IP or hostname, it is mapped to the matching device; only
 if none exists, a virtual gateway node is created.
 
+**Assign several devices (since v1.6.0):** In the table, tick the devices in the first column (the header box selects all), choose the router, switch or repeater under **Connected to** and press **Set**. **auto** removes the manual assignment. The change applies to all ticked devices or to none. Assignments that would create a loop are rejected. The boxes work with Tab and Space, and the result is announced to screen readers.
+
 **FRITZ!Box mesh (since v1.6.0):** Via TR-064 (`X_AVM-DE_GetMeshListPath`) fox_netmap reads the box's mesh
 topology: which device hangs off which repeater or LAN port, via LAN or WLAN (band). The detail panel shows the
 port, e.g. `WLAN · 5 GHz` or `LAN · LAN 1`. According to AVM, the TR-064 user needs the "App" or "Phone" right.
@@ -319,6 +321,7 @@ docker compose down -v                 # WARNING: deletes ./data (DB, log, expor
 | `POST /api/scan` · `GET /api/scan/status` | trigger scan / status |
 | `GET /api/settings` · `PATCH /api/settings` | read settings (no secrets) / change (422 if invalid) |
 | `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | manage embed tokens |
+| `POST /api/devices/connect` | bulk assignment: `{"macs": [...], "connected_to": "<MAC>"}`, `""` = auto |
 | `GET /api/export/json` · `GET /api/export/csv?sep=,` | exports |
 | `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | log |
 | `GET /api/meta` | WAN IP, gateway, version, subnets (public) |

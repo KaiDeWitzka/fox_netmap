@@ -47,6 +47,7 @@ const DEVS = [
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
   const json = async () => {
+    if (String(url).includes("/api/devices/connect")) return { ok: true, count: JSON.parse(opts.body).macs.length };
     if (String(url).includes("/api/devices")) {
       const m = String(url).match(/status=([^&]+)/);
       return m && m[1] === "online" ? DEVS.filter((d) => d.status === "online") : DEVS;
@@ -294,15 +295,15 @@ $("#lang-select").dispatchEvent(new w.Event("change"));
 await sleep(60);
 check("i18n: Zurueck auf de -> Nav 'Karte' wiederhergestellt", $("#nav [data-view='map']").textContent === "Karte" && w.localStorage.getItem("fox_lang") === "de");
 
-const thKeys = () => [...doc.querySelectorAll("#device-table thead th")].map((t) => t.dataset.key);
+const thKeys = () => [...doc.querySelectorAll("#device-table thead th[data-key]")].map((t) => t.dataset.key);
 const beforeCols = thKeys();
 check("Spalten: draggable-Header", doc.querySelectorAll("#device-table thead th[draggable='true']").length === beforeCols.length);
 const dt = { data: {}, setData(k, v) { this.data[k] = v; }, getData(k) { return this.data[k]; } };
-const th0 = doc.querySelector("#device-table thead th");
+const th0 = doc.querySelector("#device-table thead th[data-key]");
 const evDrag = new w.Event("dragstart", { bubbles: true });
 evDrag.dataTransfer = dt;
 th0.dispatchEvent(evDrag);
-const th3 = doc.querySelectorAll("#device-table thead th")[3];
+const th3 = doc.querySelectorAll("#device-table thead th[data-key]")[3];
 const evDrop = new w.Event("drop", { bubbles: true, cancelable: true });
 evDrop.dataTransfer = dt;
 th3.dispatchEvent(evDrop);
@@ -312,9 +313,10 @@ const savedCols = JSON.parse(w.localStorage.getItem("fox_table_cols") || "null")
 check("Spalten-Drag: localStorage persistiert", Array.isArray(savedCols) && savedCols[2] === beforeCols[0]);
 
 const bodyRow = doc.querySelector("#device-table tbody tr");
+const bodyCells = bodyRow ? [...bodyRow.children].filter((c) => !c.classList.contains("sel-col")) : [];
 check(
   "Spalten-Drag: Body-Zellen folgen der neuen Reihenfolge (ip, mac, hostname, vendor, …)",
-  !!bodyRow && bodyRow.children[0].textContent.includes("10.0.0.5") && bodyRow.children[2].textContent.startsWith("nas")
+  !!bodyRow && bodyCells[0].textContent.includes("10.0.0.5") && bodyCells[2].textContent.startsWith("nas")
 );
 check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
 
@@ -724,7 +726,7 @@ row0.dispatchEvent(new w.KeyboardEvent("keydown", { bubbles: true, key: "Enter" 
 await sleep(80);
 check("A11y: Enter auf Zeile -> GET /api/device/ (Detail per Tastatur)", calls.filter((c) => c.url.includes("/api/device/") && c.method === "GET").length > devGetBefore);
 
-const thFirst = doc.querySelector("#device-table thead th");
+const thFirst = doc.querySelector("#device-table thead th[data-key]");
 const keysBefore = thKeys();
 thFirst.dispatchEvent(new w.KeyboardEvent("keydown", { bubbles: true, key: "ArrowRight", altKey: true }));
 await sleep(20);
@@ -747,6 +749,36 @@ check(
 );
 check("Sicherheit: Notiz bleibt im value-Attribut gekapselt", !!$("#ed-note") && $("#ed-note").value.includes("onfocus") && !$("#ed-note").hasAttribute("onfocus"));
 check("Bugfix: Kategorie-Optionen tragen den kanonischen Wert (sprachunabhaengig)", [...doc.querySelectorAll("#ed-cat option")].every((o) => o.value && !o.value.startsWith("cat.")));
+
+// Mehrfach-Zuordnung von Hand (v1.6.0)
+doc.querySelector("button[data-view=table]").click();
+await sleep(30);
+const selBoxes = () => [...doc.querySelectorAll("#device-table tbody td.sel-col input[type=checkbox]")];
+check("Mehrfach: Auswahl-Checkbox je Zeile mit aria-label", selBoxes().length > 0 && selBoxes().every((c) => (c.getAttribute("aria-label") || "").length > 3));
+check("Mehrfach: Kopf-Checkbox 'alle' mit aria-label", !!$("#sel-all") && !!$("#sel-all").getAttribute("aria-label"));
+check("Mehrfach: Setzen ohne Auswahl deaktiviert", $("#bulk-apply").disabled && $("#bulk-clear").disabled);
+const rowsBefore = doc.querySelectorAll("#detail-content h2").length;
+const cb0 = selBoxes()[0];
+cb0.click();
+await sleep(10);
+check("Mehrfach: Checkbox-Klick oeffnet keine Detailansicht und zaehlt", $("#bulk-count").textContent.startsWith("1") && !$("#bulk-apply").disabled);
+check("Mehrfach: Kopf-Checkbox teilweise (indeterminate)", $("#sel-all").indeterminate === true);
+check("Mehrfach: Ziel-Liste nur Netzknoten, ohne ausgewaehlte", [...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "d8:47:32:8e:ee:06") && ![...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "aa:bb:cc:dd:ee:ff"));
+$("#sel-all").click();
+await sleep(20);
+check("Mehrfach: 'alle' waehlt alle Zeilen", selBoxes().every((c) => c.checked) && $("#sel-all").checked);
+selBoxes().forEach((c) => { if (c.closest("tr").textContent.includes("TL-SG108E-GZ")) c.click(); });
+await sleep(10);
+$("#bulk-parent").value = "d8:47:32:8e:ee:06";
+const nSel = selBoxes().filter((c) => c.checked).length;
+$("#bulk-apply").click();
+await sleep(60);
+const bulkCall = calls.filter((c) => c.url.includes("/api/devices/connect")).pop();
+const bulkBody = bulkCall ? JSON.parse(bulkCall.body) : null;
+check("Mehrfach: POST /api/devices/connect mit MACs und Ziel", !!bulkCall && bulkCall.method === "POST" && bulkBody.connected_to === "d8:47:32:8e:ee:06" && bulkBody.macs.length === nSel && !bulkBody.macs.includes("d8:47:32:8e:ee:06"));
+check("Mehrfach: Ergebnis per role=status gemeldet, Auswahl geleert", $("#bulk-result").getAttribute("role") === "status" && $("#bulk-result").textContent.includes(String(nSel)) && $("#bulk-apply").disabled);
+check("Mehrfach: Leiste als Gruppe beschriftet", $("#bulk-bar").getAttribute("role") === "group" && !!$("#bulk-bar").getAttribute("aria-labelledby"));
+void rowsBefore;
 
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));

@@ -4,6 +4,37 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.0] – 2026-11-22
+
+Fasst die Vorab-Versionen rc.1 bis rc.3 zusammen und ergänzt die Mehrfach-Zuordnung. Erste Version der Reihe 1.6
+mit `latest`.
+
+### Überblick
+- **Topologie:** FRITZ!Box-Mesh über TR-064, Anzeige von Anschluss und WLAN-Band, Switch-Heuristik (rc.1).
+- **Gerätekategorien:** Punktesystem, mDNS-Dienstsuche, drei neue Kategorien, „Erkannt über“ (rc.2).
+- **Sicherheit und Datenschutz:** Löschfrist für Ereignisse, gehashte Embed-Tokens, Gotify-Token im Header, SNMP
+  ohne Standard-Community (rc.3).
+
+### Neu: Mehrfach-Zuordnung von Hand
+- In der Tabelle lassen sich Geräte über eine Auswahlspalte markieren (Kopf-Kästchen = alle) und gemeinsam einem
+  Router, Switch oder Repeater zuordnen; `auto` hebt die manuelle Zuordnung auf. Neue Schnittstelle
+  `POST /api/devices/connect`.
+- Alles oder nichts in einer Transaktion. Unbekannte Geräte, unbekannte Ziele, Selbstbezug und Kreise werden
+  abgelehnt; der Kreis-Test folgt der Kette über MAC und IP.
+- Barrierefreiheit: Kästchen mit eindeutiger Beschriftung je Gerät, Leiste als beschriftete Gruppe, Ergebnis per
+  `role="status"`, bedienbar mit Tab und Leertaste, ohne die Detailansicht zu öffnen.
+
+### Geändert
+- Die Einzelzuordnung im Detail-Panel (`PATCH /api/device/{mac}`) prüft jetzt ebenfalls, ob das Ziel existiert und
+  keinen Kreis bildet. Vorher wurde jeder Wert gespeichert.
+
+### Hinweise zum Update
+- Gilt alles aus den Abschnitten rc.1 bis rc.3, vor allem: `NETZ_SNMP_COMMUNITY` setzen, wenn SNMP genutzt wird;
+  vorhandene Embed-Tokens bleiben gültig, sind aber nicht mehr anzeigbar; Ereignisse älter als 90 Tage werden
+  gelöscht (`NETZ_EVENT_RETENTION_DAYS=0` behält sie).
+- Wer per API eine Zuordnung auf eine IP oder ein nicht vorhandenes Gerät setzt, erhält jetzt `422`. Bereits
+  gespeicherte Zuordnungen bleiben unverändert.
+
 ## [1.6.0-rc.3] – 2026-11-22
 
 Dritte Vorab-Version. Wird nicht als `latest` markiert.

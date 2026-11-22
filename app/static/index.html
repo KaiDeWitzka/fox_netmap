@@ -119,6 +119,13 @@
       </div>
   </aside>
   <section id="view-table" class="view" hidden>
+    <div id="bulk-bar" class="bulk-bar" role="group" aria-labelledby="bulk-count">
+      <span id="bulk-count">0 ausgewählt</span>
+      <label><span data-i18n="bulk.connect">Verbunden mit</span> <select id="bulk-parent"></select></label>
+      <button id="bulk-apply" type="button" data-i18n="btn.set" disabled>Setzen</button>
+      <button id="bulk-clear" type="button" data-i18n="bulk.clear" disabled>Auswahl aufheben</button>
+      <span id="bulk-result" class="muted" role="status"></span>
+    </div>
     <table id="device-table">
       <colgroup></colgroup>
       <thead></thead>

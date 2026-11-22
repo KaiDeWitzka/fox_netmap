@@ -32,7 +32,7 @@ def test_health(client):
     body = r.json()
     assert body["status"] == "ok"
     assert body["devices"] == 0
-    assert body["version"] == "1.6.0-rc.3"
+    assert body["version"] == "1.6.0"
 
 
 def test_meta_public(client, app):
@@ -45,6 +45,13 @@ def test_meta_public(client, app):
     r = client.get("/api/meta")
     assert r.status_code == 200
     assert r.json() == {"gateway": "192.168.178.1", "gateway6": "", "wan_ip": "79.227.229.246", "wan_status": "Connected"}
+
+
+def insert_parent(app, mac="11:22:33:44:55:66"):
+    conn = db.connect(app.state.db_path)
+    db.upsert_device(conn, {"mac": mac, "ip": "192.168.1.2", "status": "online", "category": "Switch"}, db.utcnow())
+    conn.commit()
+    conn.close()
 
 
 def test_layout_reset(auth_client, app):
@@ -86,6 +93,7 @@ def test_devices_list_filter_patch(auth_client, app):
     assert rows[0]["mac"] == "aa:bb:cc:dd:ee:ff"
     assert len(auth_client.get("/api/devices?category=Drucker").json()) == 0
     assert len(auth_client.get("/api/devices?q=synology").json()) == 1
+    insert_parent(app)
     r = auth_client.patch(
         "/api/device/aa:bb:cc:dd:ee:ff",
         json={"category": "Drucker", "note": "buero", "x": 10, "y": 20, "connected_to": "11:22:33:44:55:66"},
@@ -103,6 +111,7 @@ def test_devices_list_filter_patch(auth_client, app):
 
 def test_patch_connected_to_set_and_clear(auth_client, app):
     insert_device(app)
+    insert_parent(app)
     r = auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"connected_to": "11:22:33:44:55:66"})
     assert r.status_code == 200
     assert r.json()["layout"]["connected_to"] == "11:22:33:44:55:66"

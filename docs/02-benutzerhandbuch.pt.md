@@ -241,6 +241,8 @@ O tipo de ligação `lan`/`wlan`/`plc` também é guardado. As arestas vão do p
 (base do esquema em árvore). Se «ligado a» for um IP ou nome de host, é associado ao dispositivo
 correspondente; só se não existir é criado um nó gateway virtual.
 
+**Atribuir vários dispositivos (desde v1.6.0):** na tabela, marque os dispositivos na primeira coluna (a caixa do cabeçalho seleciona todos), escolha o router, switch ou repetidor em **Ligado a** e prima **Definir**. **auto** remove a atribuição manual. A alteração aplica-se a todos os dispositivos marcados ou a nenhum. Atribuições que criariam um ciclo são rejeitadas. As caixas funcionam com Tab e Espaço e o resultado é anunciado aos leitores de ecrã.
+
 **Mesh FRITZ!Box (desde v1.6.0):** através do TR-064 (`X_AVM-DE_GetMeshListPath`), o fox_netmap lê a topologia
 mesh do router: que dispositivo está ligado a que repetidor ou porta LAN, por LAN ou WLAN (banda). O painel de
 detalhes mostra a porta, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Segundo a AVM, o utilizador TR-064 precisa do direito
@@ -323,6 +325,7 @@ docker compose down -v                 # ATENÇÃO: apaga ./data (BD, log, expor
 | `POST /api/scan` · `GET /api/scan/status` | iniciar scan / estado |
 | `GET /api/settings` · `PATCH /api/settings` | ler definições (sem segredos) / alterar (422 se inválido) |
 | `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | gerir tokens de embed |
+| `POST /api/devices/connect` | atribuição múltipla: `{"macs": [...], "connected_to": "<MAC>"}`, `""` = auto |
 | `GET /api/export/json` · `GET /api/export/csv?sep=,` | exportações |
 | `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | registo |
 | `GET /api/meta` | IP WAN, gateway, versão, sub-redes (público) |

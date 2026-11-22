@@ -30,7 +30,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | Editieren in der Karte | Geräte verschieben, manuelles „Verbunden mit“, Notiz/Label, Icon+Farbe je Kategorie; Gruppieren nach Räumen → Backlog |
 | Suche/Filter | Freitext (IP, Hostname, MAC, Hersteller, Notiz) + Filter: Kategorie, online/offline, Subnetz, „hat offene Ports“; Treffer in Karte hervorgehoben |
 | Klick-Details | Side-Panel mit allen Feldern + Online/Offline-Kurzverlauf; bei Router/Switch: Liste angeschlossener Geräte + Highlight in der Karte |
-| Tabellenansicht | Sortier-/filterbar (gleiches Filterset), direkt editierbar (Kategorie, Notiz, „Verbunden mit“), Spalten ein-/ausblendbar, Export-Buttons dort |
+| Tabellenansicht | Sortier-/filterbar (gleiches Filterset), direkt editierbar (Kategorie, Notiz, „Verbunden mit“), Spalten ein-/ausblendbar, Export-Buttons dort; Mehrfach-Zuordnung „Verbunden mit“ für markierte Geräte, alles oder nichts, ohne Kreise (seit v1.6.0) |
 | Darstellung | Farbcodierung nach Kategorie + Status; Badge mit Port-Anzahl am Knoten; Dark/Light-Theme (persistent) |
 | Embed | Dedizierte `/embed`-URL, read-only (Zoom/Pan/Klick ok), hinter Login; optionaler Share-Token mit Ablaufdatum; pro Token optional nur bestimmte Subnetze/Kategorien |
 | Export | JSON (vollständiges Schema, alle oder gefilterte Geräte); CSV (UTF-8, Komma/Semikolon wählbar, Default Semikolon); PDF = druckoptimierte Ansicht (serverseitiges PDF → Backlog); optional automatische tägliche Exporte in Export-Ordner |
