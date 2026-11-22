@@ -4,6 +4,39 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.5.4] – 2026-11-22
+
+### Karte
+- **Baum als Standard-Layout:** `auto` ordnet die Karte jetzt hierarchisch nach der Topologie an (Internet → Router →
+  Switch/Repeater → Endgeräte), wie in den Anforderungen festgelegt. Bisher lief ein Kräfte-Layout (`cose`), das ein
+  Netz mit vielen Geräten an einem Knoten als Strahlenkranz mit überlappenden Labels zeigte. Viele Endgeräte an
+  einem Knoten stehen kompakt im Raster darunter, Geräte ohne Zuordnung unter dem Baum. `tree` nutzt dasselbe
+  Verfahren, `force` bleibt als Kräfte-Layout wählbar. Gespeicherte Positionen haben in `auto` weiter Vorrang.
+- **Kanten zeigen vom Vorgänger zum Gerät** (vorher umgekehrt). WLAN-Kanten gestrichelt, Internet-Anbindung kräftiger.
+
+### Behoben
+- **Router erschien doppelt als virtueller „Gateway“-Knoten:** Ein `connected_to` mit IP-Adresse wurde nicht auf das
+  passende Gerät abgebildet. Jetzt gilt: MAC, IP, dann Hostname eines bekannten Geräts; nur ohne Treffer entsteht ein
+  virtueller Gateway-Knoten. Die FRITZ!Box ist damit die Wurzel unter „Internet“.
+- **Subnetz-Gruppierung blendete Kanten aus:** Bei aktiver Gruppierung (ab 25 Geräten automatisch) entfielen alle Kanten
+  innerhalb eines Subnetzes; Kanten zwischen Subnetzen liefen nur von Rahmen zu Rahmen. Die Kanten zwischen Geräten
+  bleiben jetzt erhalten.
+- Kanten zu ausgeblendeten Geräten (z. B. „Nur online“) erzeugen keine falschen „Gateway“-Knoten mit MAC-Adresse mehr.
+
+### Aus PR #59 (nach v1.5.3 gemergt)
+- Auto-Subnetzgruppen ab > 25 Geräten, Labels unter Zoom 0,85 nur für Hubs, „Nur online“ standardmäßig an.
+
+### Dokumentation
+- Handbuch §3 und §12 (6 Sprachen): Layout, Kantenrichtung, Gruppierung; Steuerzeichen im deutschen Handbuch entfernt.
+
+## [1.5.3] – 2026-11-21
+
+Nachgetragen (Releases aus PR #55, #57, #58).
+
+### Geändert
+- PDF-Export ohne Überlappung, Ausrichtung hoch/quer wählbar (`POST /api/export/pdf`).
+- Log-Ansicht mit Level-Farben (XSS-sicher), Karten-Entzerrung (kompaktere Knoten, dünnere Kanten, Labels ab Zoom 0,85).
+
 ## [1.5.2] – 2026-11-21
 
 ### Barrierefreiheit

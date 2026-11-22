@@ -83,13 +83,17 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
   is dimmed; details open on the right. Click the background again to clear.
 - **"Only online":** hides offline devices (persisted in localStorage).
 - **"Group subnets":** devices are grouped per subnet in a frame (label `subnet · site (count)`).
-  Edges between different subnets run group-to-group.
+  Edges stay between devices, also across subnets.
 - **Collapse/expand children:** in the detail panel of a router/switch, a button hides all
   directly attached devices; the node then shows `(+N)`.
-- **Layout:**
-- **Auto declutter:** more compact nodes (20 px), thinner/translucent edges, cose parameters scale with device count; labels fully visible only from zoom ≥ 0.85 (below that only hubs: router/switch/gateway/internet); above 25 devices subnet groups are enabled automatically; “Only online” is on by default (toggleable, persisted).
- `auto` (physics, default), `force`, `tree`, `concentric`, `circle`, `grid`;
+- **Layout:** `auto` (default) arranges the map as a tree by topology: internet at the top, below it the
+  router, switches/repeaters and end devices. Many end devices on one node are placed in a compact grid below
+  it; devices without a parent sit below the tree. If positions are saved for all devices (dragging), `auto`
+  uses them. Other layouts: `tree` (always tree), `force` (physics), `concentric`, `circle`, `grid`.
   **Reset** clears saved positions.
+- **Auto declutter:** compact nodes (20 px), thin edges (WLAN dashed, internet uplink stronger); labels fully
+  visible only from zoom ≥ 0.85 (below that only hubs: router/switch/gateway/internet); above 25 devices subnet
+  groups are enabled automatically; “Only online” is on by default (toggleable).
 - Virtual nodes: **🌐 Internet** (with WAN IP from TR-064, otherwise "?"), **🏠 Gateway** (if the
   gateway itself is not in the device list) and **📶 wlan:…** for WLAN devices without their own node.
 - Category emoji on nodes: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Printer ·
@@ -217,8 +221,9 @@ alarms (webhook/Gotify/Ntfy on new device — except whitelisted).
 
 Priority: **manual** (detail panel) > **SNMP** (CAM+LLDP) > **TR-064** (repeater/hotspot devices) >
 **WLAN** (`wlan:…` when TR-064 marks the host as WLAN) > **gateway**.
-The connection type `lan`/`wlan` is stored as well. With subnet groups enabled, cross-subnet
-edges run group-to-group.
+The connection type `lan`/`wlan` is stored as well. Edges point from the parent to the device
+(basis of the tree layout). If `connected to` is an IP or hostname, it is mapped to the matching device; only
+if none exists, a virtual gateway node is created.
 
 ---
 

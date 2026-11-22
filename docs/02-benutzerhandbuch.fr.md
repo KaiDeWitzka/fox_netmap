@@ -85,14 +85,19 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
   évidence, le reste est atténué ; les détails s'ouvrent à droite. Nouveau clic sur le fond pour effacer.
 - **« En ligne uniquement » :** masque les appareils hors ligne (persisté en localStorage).
 - **« Grouper les sous-réseaux » :** les appareils sont regroupés par sous-réseau dans un cadre
-  (étiquette `sous-réseau · site (nombre)`). Les arêtes entre sous-réseaux différents vont de
-  groupe à groupe.
+  (étiquette `sous-réseau · site (nombre)`). Les arêtes restent entre les appareils,
+  même entre sous-réseaux.
 - **Replier/déplier les enfants :** dans le panneau de détails d'un routeur/switch, un bouton
   masque tous les appareils directement connectés ; le nœud affiche alors `(+N)`.
-- **Disposition :**
-- **Allègement automatique :** nœuds plus compacts (20 px), arêtes plus fines/translucides, paramètres cose adaptés au nombre d'appareils ; étiquettes pleinement visibles seulement à partir du zoom ≥ 0,85 (en dessous, seulement les concentrateurs : routeur/switch/passerelle/internet) ; au-delà de 25 appareils, les groupes de sous-réseaux s'activent automatiquement ; « En ligne uniquement » est actif par défaut (modifiable, mémorisé).
- `auto` (physique, défaut), `force`, `tree`, `concentric`, `circle`, `grid` ;
-  **Réinitialiser** efface les positions enregistrées.
+- **Disposition :** `auto` (défaut) dispose la carte en arbre selon la topologie : Internet en haut, puis
+  le routeur, les switchs/répéteurs et les terminaux. Les nombreux terminaux d'un même nœud sont placés en
+  grille compacte en dessous ; les appareils sans parent sont sous l'arbre. Si des positions sont enregistrées
+  pour tous les appareils (glisser), `auto` les utilise. Autres : `tree` (toujours arbre), `force` (physique),
+  `concentric`, `circle`, `grid`. **Réinitialiser** efface les positions enregistrées.
+- **Allègement automatique :** nœuds compacts (20 px), arêtes fines (WLAN en pointillé, accès Internet plus
+  épais) ; étiquettes pleinement visibles à partir du zoom ≥ 0,85 (en dessous, seulement les concentrateurs :
+  routeur/switch/passerelle/internet) ; au-delà de 25 appareils, les groupes de sous-réseaux s'activent
+  automatiquement ; « En ligne uniquement » est actif par défaut (modifiable).
 - Nœuds virtuels : **🌐 Internet** (avec l'IP WAN via TR-064, sinon « ? »), **🏠 Passerelle**
   (si la passerelle n'est pas dans la liste) et **📶 wlan:…** pour les appareils WLAN sans nœud propre.
 - Emoji de catégorie sur les nœuds : 🏠 Routeur · 🔀 Switch · 🖥 Serveur/NAS · 💻 Client · 🖨 Imprimante ·
@@ -223,8 +228,9 @@ liste blanche).
 
 Priorité : **manuel** (panneau de détails) > **SNMP** (CAM+LLDP) > **TR-064** (répéteurs) >
 **WLAN** (`wlan:…` si TR-064 marque l'hôte comme WLAN) > **passerelle**.
-Le type de connexion `lan`/`wlan` est aussi enregistré. Avec les groupes de sous-réseaux activés,
-les arêtes inter-sous-réseaux vont de groupe à groupe.
+Le type de connexion `lan`/`wlan` est aussi enregistré. Les arêtes vont du parent vers l'appareil
+(base de la disposition en arbre). Si « connecté à » est une IP ou un nom d'hôte, il est associé à l'appareil
+correspondant ; un nœud passerelle virtuel n'est créé que si aucun n'existe.
 
 ---
 

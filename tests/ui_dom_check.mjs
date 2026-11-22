@@ -153,7 +153,7 @@ w.cytoscape = (opts) => {
       };
     },
     add(els) { this._els = els; },
-    layout(opts) { this._lastLayout = opts.name; return { run() {} }; },
+    layout(opts) { this._lastLayout = opts.name; this._lastLayoutOpts = opts; return { run() {} }; },
     fit() { this._fitCalls = (this._fitCalls || 0) + 1; },
     resize() {},
     nodes() { return { removeClass() {} }; },
@@ -396,6 +396,56 @@ check(
     cyInstance._els.some((e) => e.data && e.data.id === "192.168.178.1" && e.data.virtual && e.data.label.includes("Gateway"))
 );
 
+check(
+  "Karte: Kanten zeigen Eltern -> Kind (Gateway -> Switch, Internet -> Gateway)",
+  cyInstance._els.some((e) => e.data && e.data.source === "192.168.178.1" && e.data.target === "d8:47:32:8e:ee:06") &&
+    cyInstance._els.some((e) => e.data && e.data.source === "internet" && e.data.target === "192.168.178.1")
+);
+check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInstance._lastLayout === "preset");
+{
+  // v1.5.4: steht das Gateway als Geraet in der Liste, wird kein virtueller Gateway-Knoten erzeugt
+  const fritz = { mac: "3c:a6:2f:00:00:01", ip: "192.168.178.1", hostname: "fritz.box", category: "Router", status: "online", subnet: "192.168.178.0/24", connected_to: "" };
+  DEVS.push(fritz);
+  await w.eval("loadDevices()");
+  const els = cyInstance._els;
+  DEVS.pop();
+  check(
+    "Bugfix v1.5.4: Gateway-IP wird auf das Router-Geraet abgebildet (kein doppelter Gateway-Knoten)",
+    !els.some((e) => e.data && e.data.id === "192.168.178.1") &&
+      els.some((e) => e.data && e.data.source === "3c:a6:2f:00:00:01" && e.data.target === "d8:47:32:8e:ee:06") &&
+      els.some((e) => e.data && e.data.source === "internet" && e.data.target === "3c:a6:2f:00:00:01")
+  );
+  const pos = w.eval("computeTreePositions")(els);
+  const y = (id) => pos[id] && pos[id].y;
+  check(
+    "Baum: Internet oben, Router darunter, darunter Switch und WLAN, WLAN-Geraet unter WLAN",
+    y("internet") < y("3c:a6:2f:00:00:01") && y("3c:a6:2f:00:00:01") < y("d8:47:32:8e:ee:06") && y("3c:a6:2f:00:00:01") < y("wlan:192.168.178.1") && y("wlan:192.168.178.1") < y("aa:bb:cc:00:11:22")
+  );
+  check("Baum: jeder Knoten hat eine Position", els.filter((e) => e.data && !e.data.source && !e.data.subnet).every((e) => pos[e.data.id]));
+  await w.eval("loadDevices()");
+}
+{
+  // 40 Endgeraete an einem Router: Raster statt einer Zeile, keine zwei Knoten auf derselben Position
+  const els = [{ data: { id: "r", hub: true } }];
+  for (let i = 0; i < 40; i++) {
+    els.push({ data: { id: "c" + i, name: "c" + i } });
+    els.push({ data: { source: "r", target: "c" + i } });
+  }
+  els.push({ data: { id: "lonely", name: "lonely" } });
+  const pos = w.eval("computeTreePositions")(els);
+  const xs = Object.values(pos).map((p) => p.x);
+  const keys = new Set(Object.values(pos).map((p) => p.x + "," + p.y));
+  check(
+    "Baum: 40 Endgeraete im Raster (Breite <= 8 Spalten), keine Ueberlagerung, ungebundene Knoten darunter",
+    Math.max(...xs) - Math.min(...xs) <= 8 * 130 && keys.size === Object.keys(pos).length && pos.lonely.y > pos.c39.y
+  );
+  const cyc = [{ data: { id: "a" } }, { data: { id: "b" } }, { data: { source: "a", target: "b" } }, { data: { source: "b", target: "a" } }];
+  const pc = w.eval("computeTreePositions")(cyc);
+  check("Baum: Zyklus ohne Endlosschleife, beide Knoten positioniert", !!pc.a && !!pc.b);
+}
+check("parentId: Hostname wird auf Geraet abgebildet", w.eval(`parentId({ connected_to: "TL-SG108E-GZ" })`) === "d8:47:32:8e:ee:06");
+check("parentId: unbekannte MAC ergibt keinen virtuellen Gateway-Knoten", w.eval(`parentId({ connected_to: "de:ad:be:ef:00:01" })`) === null);
+
 const parentSel = $("#ed-parent");
 check("Detail: Verbunden-mit-Select mit Switch-Option", !!parentSel && parentSel.innerHTML.includes("TL-SG108E-GZ"));
 if (parentSel) {
@@ -556,7 +606,10 @@ check("Layout: Wechsel auf Raster -> cy.layout('grid')", cyInstance._lastLayout 
 $("#layout-select").value = "tree";
 $("#layout-select").dispatchEvent(new w.Event("change"));
 await sleep(20);
-check("Layout: Wechsel auf Hierarchisch -> cy.layout('breadthfirst')", cyInstance._lastLayout === "breadthfirst");
+check(
+  "Layout: Wechsel auf Hierarchisch -> eigener Baum (preset mit Positionen)",
+  cyInstance._lastLayout === "preset" && typeof cyInstance._lastLayoutOpts.positions === "function"
+);
 $("#btn-layout-reset").click();
 await sleep(60);
 check("Layout: Reset -> POST /api/layout/reset", calls.some((c) => c.url.includes("/api/layout/reset") && c.method === "POST"));
@@ -600,12 +653,13 @@ check(
   cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && e.data.parent === "subnet:192.168.178.0/24")
 );
 check(
-  "Gruppen an: WLAN-Kante bleibt geraetebasiert (wlan-tv -> wlan:...)",
-  cyInstance._els.some((e) => e.data && e.data.source === "aa:bb:cc:00:11:22" && e.data.target === "wlan:192.168.178.1")
+  "Gruppen an: WLAN-Kante bleibt geraetebasiert (wlan:... -> wlan-tv)",
+  cyInstance._els.some((e) => e.data && e.data.source === "wlan:192.168.178.1" && e.data.target === "aa:bb:cc:00:11:22")
 );
 check(
-  "Gruppen an: Cross-Subnetz-Kante auf Gruppen gemappt (179 -> 178)",
-  cyInstance._els.some((e) => e.data && e.data.source === "subnet:192.168.179.0/24" && e.data.target === "subnet:192.168.178.0/24")
+  "Gruppen an: Kanten bleiben geraetebasiert, auch ueber Subnetze (Switch -> remote-plug)",
+  cyInstance._els.some((e) => e.data && e.data.source === "d8:47:32:8e:ee:06" && e.data.target === "ip:192.168.179.20") &&
+    !cyInstance._els.some((e) => e.data && e.data.source && String(e.data.source).startsWith("subnet:"))
 );
 check(
   "Standorte: Gruppen-Label mit Standortname (Remote · 192.168.179.0/24)",
