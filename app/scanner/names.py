@@ -38,6 +38,7 @@ def _decode_name(data: bytes, offset: int) -> tuple[str, int]:
     labels: list[str] = []
     end = offset
     jumped = False
+    hops = 0  # Schutz gegen Zeiger-Schleifen in manipulierten Paketen (v1.6.0)
     while offset < len(data):
         length = data[offset]
         if length == 0:
@@ -46,7 +47,8 @@ def _decode_name(data: bytes, offset: int) -> tuple[str, int]:
                 end = offset
             break
         if length & 0xC0 == 0xC0:
-            if offset + 1 >= len(data):
+            hops += 1
+            if offset + 1 >= len(data) or hops > 16:
                 break
             ptr = ((length & 0x3F) << 8) | data[offset + 1]
             if not jumped:

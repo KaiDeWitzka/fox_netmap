@@ -161,7 +161,7 @@ Everything changed here takes effect **on the next scan without restarting the c
 | Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.168.178.0/24; Remote:192.168.179.0/24` |
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
-| mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR as fallback |
+| mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR as fallback (+ DNS-SD, v1.6.0) |
 | Online OUI fallback / max lookups per scan / API URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | look up vendors of unknown MACs online (default `https://api.macvendors.com`), **off by default** (privacy: MAC prefixes are sent to a third party), cached in the DB |
 | Login enabled | `NETZ_AUTH_ENABLED` | session login on/off (user/pass stay env-only) |
 | Theme / language | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
@@ -214,6 +214,17 @@ alarms (webhook/Gotify/Ntfy on new device — except whitelisted).
 
 **Retention:** offline devices are deleted after `NETZ_DEVICE_RETENTION_DAYS` (default 30,
 0 = never).
+
+**Device categories (since v1.6.0):** Router, Repeater/AP, Switch, Server/NAS, Client, Mobile device, Multimedia,
+Printer, Smart home/IoT, Unknown. Every signal awards points, the highest total wins:
+default gateway (100) > FRITZ!Box mesh role (50) > mDNS model, e.g. `iPhone14,2` (8) > hostname (6) >
+mDNS service, e.g. `_ipp._tcp` (4) > vendor from OUI (3) > open ports (1–5) > private Wi-Fi address (1).
+Hostnames only match at word start (`ring-door` yes, `string` no). Port 53 alone no longer makes a device a router,
+SMB (445) alone counts as client. Ambiguous vendors such as Apple, Samsung or TP-Link are not scored. In addition to
+the port list, the scanner checks a few unambiguous high ports (e.g. 62078 iOS, 8009 Google Cast, 1400 Sonos,
+8006 Proxmox), unless `NETZ_PORTS` defines a custom list. The detail panel shows under **Detected via** which signal
+decided. A manually set category always wins. The mDNS service query is a single request in the local network and
+follows `NETZ_MDNS_ENABLED`.
 
 ---
 

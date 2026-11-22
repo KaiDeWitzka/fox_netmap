@@ -4,6 +4,33 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.0-rc.2] – 2026-11-22
+
+Zweite Vorab-Version. Wird nicht als `latest` markiert.
+
+### Gerätekategorien
+- **Drei neue Kategorien:** Repeater/AP, Mobilgerät, Multimedia (TV, Streaming, Konsole, Lautsprecher).
+- **Punktesystem statt „erster Treffer gewinnt“:** Standard-Gateway > FRITZ!Box-Mesh-Rolle > mDNS-Modell > Hostname >
+  mDNS-Dienst > Hersteller > Ports > private WLAN-Adresse. Details im Handbuch §11.
+- **mDNS-Dienstsuche (DNS-SD):** eine Anfrage im lokalen Netz erkennt Drucker (`_ipp`), Cast-Geräte, AirPlay,
+  HomeKit, Sonos und Apple-Modelle (`iPhone…`, `MacBook…`, `AppleTV…`).
+- **Hostnamen nur am Wortanfang:** `string` ist kein Ring-Gerät, `honest` kein Nest mehr. Neue Muster u. a. für
+  iPhone, iPad, Mac, PS5, webOS-TV, MagentaTV, HP-Standardnamen (`NPI…`) und Brother (`BRW…`).
+- **Ports:** 53 allein macht kein Gerät mehr zum Router, SMB (445) allein gilt als Client. Zusätzlich werden 15
+  eindeutige hohe Ports geprüft (z. B. 62078 iOS, 8009 Cast, 1400 Sonos), außer bei eigener Liste in `NETZ_PORTS`.
+- **AVM-Geräte** außer dem Gateway gelten als Repeater/AP statt als Router.
+- **„Erkannt über“** in der Detailansicht zeigt das entscheidende Signal (neue Spalte `devices.category_reason`).
+  Eine von Hand gesetzte Kategorie hat weiter Vorrang.
+- Repeater/AP zählt in Karte und Details als Netzknoten (Kinder-Liste, Baum).
+
+### Hinweis zum Update
+Beim ersten Scan nach dem Update werden alle Geräte ohne manuelle Kategorie neu eingeordnet. Durch die zusätzlichen
+Ports kann einmalig das Ereignis „Ports geändert“ erscheinen.
+
+### Sicherheit
+- **Behoben:** Ein manipuliertes mDNS-Paket mit Zeiger-Schleife konnte den Hostnamen-Parser in eine Endlosschleife
+  bringen. Jetzt höchstens 16 Sprünge; dazu Grenzen für Paketgröße, Paketzahl, Datensätze und TXT-Länge.
+
 ## [1.6.0-rc.1] – 2026-11-22
 
 Vorab-Version zum Testen an einer echten FRITZ!Box. Wird nicht als `latest` markiert.

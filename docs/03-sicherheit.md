@@ -141,6 +141,18 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 - Der Pfad enthält eine Session-ID. Sie wird weder protokolliert noch gespeichert; Fehlermeldungen nennen nur den Statuscode.
 - Ungültiges JSON oder ein Fehler führt nur zum Rückfall auf die bisherige Topologie, der Scan läuft weiter.
 
+### 2.11 mDNS-Dienstsuche und Einordnung (seit v1.6.0)
+
+- Eine einzelne Anfrage an die mDNS-Gruppe im lokalen Netz (Legacy Unicast, RFC 6762 Abschnitt 6.7), Laufzeit 2 s.
+  Abschaltbar mit `NETZ_MDNS_ENABLED=false`.
+- Antworten stammen von beliebigen Geräten im Netz und gelten als nicht vertrauenswürdig. Der Parser begrenzt
+  Paketgröße (9000 Byte), Paketanzahl (2000), Datensätze je Paket (512), TXT-Werte (64 Zeichen) und
+  Namenskompressions-Sprünge (16). Ein Zeiger auf sich selbst führte vorher im Hostnamen-Parser zu einer
+  Endlosschleife; das ist behoben und getestet.
+- Gespeichert werden nur Kategorie und Begründung (z. B. `svc:_ipp._tcp`), keine Rohdaten. Die Oberfläche gibt beides
+  escaped aus (siehe 2.1).
+- Zusätzlich zur Portliste werden bis zu 15 eindeutige hohe Ports je Gerät geprüft (TCP-Connect, gleiche Zeitlimits).
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |

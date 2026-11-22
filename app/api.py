@@ -13,12 +13,12 @@ from pydantic import BaseModel, Field
 from . import db, exporters
 from .auth import is_valid_session
 from .auth import router as auth_router
+from .scanner.categorize import CATEGORIES
 
 router = APIRouter()
 router.include_router(auth_router)
 log = logging.getLogger("fox_netmap")
 
-CATEGORIES = ["Router", "Switch", "Server/NAS", "Client", "Drucker", "Smart-Home/IoT", "Unbekannt"]
 
 SAFE_SETTINGS = [
     "subnets",

@@ -444,6 +444,15 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   check("Baum: Zyklus ohne Endlosschleife, beide Knoten positioniert", !!pc.a && !!pc.b);
 }
 check(
+  "Kategorien v1.6.0: Begruendung lesbar, Repeater ist Netzknoten",
+  w.eval(`reasonText({ category_reason: "host:iphone" })`) === "Hostname „iphone“" &&
+    w.eval(`reasonText({ category_reason: "port:62078" })`) === "offener Port 62078" &&
+    w.eval(`reasonText({ category_reason: "mesh:slave" })`) === "FRITZ!Box-Mesh (Repeater)" &&
+    w.eval(`reasonText({ category_reason: "host:x", category_override: "Client" })`) === "manuell gesetzt" &&
+    w.eval(`reasonText({ category_reason: "" })`) === "–" &&
+    w.eval(`isNetCategory("Repeater/AP")`) === true && w.eval(`isNetCategory("Client")`) === false
+);
+check(
   "Mesh: Anschluss lesbar (LAN 1, 5 GHz, 2,4 GHz, leer)",
   w.eval(`portLabel("LAN:1")`) === "LAN 1" && w.eval(`portLabel("AP:5G:0")`) === "5 GHz" &&
     w.eval(`portLabel("UPLINK:2G:0")`) === "2,4 GHz" && w.eval(`portLabel("")`) === "" &&

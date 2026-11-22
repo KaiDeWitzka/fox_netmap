@@ -27,6 +27,7 @@ der Software.
 |---|---|---|
 | MAC-Adresse, IP-Adresse (IPv4/IPv6), Subnetz | ARP/NDP, ping, TCP, TR-064, SNMP | Ja, sobald ein Gerät einer Person zugeordnet werden kann (z. B. Smartphone) |
 | Hostname | DNS-Rückwärtsauflösung, mDNS, TR-064 | Oft direkt, z. B. „iPhone-von-Anna“ |
+| Kategorie und Begründung (seit v1.6.0) | Hostname, Hersteller, Ports, mDNS-Dienste und -Modell (z. B. `iPhone14,2`) | Indirekt: Gerätetyp. Gespeichert wird nur das entscheidende Signal, keine mDNS-Rohdaten |
 | Hersteller (OUI) | Lokale OUI-Datenbank, optional Online-Abfrage | Indirekt |
 | Offene TCP-Ports und Dienstnamen | Port-Scan | Indirekt (Rückschluss auf genutzte Software) |
 | Online-/Offline-Verlauf mit Zeitstempel, erste/letzte Sichtung | Jeder Scan | **Ja – ergibt bei persönlichen Geräten ein Anwesenheitsprofil** |

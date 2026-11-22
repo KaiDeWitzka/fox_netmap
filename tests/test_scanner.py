@@ -109,12 +109,15 @@ def test_effective_settings_override(tmp_path):
 
 def test_categorize():
     assert categorize.categorize(hostname="fritz.box") == "Router"
-    assert categorize.categorize(vendor="AVM GmbH") == "Router"
-    assert categorize.categorize(ports=[{"port": 53}]) == "Router"
+    # v1.6.0: AVM ohne Gateway-Rolle ist eher Repeater; Port 53 allein macht kein Geraet zum Router
+    assert categorize.categorize(vendor="AVM GmbH") == "Repeater/AP"
+    assert categorize.categorize(vendor="AVM GmbH", is_gateway=True) == "Router"
+    assert categorize.categorize(ports=[{"port": 53}]) == "Server/NAS"
     assert categorize.categorize(ports=[{"port": 161}]) == "Switch"
     assert categorize.categorize(hostname="switch-keller") == "Switch"
     assert categorize.categorize(hostname="synology-nas") == "Server/NAS"
-    assert categorize.categorize(ports=[{"port": 445}]) == "Server/NAS"
+    assert categorize.categorize(ports=[{"port": 445}]) == "Client"
+    assert categorize.categorize(ports=[{"port": 445}, {"port": 22}]) == "Server/NAS"
     assert categorize.categorize(ports=[{"port": 9100}]) == "Drucker"
     assert categorize.categorize(hostname="drucker-buero") == "Drucker"
     assert categorize.categorize(hostname="shelly-wohnzimmer") == "Smart-Home/IoT"

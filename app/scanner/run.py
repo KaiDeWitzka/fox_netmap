@@ -9,7 +9,7 @@ from .. import db
 from ..config import Settings, get_settings
 from ..exporters import auto_export, auto_export_due
 from ..logsetup import get_logger
-from . import categorize, discover, names, notify, oui, ports, snmp, topology, tr064
+from . import categorize, discover, mdns, names, notify, oui, ports, snmp, topology, tr064
 
 SEED_OUI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "oui_seed.txt")
 
@@ -147,6 +147,18 @@ def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
     return None
 
 
+def mesh_role_map(mesh_info: dict | None) -> dict[str, str]:
+    """{mac: "master" | "slave"} fuer alle Mesh-Knoten, auch unter ihren Schnittstellen-MACs."""
+    out: dict[str, str] = {}
+    for mac, node in ((mesh_info or {}).get("nodes") or {}).items():
+        role = node.get("role", "")
+        if role not in ("master", "slave"):
+            continue
+        for m in [mac, *node.get("macs", [])]:
+            out.setdefault(oui.normalize_mac(m), role)
+    return out
+
+
 def mesh_parent_map(mesh_info: dict, devices: list[dict], gateway: str) -> dict[str, str]:
     """Bildet die Mesh-Eltern auf gescannte Geraete ab.
 
@@ -212,9 +224,16 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
 
     devices = merge_sources(found, tr064_hosts, conn)
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
+    port_plan = ports.port_list(settings.port_top, settings.ports)
+    if not settings.ports.strip() and settings.port_top > 0:
+        # Wenige zusaetzliche Ports, die die Einordnung entscheiden (z. B. 62078 iOS, 8009 Cast, 1400 Sonos)
+        port_plan = sorted(set(port_plan) | set(categorize.FINGERPRINT_PORTS))
     for d in live:
-        d["ports"] = ports.scan_ports(d["ip"], ports.port_list(settings.port_top, settings.ports), settings.scan_timeout)
+        d["ports"] = ports.scan_ports(d["ip"], port_plan, settings.scan_timeout)
     hostnames = names.resolve_all([d["ip"] for d in live], use_mdns=settings.mdns_enabled)
+    mdns_map = mdns.browse() if settings.mdns_enabled else {}
+    if mdns_map:
+        log.info("mDNS: %s Geräte mit Diensten", len(mdns_map))
 
     snmp_map: dict[str, str] = {}
     if settings.snmp_enabled:
@@ -228,6 +247,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 log.info("LLDP-MIB: %s Nachbarn zusaetzlich erkannt", len(lldp))
 
     mesh_parents = mesh_parent_map(mesh_info, devices, gateway) if mesh_info else {}
+    mesh_roles = mesh_role_map(mesh_info)
     fixed: set[str] = set()
     lan_ports: dict[str, tuple[str, str]] = {}
     for d in devices:
@@ -250,14 +270,19 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 d["subnet"] = next((sn for sn in subnets if addr in ipaddress.ip_network(sn, strict=False)), "")
             except ValueError:
                 pass
-        d["category"] = categorize.categorize(
+        # TR-064 liefert "Ethernet", "802.11" oder "HomePlug" (vor v1.6.0 wurde nur "wlan"/"lan" erkannt)
+        d["connection"] = topology.conn_type(d.get("tr064_type", ""))
+        link = mesh_info["parents"].get(d["mac"]) if mesh_info else None
+        d["category"], d["category_reason"] = categorize.classify(
             hostname=d.get("hostname", ""),
             vendor=d.get("vendor", ""),
             ports=d.get("ports", []),
-            tr064_type=d.get("tr064_type", ""),
+            mac=d["mac"],
+            is_gateway=bool(d.get("ip")) and d.get("ip") in (gateway, gateway6),
+            mesh_role=mesh_roles.get(d["mac"], ""),
+            mdns=mdns_map.get(d.get("ip", "")),
+            connection=link["conn"] if link else d["connection"],
         )
-        # TR-064 liefert "Ethernet", "802.11" oder "HomePlug" (vor v1.6.0 wurde nur "wlan"/"lan" erkannt)
-        d["connection"] = topology.conn_type(d.get("tr064_type", ""))
         layout = db.get_layout(conn, d["mac"]) or {}
         manual = layout.get("connected_to") if layout.get("connected_manual") else None
         d["layout"] = {
@@ -273,7 +298,6 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 manual=manual,
             )
         }
-        link = mesh_info["parents"].get(d["mac"]) if mesh_info else None
         if manual:
             fixed.add(d["mac"])
         elif d["mac"] in snmp_map:
