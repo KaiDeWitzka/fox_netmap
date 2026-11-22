@@ -218,7 +218,8 @@ et peut être ajusté avec `?theme=dark|light` et `?lang=…`.
 ## 10. Exports
 
 - **JSON / CSV** dans l'en-tête : export complet de tous les appareils (ports, historique,
-  connexions, sites). CSV avec séparateur au choix (`/api/export/csv?sep=;`).
+  connexions, sites, port sur le nœud parent (`link_port`, p. ex. `LAN:2` / `AP:5G:0` issu du mesh
+  FRITZ!Box) et indicateur VPN (`vpn`)). CSV avec séparateur au choix (`/api/export/csv?sep=;`).
 - **Imprimer → PDF :** vue optimisée pour l'impression (navigateur « Enregistrer en PDF »).
 - **Auto-export :**
 - **PDF (côté serveur) :** bouton **PDF** dans l'en-tête — capture de la carte (PNG) + tableau des appareils en vrai PDF via `POST /api/export/pdf`  (aussi avec un jeton, filtres via paramètres de requête). Orientation portrait/paysage via la liste à côté du bouton (mémorisée, `orientation` dans le corps POST) ; les longues cellules sont coupées proprement au lieu de se chevaucher. à activer dans les Paramètres ; écrit JSON+CSV après chaque intervalle dans

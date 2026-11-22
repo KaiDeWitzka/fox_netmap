@@ -461,7 +461,7 @@ def test_devices_api_und_export_mit_vpn(auth_client, app):
     conn = db.connect(app.state.db_path)
     db.upsert_device(
         conn,
-        {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online", "category": "Unbekannt", "hostname": "fritz.box"},
+        {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online", "category": "Unbekannt", "hostname": "fritz.box", "link_port": "LAN:2", "connection": "lan"},
         db.utcnow(),
     )
     conn.commit()
@@ -473,9 +473,12 @@ def test_devices_api_und_export_mit_vpn(auth_client, app):
     payload = auth_client.get("/api/export/json").json()
     jdev = next(d for d in payload["devices"] if d["mac"] == "00:7a:a4:9b:d9:68")
     assert jdev["vpn"] is True
+    assert jdev["link_port"] == "LAN:2"
     csv_text = auth_client.get("/api/export/csv").text
     lines = csv_text.splitlines()
     header = lines[0].split(";")
     assert "vpn" in header
+    assert "link_port" in header
     row = next(line for line in lines[1:] if line.startswith("00:7a:a4:9b:d9:68"))
     assert row.split(";")[header.index("vpn")] == "ja"
+    assert row.split(";")[header.index("link_port")] == "LAN:2"
