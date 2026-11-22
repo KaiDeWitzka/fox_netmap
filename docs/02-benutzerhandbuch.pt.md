@@ -215,7 +215,8 @@ ajustado com `?theme=dark|light` e `?lang=…`.
 ## 10. Exportações
 
 - **JSON / CSV** no cabeçalho: exportação completa de todos os dispositivos (portas, histórico,
-  ligações, locais). CSV com separador à escolha (`/api/export/csv?sep=;`).
+  ligações, locais, porta no nó pai (`link_port`, ex.: `LAN:2` / `AP:5G:0` da mesh FRITZ!Box) e
+  indicador VPN (`vpn`)). CSV com separador à escolha (`/api/export/csv?sep=;`).
 - **Imprimir → PDF:** vista otimizada para impressão (navegador «Guardar como PDF»).
 - **Auto-exportação:**
 - **PDF (no servidor):** botão **PDF** no cabeçalho — captura do mapa (PNG) + tabela de dispositivos como PDF real via `POST /api/export/pdf`  (também com token, filtros via parâmetros de consulta). Orientação retrato/paisagem selecionável ao lado do botão (guardada, `orientation` no body do POST); células longas quebram em vez de se sobrepor. ativar em Definições; escreve JSON+CSV após cada intervalo na pasta de

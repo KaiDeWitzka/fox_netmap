@@ -17,6 +17,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
   `devices.vpn` (DB-Migration automatisch).
 - **Alarme:** VPN-Geräte lösen keinen „neues Gerät“-Alarm aus (kommen und gehen mit dem Tunnel);
   sie werden stattdessen als „neues VPN-Gerät (kein Alarm)“ ins Log geschrieben.
+- **Export:** `link_port` (konkreter Anschluss am Elternknoten aus dem FRITZ!Box-Mesh, z. B. `LAN:2`
+  oder `AP:5G:0`) ist jetzt auch in JSON- und CSV-Export enthalten.
+
 ## [1.6.2] – 2026-11-22
 
 Versionsnummer im UI-Header und IPv6-Adresse pro Gerät (PR #67).
