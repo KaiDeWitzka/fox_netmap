@@ -14,6 +14,7 @@ fox_netmap darf frei genutzt, verändert und weitergegeben werden (auch kommerzi
 - [Benutzerhandbuch](docs/02-benutzerhandbuch.md) — in 6 Sprachen: [de](docs/02-benutzerhandbuch.md) · [en](docs/02-benutzerhandbuch.en.md) · [fr](docs/02-benutzerhandbuch.fr.md) · [es](docs/02-benutzerhandbuch.es.md) · [it](docs/02-benutzerhandbuch.it.md) · [pt](docs/02-benutzerhandbuch.pt.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
 - [Anforderungen & Architektur](docs/01-anforderungen.md)
 - [Sicherheitskonzept](docs/03-sicherheit.md) · [Sicherheitslücke melden](SECURITY.md) · [Changelog](CHANGELOG.md)
+- [Plan Knotendesign v1.6.1](docs/plaene/v1.6.1-knotendesign.md) — Kartenknoten nach Soll-Entwurf, mit Entscheidungen und Kontrastwerten
 - [Datenschutzhinweis](docs/04-datenschutz.md) — welche Daten erhoben, gespeichert und nach außen gesendet werden, Löschfristen, datensparsame Konfiguration
 
 ## Quickstart (standalone Docker)
