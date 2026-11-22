@@ -44,7 +44,9 @@ def test_meta_public(client, app):
     conn.close()
     r = client.get("/api/meta")
     assert r.status_code == 200
-    assert r.json() == {"gateway": "192.168.178.1", "gateway6": "", "wan_ip": "79.227.229.246", "wan_status": "Connected"}
+    body = r.json()
+    assert body["gateway"] == "192.168.178.1" and body["wan_ip"] == "79.227.229.246"
+    assert body["version"]  # Version wird mitgeliefert
 
 
 def insert_parent(app, mac="11:22:33:44:55:66"):
@@ -405,3 +407,38 @@ def test_build_pdf_wraps_long_cells(app):
     assert pdf_ls.startswith(b"%PDF")
     w, h = _pdf_mediabox(pdf_ls)
     assert w > h
+
+
+def test_meta_includes_version(auth_client, app):
+    body = auth_client.get("/api/meta").json()
+    assert body["version"] == app.state.settings.app_version
+
+
+def test_ip6_column_and_upsert(tmp_path):
+    conn = db.connect(str(tmp_path / "t.db"))
+    db.init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
+    assert "ip6" in cols
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "ip6": "fdf1:3afe:ed39::10"}, db.utcnow())
+    conn.commit()
+    row = db.get_device(conn, "aa:bb:cc:dd:ee:ff")
+    assert row["ip6"] == "fdf1:3afe:ed39::10"
+    # Update ohne ip6-Schlüssel -> leer, bleibt erhalten bei gesetztem Wert
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "ip6": "fdf1:3afe:ed39::11"}, db.utcnow())
+    conn.commit()
+    assert db.get_device(conn, "aa:bb:cc:dd:ee:ff")["ip6"] == "fdf1:3afe:ed39::11"
+    conn.close()
+
+
+def test_device_detail_and_export_include_ip6(auth_client, app):
+    conn = db.connect(app.state.db_path)
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "ip6": "fdf1:3afe:ed39::10"}, db.utcnow())
+    conn.commit()
+    conn.close()
+    d = auth_client.get("/api/device/aa:bb:cc:dd:ee:ff").json()
+    assert d["ip6"] == "fdf1:3afe:ed39::10"
+    payload = auth_client.get("/api/export/json").json()
+    assert payload["devices"][0]["ip6"] == "fdf1:3afe:ed39::10"
+    csv_text = auth_client.get("/api/export/csv").text
+    assert "ip6" in csv_text.splitlines()[0]
+    assert "fdf1:3afe:ed39::10" in csv_text

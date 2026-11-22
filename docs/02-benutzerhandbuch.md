@@ -73,7 +73,7 @@ docker compose up -d --build
 
 Schematische Übersicht mit Detail-Panel: [01-karte.svg](screenshots/01-karte.svg)
 
-Der Header enthält (v. l. n. r.): Logo/Version, Navigation **Karte / Tabelle / Log**, Suche,
+Der Header enthält (v. l. n. r.): Logo mit **Versionsnummer** (kommt aus `/api/meta`, ändert sich mit jedem Release), Navigation **Karte / Tabelle / Log**, Suche,
 Filter (Kategorie, Status, Standort), **Nur online**, Layout-Auswahl, Exporte (JSON/CSV),
 **▶ Scan**, Drucken (PDF), Theme (🌙/☀), **⚙ Einstellungen**, Logout.
 
@@ -150,7 +150,7 @@ Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-E
 
 ## 6. Gerätedetails
 
-Rechts im Tab **Details**: Kategorie (änderbar), IP/MAC/Hostname/Hersteller (OUI), Status,
+Rechts im Tab **Details**: Kategorie (änderbar), IP/**IPv6** (v6 per NDP-MAC-Match aus `ip -6 neigh`, Spalte `ip6` in DB/JSON/CSV), MAC/Hostname/Hersteller (OUI), Status,
 Subnetz, Standort, Quelle(n) des Scans (z. B. `arp,tr064`), „Verbunden mit“ (manuell wählbar,
 leer = automatisch), offene Ports mit Dienstnamen, Notiz, Verlauf (online/offline/Ports) und
 Ereignisse. **Speichern** persistiert Kategorie/Notiz/manuelle Verbindung.

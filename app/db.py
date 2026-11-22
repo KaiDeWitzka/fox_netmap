@@ -106,6 +106,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "connection" not in cols:
         conn.execute("ALTER TABLE devices ADD COLUMN connection TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.connection ergaenzt")
+    if "ip6" not in cols:
+        conn.execute("ALTER TABLE devices ADD COLUMN ip6 TEXT NOT NULL DEFAULT ''")
+        log.info("Migration: Spalte devices.ip6 ergaenzt")
     if "link_port" not in cols:
         # v1.6.0: Anschluss laut FRITZ!Box-Mesh, z. B. "LAN:1" oder "AP:5G:0"
         conn.execute("ALTER TABLE devices ADD COLUMN link_port TEXT NOT NULL DEFAULT ''")
@@ -200,11 +203,12 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     ).fetchone()
     if row is None:
         conn.execute(
-            "INSERT INTO devices (mac, ip, hostname, vendor, category, status, subnet, source, connection, link_port, category_reason, note, first_seen, last_seen)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO devices (mac, ip, ip6, hostname, vendor, category, status, subnet, source, connection, link_port, category_reason, note, first_seen, last_seen)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 dev["mac"],
                 dev.get("ip", ""),
+                dev.get("ip6", ""),
                 dev.get("hostname", ""),
                 dev.get("vendor", ""),
                 dev.get("category", "Unbekannt"),
@@ -222,9 +226,10 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     else:
         category = row["category_override"] or dev.get("category", "Unbekannt")
         conn.execute(
-            "UPDATE devices SET ip=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
+            "UPDATE devices SET ip=?, ip6=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
             (
                 dev.get("ip", ""),
+                dev.get("ip6", ""),
                 dev.get("hostname", ""),
                 dev.get("vendor", ""),
                 category,

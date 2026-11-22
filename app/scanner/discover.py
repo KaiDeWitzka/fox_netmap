@@ -84,6 +84,15 @@ def ip_sort_key(s: str):
     return (a.version, int(a))
 
 
+def v6_by_mac(neigh6: dict[str, str]) -> dict[str, str]:
+    """MAC -> globale IPv6-Adresse aus der NDP-Tabelle (Link-Local fe80:: ausgenommen)."""
+    out: dict[str, str] = {}
+    for ip6, mac in (neigh6 or {}).items():
+        if mac and not ip6.lower().startswith("fe80:"):
+            out.setdefault(mac.lower(), ip6)
+    return out
+
+
 def in_net(ip: str, net) -> bool:
     try:
         return ipaddress.ip_address(ip) in net

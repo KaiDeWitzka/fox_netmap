@@ -73,7 +73,7 @@ docker compose up -d --build
 
 Vista esquemática con panel de detalles: [01-karte.svg](screenshots/01-karte.svg)
 
-La cabecera contiene (de izq. a dcha.): logo/versión, navegación **Mapa / Tabla / Registro**,
+La cabecera contiene (de izq. a dcha.): logo con **número de versión** (de `/api/meta`, cambia con cada release), navegación **Mapa / Tabla / Registro**,
 búsqueda, filtros (categoría, estado, sitio), **Solo en línea**, selector de diseño, exportaciones
 (JSON/CSV), **▶ Scan**, imprimir (PDF), tema (🌙/☀), **⚙ Configuración**, cerrar sesión.
 
@@ -152,7 +152,7 @@ filtro por nivel y descarga del archivo completo. Lo mismo ofrecen `/api/logs` y
 
 ## 6. Detalles del dispositivo
 
-A la derecha, pestaña **Detalles**: categoría (editable), IP/MAC/hostname/fabricante (OUI),
+A la derecha, pestaña **Detalles**: categoría (editable), IP/**IPv6** (v6 vía coincidencia MAC NDP de `ip -6 neigh`, columna `ip6` en BD/JSON/CSV), MAC/hostname/fabricante (OUI),
 estado, subred, sitio, fuente(s) del escaneo (p. ej. `arp,tr064`), «conectado a» (selección
 manual, vacío = automático), puertos abiertos con nombres de servicio, nota, historial
 (en línea/sin conexión/puertos) y eventos. **Guardar** persiste categoría/nota/conexión manual.

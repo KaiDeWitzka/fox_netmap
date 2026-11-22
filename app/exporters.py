@@ -9,6 +9,7 @@ from . import db
 CSV_FIELDS = [
     "mac",
     "ip",
+    "ip6",
     "hostname",
     "vendor",
     "category",
@@ -33,6 +34,7 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
             {
                 "mac": r["mac"],
                 "ip": r["ip"],
+                "ip6": r.get("ip6", ""),
                 "hostname": r["hostname"],
                 "vendor": r["vendor"],
                 "category": r["category"],
@@ -66,6 +68,7 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
             [
                 r["mac"],
                 r["ip"],
+                r.get("ip6", ""),
                 r["hostname"],
                 r["vendor"],
                 r["category"],

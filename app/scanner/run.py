@@ -183,6 +183,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
     oui_table = load_oui_table(settings)
+    v6_by_mac = discover.v6_by_mac(discover.neigh6_table())
     oui_budget = {"left": settings.oui_online_max}
     gateway = topology.gateway_ip()
     if gateway:
@@ -257,6 +258,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         if not d.get("mac"):
             continue
         d["mac"] = oui.normalize_mac(d["mac"])
+        d["ip6"] = v6_by_mac.get(d["mac"], "")
         d["vendor"] = oui.lookup(d["mac"], oui_table)
         if not d["vendor"]:
             d["vendor"] = oui.lookup_online(d["mac"], settings, conn, oui_budget)

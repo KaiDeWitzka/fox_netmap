@@ -369,6 +369,7 @@ async function loadDevices() {
 async function loadMeta() {
   const r = await api("/api/meta");
   if (r.ok) META = await r.json();
+  document.getElementById("hdr-version").textContent = META.version ? "v" + META.version : "";
 }
 
 async function loadSites() {
@@ -720,7 +721,7 @@ async function showDetail(mac) {
   const el = document.getElementById("detail-content");
   const hostLinks = webLinks(d).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" class="ext-link">${esc(l.label)}</a>`).join(", ");
   const rows = [
-    [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
+    [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], ["IPv6", esc(d.ip6 || "\u2013")], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
     [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
     [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
     [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
