@@ -20,6 +20,14 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 - **Export:** `link_port` (konkreter Anschluss am Elternknoten aus dem FRITZ!Box-Mesh, z. B. `LAN:2`
   oder `AP:5G:0`) ist jetzt auch in JSON- und CSV-Export enthalten.
 
+### CI / Supply Chain
+- **Scan & Image bei jedem Merge auf `main`:** neuer Workflow `main-scan.yml` baut das gehärtete Image,
+  führt das Trivy-Gate aus (fixbare CRITICAL/HIGH → Abbruch), erzeugt SBOM (CycloneDX + SPDX) und
+  Trivy-Bericht als Artefakt (30 Tage) und pusht das Multi-Arch-Image als `:main` / `:sha-<sha>` nach
+  GHCR (mit SBOM-/Provenance-Attestierung) — nur nach grünem Gate.
+- **Wöchentlicher Nachscan** (`image-scan.yml`) prüft jetzt `:latest` **und** `:main`.
+- Doku aktualisiert: README (Releases), `docs/03-sicherheit.md` §2.9.
+
 ## [1.6.2] – 2026-11-22
 
 Versionsnummer im UI-Header und IPv6-Adresse pro Gerät (PR #67).

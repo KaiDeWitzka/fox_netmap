@@ -49,6 +49,7 @@ OUI-Datenbank aktualisieren: `python scripts/update_oui.py ./data` (lädt die IE
 - SemVer ab v1.0.0: Releases tragen Tags im Format `vMAJOR.MINOR.PATCH` (z. B. `v1.0.0`, `v1.1.0`, `v2.0.0`) auf `main`
 - Tag pushen (`git tag v1.1.0 && git push origin v1.1.0`) → Workflow `release.yml` testet (ruff + pytest + UI-DOM), baut das Multi-Arch-Image (amd64/arm64), prüft es mit Trivy, veröffentlicht es in der GitHub Container Registry und erstellt ein GitHub-Release mit SBOM (CycloneDX, SPDX) und Trivy-Bericht
 - Tag muss zu `app.__version__` passen, sonst bricht der Release ab
+- **Jeder Push auf `main`** (`main-scan.yml`): Image bauen → Trivy-Gate (CRITICAL/HIGH mit Fix) → SBOM + Trivy-Bericht als Artefakt → Multi-Arch-Push als `ghcr.io/kaidewitzka/fox_netmap:main` bzw. `:sha-<sha>` (nur nach grünem Scan). Wöchentlicher Nachscan (`image-scan.yml`) prüft `:latest` und `:main` auf neu bekannt gewordene CVEs
 
 ## Fertiges Container-Image (GHCR, seit v1.5.1)
 

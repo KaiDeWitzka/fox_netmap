@@ -1,7 +1,8 @@
 name: image-scan
 
-# Wöchentlicher Nachscan des veröffentlichten Images: findet CVEs, die nach dem Release bekannt wurden.
-# Bei Treffern schlägt der Lauf fehl (GitHub benachrichtigt) – Abhilfe: Dependabot-PR mergen bzw. Patch-Release.
+# Wöchentlicher Nachscan der veröffentlichten Images (:latest und :main): findet CVEs, die nach dem
+# Release/Merge bekannt wurden. Bei Treffern schlägt der Lauf fehl (GitHub benachrichtigt) – Abhilfe:
+# Dependabot-PR mergen bzw. Patch-Release.
 on:
   schedule:
     - cron: "17 5 * * 1"
@@ -12,7 +13,7 @@ permissions:
   packages: read
 
 env:
-  IMAGE: ghcr.io/kaidewitzka/fox_netmap:latest
+  IMAGE: ghcr.io/kaidewitzka/fox_netmap
 
 jobs:
   scan:
@@ -25,13 +26,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: docker pull "$IMAGE"
-      - name: Trivy-Scan
+      - run: docker pull "$IMAGE:latest" "$IMAGE:main"
+      - name: Trivy-Scan (latest + main)
         run: |
           mkdir -p reports ~/.cache/trivy
-          scripts/trivy.sh image --scanners vuln --format table --output reports/trivy-latest.txt "$IMAGE"
-          scripts/trivy.sh image --scanners vuln --ignore-unfixed --severity CRITICAL,HIGH \
-            --ignorefile .trivyignore --exit-code 1 "$IMAGE"
+          for tag in latest main; do
+            echo "== Scan $IMAGE:$tag"
+            scripts/trivy.sh image --scanners vuln --format table --output "reports/trivy-$tag.txt" "$IMAGE:$tag"
+            scripts/trivy.sh image --scanners vuln --ignore-unfixed --severity CRITICAL,HIGH \
+              --ignorefile .trivyignore --exit-code 1 "$IMAGE:$tag"
+          done
       - name: Bericht sichern
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
