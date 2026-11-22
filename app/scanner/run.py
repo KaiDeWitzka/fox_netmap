@@ -40,6 +40,7 @@ OVERRIDABLE = {
     "fritz_user": str,
     "fritz_pass": str,
     "fritz_mesh": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "vpn_pool": str,
     "snmp_community": str,
     "notify_webhook": str,
     "notify_gotify": str,
@@ -118,6 +119,8 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
             add_source(d, "tr064")
             d["tr064_type"] = h.get("type", "")
             d["tr064_active"] = h.get("active", True)
+            if topology.is_vpn_tr064(h.get("type", "")):
+                d["vpn"] = True
             if h.get("endpoint"):
                 d["tr064_endpoint"] = h["endpoint"]
         else:
@@ -128,6 +131,7 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
                 "source": "tr064",
                 "tr064_type": h.get("type", ""),
                 "tr064_active": h.get("active", True),
+                "vpn": topology.is_vpn_tr064(h.get("type", "")),
             }
     return list(by_mac.values())
 
@@ -275,6 +279,11 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 d["subnet"] = next((sn for sn in subnets if addr in ipaddress.ip_network(sn, strict=False)), "")
             except ValueError:
                 pass
+        # VPN-Client? Entweder TR-064 InterfaceType "VPN" (IPSec) oder IP im konfigurierten VPN-Pool
+        # (Default "off" = keine Annahme; "auto" = FRITZ!-Konvention letzte Oktett >= 201 im Gateway-/24;
+        # WireGuard-Peers erscheinen nicht in TR-064, daher ggf. Pool explizit setzen)
+        if not d.get("vpn"):
+            d["vpn"] = topology.is_vpn_ip(d.get("ip", ""), getattr(settings, "vpn_pool", "off"), gateway)
         # TR-064 liefert "Ethernet", "802.11" oder "HomePlug" (vor v1.6.0 wurde nur "wlan"/"lan" erkannt)
         d["connection"] = topology.conn_type(d.get("tr064_type", ""))
         link = mesh_info["parents"].get(d["mac"]) if mesh_info else None
@@ -392,7 +401,11 @@ def run_once(settings: Settings, conn) -> dict:
             len(devices), n_ping, n_tcp, n_arp, n_tr, n_only_tr,
         )
         summary = apply_scan(conn, settings, devices)
-        alarm_list = [d for d in summary["new_online"] if not notify.is_whitelisted(settings, d)]
+        # VPN-Clients (z. B. .201/.202 der FRITZ!Box) kommen und gehen mit dem VPN-Tunnel -> kein Alarm
+        for d in summary["new_online"]:
+            if d.get("vpn"):
+                log.info("neues VPN-Geraet (kein Alarm): %s %s %s", d.get("mac"), d.get("ip"), d.get("hostname") or "-")
+        alarm_list = [d for d in summary["new_online"] if not d.get("vpn") and not notify.is_whitelisted(settings, d)]
         skipped = len(summary["new_online"]) - len(alarm_list)
         if skipped:
             log.info("Alarm unterdrueckt (Whitelist): %s Geraet(e)", skipped)

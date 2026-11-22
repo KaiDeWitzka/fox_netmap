@@ -182,6 +182,7 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 | URL de alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; os tokens ficam só em env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP que não disparam o alarme «novo dispositivo» |
 | Locais | `NETZ_SITES` | `Nome:sub-rede; …` p. ex. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
+| Pool de endereços VPN | `NETZ_VPN_POOL` | Padrão `off` (sem suposição). `auto` = convenção FRITZ!: último octeto ≥ 201 na /24 do gateway; também CIDR (`10.8.0.0/24`) e intervalos (`192.168.178.201-192.168.178.254`), separados por vírgula |
 | Histórico / retenção | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | histórico em horas; apagar dispositivos offline após N dias (0 = nunca) |
 | Retenção de eventos | `NETZ_EVENT_RETENTION_DAYS` | apagar eventos após N dias, predefinição 90 (0 = nunca) |
 | Auto-exportação / intervalo / pasta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automáticos; intervalo em h (0 = após cada scan) |
@@ -290,6 +291,12 @@ ICMP esteja bloqueado.
 IPv6: basta adicionar um CIDR v6 às sub-redes; descoberta em redes grandes via NDP + ping ao
 gateway, mais varrimento em redes pequenas; gateway-v6 para a topologia; ligações web como
 `[2003:db8::10]:8080`.
+
+**Clientes VPN (ex.: FRITZ!Box IPSec/WireGuard .201/.202):** o TR-064 reporta ligações VPN com tipo de
+interface «VPN» — esses dispositivos são marcados automaticamente como VPN (selo «VPN» na tabela e
+no mapa, linha «Ligação VPN» no painel de detalhes, campo `vpn` em JSON/CSV/API). Os peers WireGuard
+não aparecem no TR-064; para eles existe o **pool de endereços VPN** configurável (ex.: `auto`).
+Clientes VPN não disparam alarme de «novo dispositivo», porque entram e saem com o túnel.
 
 ---
 

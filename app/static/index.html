@@ -105,6 +105,8 @@
             <label><span data-i18n="st.ouiUrl">OUI-Online-API-URL</span> <input id="st-ouiurl" type="url" placeholder="https://api.macvendors.com"></label>
             <label><span data-i18n="st.whitelist">Whitelist (MAC/IP, kommagetrennt; kein Alarm)</span> <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
             <label><span data-i18n="st.sites">Standorte (Name:Subnetz; Name2:Subnetz2)</span> <input id="st-sites" type="text" placeholder="Zuhause:192.168.178.0/24; Remote:192.168.179.0/24"></label>
+            <label><span data-i18n="st.vpnPool">VPN-Adresspool (auto / CIDR / Bereich a-b; off = aus, Default)</span> <input id="st-vpnpool" type="text" data-i18n-ph="st.vpnPoolPh" placeholder="off"></label>
+            <p class="muted" data-i18n="st.vpnPoolHint">Default off: kein Pool angenommen. auto = FRITZ!-Konvention &ndash; im /24 des Gateways gelten Adressen ab letzter Oktett 201 als VPN (DHCP endet bei .200). TR-064 meldet VPN-Clients zus&auml;tzlich &uuml;ber den Schnittstellentyp (z. B. .201/.202).</p>
             <button type="submit" data-i18n="st.save">Speichern</button>
           </form>
           <p id="settings-msg" class="muted" role="alert"></p>

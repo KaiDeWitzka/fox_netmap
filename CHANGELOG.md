@@ -4,6 +4,20 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Neu
+- **VPN-Erkennung:** TR-064-Schnittstellentyp „VPN“ (z. B. FRITZ!Box IPSec .201) markiert Geräte als
+  VPN-Client — protokollbasiert, ohne Pool-Annahme. Optional zusätzlich Adresspool-Heuristik über das
+  neue Setting `vpn_pool` (`NETZ_VPN_POOL`, Default `off`; `auto` = FRITZ!-Konvention: letzte Oktett ≥ 201
+  im /24 des Gateways; auch CIDRs und Bereiche `a-b`, kommagetrennt). Damit lassen sich auch
+  WireGuard-Peers (.202) erfassen, die TR-064 nicht meldet.
+- **Anzeige:** VPN-Geräte tragen ein „VPN"-Badge in der Tabelle, einen gestrichelten Rand in der Karte,
+  eine Zeile „VPN-Verbindung“ im Detail-Panel und ein `vpn`-Feld in JSON/CSV/API. Neue Spalte
+  `devices.vpn` (DB-Migration automatisch).
+- **Alarme:** VPN-Geräte lösen keinen „neues Gerät“-Alarm aus (kommen und gehen mit dem Tunnel);
+  sie werden stattdessen als „neues VPN-Gerät (kein Alarm)“ ins Log geschrieben.
+
 ## [1.6.1] – 2026-11-22
 
 Neues Knotendesign der Karte nach dem Soll-Entwurf ([Plan](docs/plaene/v1.6.1-knotendesign.md)).

@@ -481,7 +481,7 @@ function buildElements() {
     const fullName = d.hostname || d.ip || d.mac;
     // Zwei Zeilen wie im Soll-Entwurf: Name, darunter "IP · Kategorie" (+N eingeklappt, offline als Text)
     const second = [d.ip && d.ip !== fullName ? d.ip : "", t("cat." + d.category)].filter(Boolean).join(" · ") +
-      (collapsed.has(d.mac) && kids ? ` (+${kids})` : "") + (d.status === "offline" ? " · " + t("map.offline") : "");
+      (collapsed.has(d.mac) && kids ? ` (+${kids})` : "") + (d.status === "offline" ? " · " + t("map.offline") : "") + (d.vpn ? " · " + t("vpn.badge") : "");
     const hub = isNetCategory(d.category);
     const nd = {
       data: {
@@ -497,6 +497,7 @@ function buildElements() {
         hub,
         name: (d.hostname || d.ip || d.mac).toLowerCase(),
         subnetKey: d.subnet || "",
+        vpn: d.vpn ? 1 : 0,
       },
       position: { x, y },
     };
@@ -628,6 +629,8 @@ function mapStyle(theme) {
     { selector: "node[category='Repeater/AP']", style: { "border-color": P.repeater } },
     // Offline: nur der Körper wird abgeblendet und gestrichelt, die Beschriftung bleibt lesbar (>= 4,5:1) und nennt "offline"
     { selector: "node[status='offline']", style: { "background-opacity": 0.45, "background-image-opacity": 0.6, "border-style": "dashed", color: P.textOff } },
+    // VPN-Client (z. B. FRITZ!Box IPSec/WireGuard): auffaelliger gestrichelter Rand
+    { selector: "node[vpn = 1]", style: { "border-style": "dashed", "border-width": 2.5, "border-color": "#f59e0b" } },
     { selector: "node:selected", style: { "border-width": 3, "border-color": P.sel } },
     { selector: "node.hl", style: { "border-width": 4, "border-color": P.hl } },
     { selector: "node.spot", style: { "border-width": 5, "border-color": P.hl } },
@@ -723,6 +726,7 @@ async function showDetail(mac) {
   const rows = [
     [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], ["IPv6", esc(d.ip6 || "\u2013")], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
     [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
+    [t("d.vpn"), d.vpn ? t("d.yes") : "–"],
     [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
     [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
   ];
@@ -969,6 +973,14 @@ function buildCell(d, key) {
         td.appendChild(a);
       });
       td.appendChild(document.createTextNode(")"));
+    }
+    if (d.vpn) {
+      td.appendChild(document.createTextNode(" "));
+      const b = document.createElement("span");
+      b.className = "badge-vpn";
+      b.textContent = t("vpn.badge");
+      b.title = t("vpn.badgeTitle");
+      td.appendChild(b);
     }
   } else if (key === "mac") {
     const m = d.mac || "";
@@ -1231,6 +1243,7 @@ function bindSidebar() {
       oui_online_url: document.getElementById("st-ouiurl").value,
       alarm_whitelist: document.getElementById("st-whitelist").value,
       sites: document.getElementById("st-sites").value,
+      vpn_pool: document.getElementById("st-vpnpool").value,
     };
     const fritzPassVal = document.getElementById("st-fritzpass").value;
     if (fritzPassVal) body.fritz_pass = fritzPassVal;
@@ -1341,6 +1354,14 @@ function validateSettings(v) {
   for (const e of String(v.alarm_whitelist || "").split(",").map((s) => s.trim()).filter(Boolean))
     if (!validIpAny(e) && !validMac(e)) errs.push(t("err.whitelist", { v: e }));
   if (!validSites(v.sites || "")) errs.push(t("err.sites"));
+  for (const tok of String(v.vpn_pool ?? "off").split(",").map((s) => s.trim()).filter(Boolean)) {
+    const low = tok.toLowerCase();
+    if (low === "auto" || low === "off" || low === "0") continue;
+    if (tok.includes("-")) {
+      const parts = tok.split("-");
+      if (parts.length !== 2 || !validIpAny(parts[0].trim()) || !validIpAny(parts[1].trim())) errs.push(t("err.vpnPool", { v: tok }));
+    } else if (!validCidrAny(tok)) errs.push(t("err.vpnPool", { v: tok }));
+  }
   if (v.theme !== "dark" && v.theme !== "light") errs.push(t("err.theme"));
   if (v.lang && !LANGS.some(([c]) => c === v.lang)) errs.push(t("err.lang"));
   for (const sn of v.subnets.split(",").map((s) => s.trim()).filter(Boolean))
@@ -1433,6 +1454,7 @@ async function loadSettings() {
   document.getElementById("st-mdns").checked = String(s.mdns_enabled) === "true" || s.mdns_enabled === true;
   document.getElementById("st-whitelist").value = s.alarm_whitelist || "";
   document.getElementById("st-sites").value = s.sites || "";
+  document.getElementById("st-vpnpool").value = s.vpn_pool || "off";
   loadTokens();
 }
 

@@ -118,6 +118,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # v1.6.0: Begruendung der automatischen Einordnung, z. B. "host:iphone" oder "port:62078"
         conn.execute("ALTER TABLE devices ADD COLUMN category_reason TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.category_reason ergaenzt")
+    if "vpn" not in cols:
+        # VPN-Client (z. B. FRITZ!Box IPSec/WireGuard .201+): Kennzeichen, kein "neues Geraet"-Alarm
+        conn.execute("ALTER TABLE devices ADD COLUMN vpn INTEGER NOT NULL DEFAULT 0")
+        log.info("Migration: Spalte devices.vpn ergaenzt")
 
 
 TOKEN_PREFIX = "sha256:"
@@ -203,12 +207,13 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     ).fetchone()
     if row is None:
         conn.execute(
-            "INSERT INTO devices (mac, ip, ip6, hostname, vendor, category, status, subnet, source, connection, link_port, category_reason, note, first_seen, last_seen)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO devices (mac, ip, ip6, vpn, hostname, vendor, category, status, subnet, source, connection, link_port, category_reason, note, first_seen, last_seen)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 dev["mac"],
                 dev.get("ip", ""),
                 dev.get("ip6", ""),
+                1 if dev.get("vpn") else 0,
                 dev.get("hostname", ""),
                 dev.get("vendor", ""),
                 dev.get("category", "Unbekannt"),
@@ -226,10 +231,11 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     else:
         category = row["category_override"] or dev.get("category", "Unbekannt")
         conn.execute(
-            "UPDATE devices SET ip=?, ip6=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
+            "UPDATE devices SET ip=?, ip6=?, vpn=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
             (
                 dev.get("ip", ""),
                 dev.get("ip6", ""),
+                1 if dev.get("vpn") else 0,
                 dev.get("hostname", ""),
                 dev.get("vendor", ""),
                 category,

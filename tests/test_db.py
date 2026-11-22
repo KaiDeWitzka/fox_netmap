@@ -144,3 +144,30 @@ def test_settings_kv(tmp_path):
     db.set_setting(conn, "scan_interval", "300")
     conn.commit()
     assert db.get_setting(conn, "scan_interval") == "300"
+
+
+def test_migration_adds_vpn_column(tmp_path):
+    conn = db.connect(str(tmp_path / "old.db"))
+    conn.execute(
+        "CREATE TABLE devices (mac TEXT PRIMARY KEY, ip TEXT NOT NULL DEFAULT '', hostname TEXT NOT NULL DEFAULT '',"
+        " vendor TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'Unbekannt', category_override TEXT,"
+        " status TEXT NOT NULL DEFAULT 'offline', subnet TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT '',"
+        " note TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT '', last_seen TEXT NOT NULL DEFAULT '')"
+    )
+    conn.commit()
+    db.init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
+    assert "vpn" in cols
+    conn.close()
+
+
+def test_upsert_vpn_flag(tmp_path):
+    conn = make_conn(tmp_path)
+    now = db.utcnow()
+    db.upsert_device(conn, {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online"}, now)
+    conn.commit()
+    assert db.get_device(conn, "00:7a:a4:9b:d9:68")["vpn"] == 1
+    assert db.list_devices(conn)[0]["vpn"] == 1
+    db.upsert_device(conn, {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": False, "status": "offline"}, now)
+    conn.commit()
+    assert db.get_device(conn, "00:7a:a4:9b:d9:68")["vpn"] == 0

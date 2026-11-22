@@ -588,3 +588,55 @@ def test_v6_by_mac():
     m = discover.v6_by_mac(neigh6)
     assert m == {"aa:bb:cc:dd:ee:ff": "fdf1:3afe:ed39::10"}
     assert discover.v6_by_mac({}) == {}
+
+
+def test_vpn_pool_heuristik():
+    import pytest
+
+    from app.scanner.topology import is_vpn_ip, is_vpn_tr064, vpn_pool_rules
+
+    # auto: nur Gateway-/24, letzte Oktett >= 201 (FRITZ!-Default: DHCP endet bei .200)
+    assert is_vpn_ip("192.168.178.201", "auto", "192.168.178.1") is True
+    assert is_vpn_ip("192.168.178.254", "auto", "192.168.178.1") is True
+    assert is_vpn_ip("192.168.178.200", "auto", "192.168.178.1") is False
+    assert is_vpn_ip("192.168.179.201", "auto", "192.168.178.1") is False  # fremdes Subnetz unberuehrt
+    assert is_vpn_ip("fdf1:3afe:ed39::201", "auto", "192.168.178.1") is False  # IPv6 nie per Pool
+    assert is_vpn_ip("192.168.178.201", "off", "192.168.178.1") is False
+    assert is_vpn_ip("192.168.178.201", "", "192.168.178.1") is False  # Default leer = aus, keine Annahme
+    assert is_vpn_ip("", "auto", "192.168.178.1") is False
+    # explizite CIDRs und Bereiche
+    assert is_vpn_ip("10.8.0.5", "10.8.0.0/24", "") is True
+    assert is_vpn_ip("192.168.178.203", "192.168.178.201-192.168.178.210", "") is True
+    assert is_vpn_ip("192.168.178.211", "192.168.178.201-192.168.178.210", "") is False
+    assert is_vpn_ip("10.8.0.9", "auto, 10.8.0.0/24", "192.168.178.1") is True
+    with pytest.raises(ValueError):
+        vpn_pool_rules("keine-ip", "")
+    with pytest.raises(ValueError):
+        vpn_pool_rules("192.168.178.210-192.168.178.201", "")
+    # TR-064 InterfaceType
+    assert is_vpn_tr064("VPN") is True
+    assert is_vpn_tr064("Ethernet") is False
+
+
+def test_merge_sources_tr064_vpn_flag():
+    from app.scanner.run import merge_sources
+
+    found = [{"ip": "192.168.178.201", "mac": "00:7a:a4:9b:d9:68", "source": "ping+arp"}]
+    tr = {"00:7a:a4:9b:d9:68": {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "hostname": "fritz.box", "active": True, "type": "VPN"}}
+    out = merge_sources(found, tr)
+    assert out[0]["vpn"] is True
+    out2 = merge_sources([], {"00:7a:a4:9b:d9:69": {"mac": "00:7a:a4:9b:d9:69", "ip": "192.168.178.202", "hostname": "", "active": True, "type": "VPN"}})
+    assert out2[0]["vpn"] is True
+    out3 = merge_sources([], {"aa:bb:cc:dd:ee:ff": {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.178.50", "hostname": "nas", "active": True, "type": "Ethernet"}})
+    assert not out3[0].get("vpn")
+
+
+def test_apply_scan_speichert_vpn_flag(tmp_path):
+    conn, settings = make(tmp_path)
+    d1 = dev("00:7a:a4:9b:d9:68", "192.168.178.201", vpn=True, category="Unbekannt", layout={"connected_to": "192.168.178.1"})
+    apply_scan(conn, settings, [d1])
+    assert db.get_device(conn, d1["mac"])["vpn"] == 1
+    # naechster Scan ohne VPN-Flag setzt es zurueck
+    d2 = dev("00:7a:a4:9b:d9:68", "192.168.178.201", vpn=False, status="offline", layout={"connected_to": "192.168.178.1"})
+    apply_scan(conn, settings, [d2])
+    assert db.get_device(conn, d1["mac"])["vpn"] == 0

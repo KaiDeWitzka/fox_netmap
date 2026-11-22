@@ -41,6 +41,74 @@ def conn_type(interface_type: str) -> str:
     return ""
 
 
+def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
+    """Parst das Setting vpn_pool.
+
+    Rueckgabe: (auto_net, auto_min, nets, ranges)
+      - auto_net/auto_min: Token "auto" -> FRITZ!-Konvention: im /24 des Gateways zaehlt
+        die letzte Oktett >= auto_min (201) als VPN-Pool (DHCP endet bei .200).
+      - nets: CIDR-Eintraege (ip_network)
+      - ranges: Bereiche "a-b" als (start, ende)
+    Leer/"off"/"0" (Default) deaktiviert die Pool-Heuristik komplett - es wird kein VPN-Pool
+    angenommen; dann greift nur die TR-064-Erkennung (siehe is_vpn_tr064).
+    """
+    nets: list = []
+    ranges: list = []
+    auto_net = None
+    auto_min = 0
+    pool = (vpn_pool or "").strip()
+    if not pool or pool.lower() in ("off", "0"):
+        return auto_net, auto_min, nets, ranges
+    for tok in pool.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if tok.lower() == "auto":
+            try:
+                gw = ipaddress.ip_address(gateway)
+            except ValueError:
+                continue
+            if gw.version == 4:
+                auto_net = ipaddress.ip_network(f"{gw}/24", strict=False)
+                auto_min = 201
+            continue
+        if "-" in tok:
+            a, _, b = tok.partition("-")
+            try:
+                ia = ipaddress.ip_address(a.strip())
+                ib = ipaddress.ip_address(b.strip())
+            except ValueError:
+                raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}") from None
+            if ia.version != ib.version or ia > ib:
+                raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}")
+            ranges.append((ia, ib))
+        else:
+            nets.append(ipaddress.ip_network(tok, strict=False))
+    return auto_net, auto_min, nets, ranges
+
+
+def is_vpn_ip(ip: str, vpn_pool: str, gateway: str = "") -> bool:
+    """True, wenn die IP laut vpn_pool-Heuristik zum VPN-Adresspool gehoert."""
+    if not ip:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    auto_net, auto_min, nets, ranges = vpn_pool_rules(vpn_pool, gateway)
+    if auto_net is not None and addr.version == 4 and addr in auto_net:
+        if int(addr) - int(auto_net.network_address) >= auto_min:
+            return True
+    if any(addr in n for n in nets):
+        return True
+    return any(a <= addr <= b for a, b in ranges)
+
+
+def is_vpn_tr064(interface_type: str) -> bool:
+    """TR-064 meldet VPN-Clients (z. B. IPSec) mit InterfaceType wie 'VPN'."""
+    return "vpn" in (interface_type or "").lower()
+
+
 def resolve_connected_to(
     mac: str,
     ip: str,
