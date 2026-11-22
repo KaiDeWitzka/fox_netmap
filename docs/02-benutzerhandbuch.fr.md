@@ -73,7 +73,7 @@ docker compose up -d --build
 
 Vue schématique avec panneau de détails : [01-karte.svg](screenshots/01-karte.svg)
 
-L'en-tête contient (de gauche à droite) : logo/version, navigation **Carte / Tableau / Journal**,
+L'en-tête contient (de gauche à droite) : logo avec **numéro de version** (depuis `/api/meta`, change à chaque release), navigation **Carte / Tableau / Journal**,
 recherche, filtres (catégorie, état, site), **En ligne uniquement**, choix de la disposition,
 exports (JSON/CSV), **▶ Scan**, impression (PDF), thème (🌙/☀), **⚙ Paramètres**, déconnexion.
 
@@ -151,7 +151,7 @@ les 5 s, filtre par niveau, et téléchargement du fichier complet. Idem via `/a
 
 ## 6. Détails d'un appareil
 
-À droite, onglet **Détails** : catégorie (modifiable), IP/MAC/nom d'hôte/fabricant (OUI), état,
+À droite, onglet **Détails** : catégorie (modifiable), IP/**IPv6** (v6 via correspondance MAC NDP depuis `ip -6 neigh`, colonne `ip6` en BDD/JSON/CSV), MAC/nom d'hôte/fabricant (OUI), état,
 sous-réseau, site, source(s) du scan (p. ex. `arp,tr064`), « connecté à » (choix manuel, vide =
 auto), ports ouverts avec noms de service, note, historique (en ligne/hors ligne/ports) et
 événements. **Enregistrer** persiste catégorie/note/connexion manuelle.

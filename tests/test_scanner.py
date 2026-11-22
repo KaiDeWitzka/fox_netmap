@@ -577,3 +577,14 @@ def test_discover_mixed_v4_v6_sort(monkeypatch):
     assert any(i.startswith("fdf1:") for i in ips)
     assert ips == sorted(ips, key=lambda s: (ipaddress.ip_address(s).version, int(ipaddress.ip_address(s))))
     assert discover.ip_sort_key("10.0.0.2") < discover.ip_sort_key("fdf1::1")
+
+
+def test_v6_by_mac():
+    neigh6 = {
+        "fdf1:3afe:ed39::10": "AA:BB:CC:DD:EE:FF",
+        "fe80::1": "aa:bb:cc:dd:ee:ff",  # Link-Local -> ignorieren
+        "fdf1:3afe:ed39::20": "",  # ohne MAC -> ignorieren
+    }
+    m = discover.v6_by_mac(neigh6)
+    assert m == {"aa:bb:cc:dd:ee:ff": "fdf1:3afe:ed39::10"}
+    assert discover.v6_by_mac({}) == {}

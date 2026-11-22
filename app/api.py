@@ -523,8 +523,9 @@ def sites_api(request: Request):
 
 
 @router.get("/api/meta")
-def meta(conn=Depends(get_conn)):
+def meta(request: Request, conn=Depends(get_conn)):
     return {
+        "version": request.app.state.settings.app_version,
         "gateway": db.get_setting(conn, "gateway") or "",
         "gateway6": db.get_setting(conn, "gateway6") or "",
         "wan_ip": db.get_setting(conn, "wan_ip") or "",

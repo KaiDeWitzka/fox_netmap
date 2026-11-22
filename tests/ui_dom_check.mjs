@@ -20,7 +20,7 @@ doc.head.appendChild(style);
 const calls = [];
 const DEVS = [
       {
-        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "fdf1:3afe:ed39::10", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064",
         ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 2, x: null, y: null, connection: "lan",
@@ -54,7 +54,7 @@ w.fetch = async (url, opts = {}) => {
     }
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
-    if (String(url).includes("/api/meta")) return { gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
+    if (String(url).includes("/api/meta")) return { version: "1.6.1", gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
     if (String(url).includes("/api/sites"))
       return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
@@ -77,7 +77,7 @@ w.fetch = async (url, opts = {}) => {
           connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
         };
       return {
-        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", hostname: "nas", vendor: "Synology",
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "fdf1:3afe:ed39::10", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", note: "",
         first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
         ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
@@ -364,8 +364,10 @@ check(
     doc.querySelectorAll("#detail-content a").length === 2
 );
 check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
+check("Detail: IPv6-Zeile mit Adresse aus NDP-Match", $("#detail-content").textContent.includes("fdf1:3afe:ed39::10"));
 
 
+check("Header: Version aus /api/meta sichtbar (v1.6.1)", $("#hdr-version") && $("#hdr-version").textContent === "v1.6.1");
 check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._els.some((e) => e.data && e.data.id === "wlan:192.168.178.1" && e.data.virtual));
 check(
   "Karte: Internet-Knoten mit WAN-IP + Kante zum Gateway",

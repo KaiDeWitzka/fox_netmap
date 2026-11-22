@@ -72,7 +72,7 @@ docker compose up -d --build
 
 Schematic overview with detail panel: [01-karte.svg](screenshots/01-karte.svg)
 
-The header contains (left to right): logo/version, navigation **Map / Table / Log**, search,
+The header contains (left to right): logo with **version number** (from `/api/meta`, changes with every release), navigation **Map / Table / Log**, search,
 filters (category, status, site), **Only online**, layout selector, exports (JSON/CSV),
 **▶ Scan**, print (PDF), theme (🌙/☀), **⚙ Settings**, logout.
 
@@ -147,7 +147,7 @@ filter, and download of the full file. The same is provided by `/api/logs` and
 
 ## 6. Device details
 
-Right, in the **Details** tab: category (editable), IP/MAC/hostname/vendor (OUI), status,
+Right, in the **Details** tab: category (editable), IP/**IPv6** (v6 via NDP-MAC match from `ip -6 neigh`, `ip6` column in DB/JSON/CSV), MAC/hostname/vendor (OUI), status,
 subnet, site, scan source(s) (e.g. `arp,tr064`), "connected to" (manually selectable, empty =
 automatic), open ports with service names, note, history (online/offline/ports) and events.
 **Save** persists category/note/manual connection.

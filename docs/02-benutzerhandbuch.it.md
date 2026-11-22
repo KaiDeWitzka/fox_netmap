@@ -73,7 +73,7 @@ docker compose up -d --build
 
 Vista schematica con pannello dettagli: [01-karte.svg](screenshots/01-karte.svg)
 
-L'intestazione contiene (da sx a dx): logo/versione, navigazione **Mappa / Tabella / Log**,
+L'intestazione contiene (da sx a dx): logo con **numero di versione** (da `/api/meta`, cambia a ogni release), navigazione **Mappa / Tabella / Log**,
 ricerca, filtri (categoria, stato, sito), **Solo online**, selettore del layout, esportazioni
 (JSON/CSV), **▶ Scan**, stampa (PDF), tema (🌙/☀), **⚙ Impostazioni**, logout.
 
@@ -152,7 +152,7 @@ filtro per livello e download del file completo. Lo stesso è offerto da `/api/l
 
 ## 6. Dettagli del dispositivo
 
-A destra, scheda **Dettagli**: categoria (modificabile), IP/MAC/hostname/produttore (OUI), stato,
+A destra, scheda **Dettagli**: categoria (modificabile), IP/**IPv6** (v6 via match MAC NDP da `ip -6 neigh`, colonna `ip6` in DB/JSON/CSV), MAC/hostname/produttore (OUI), stato,
 sottorete, sito, fonte/i della scansione (p. es. `arp,tr064`), «collegato a» (selezionabile
 manualmente, vuoto = automatico), porte aperte con nomi di servizio, nota, cronologia
 (online/offline/porte) ed eventi. **Salva** persiste categoria/nota/collegamento manuale.
