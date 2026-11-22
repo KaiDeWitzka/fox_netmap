@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.5] – 2026-11-22
+
+IPv6-Fund in großen v6-Netzen (SLAAC/EUI-64, ff02::1, DNS-AAAA), README zweisprachig (de/en), Settings-Menü nach Schwerpunkten gruppiert (PRs #76, #77).
 
 ### Geändert
 - **Einstellungen nach Schwerpunkten gruppiert:** Das Settings-Formular ist jetzt in 7
