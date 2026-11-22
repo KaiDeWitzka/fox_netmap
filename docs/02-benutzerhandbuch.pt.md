@@ -1,6 +1,6 @@
 # fox_netmap — Manual do utilizador
 
-Versão 1.3.x · novembro de 2026
+Versão 1.6.1 · novembro de 2026
 
 > Idiomas: [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -9,8 +9,9 @@ dispositivos em várias sub-redes/VLANs, com topologia («ligado a»), portas ab
 alarmes e exportaciones (JSON/CSV/impressão PDF). Os dados são persistentes em SQLite; as
 pesquisas (scans) são cíclicas ou manuais.
 
-> As imagens deste manual (`docs/screenshots/*.svg`) são ilustrações esquemáticas da interface
-> real (tema escuro): a estrutura e os elementos correspondem 1:1 à aplicação.
+> As imagens do mapa `docs/screenshots/01-karte-hell.png` e `01-karte-dunkel.png` são capturas reais da
+> v1.6.1 com dados de teste. As restantes imagens (`*.svg`) são ilustrações esquemáticas da interface
+> (tema escuro); a estrutura e os elementos correspondem à aplicação.
 
 **Índice**
 
@@ -66,7 +67,11 @@ docker compose up -d --build
 
 ## 2. A interface
 
-![Mapa com grupos de sub-redes e painel de detalhes](screenshots/01-karte.svg)
+![Mapa v1.6.1, tema claro: grupos de sub-rede Casa e Remoto, gateway com anel, legenda aberta](screenshots/01-karte-hell.png)
+
+![Mapa v1.6.1, tema escuro: árvore com repetidor, switch e dispositivos finais, legenda recolhida](screenshots/01-karte-dunkel.png)
+
+Vista esquemática com painel de detalhes: [01-karte.svg](screenshots/01-karte.svg)
 
 O cabeçalho contém (da esq. para a dir.): logótipo/versão, navegação **Mapa / Tabela / Registo**,
 pesquisa, filtros (categoria, estado, local), **Apenas online**, seletor de esquema, exportaciones
@@ -94,14 +99,28 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
   compacta por baixo; dispositivos sem pai ficam abaixo da árvore. Se houver posições guardadas para todos os
   dispositivos (arrastar), `auto` usa-as. Outros: `tree` (sempre árvore), `force` (física), `concentric`,
   `circle`, `grid`. **Repor** limpa as posições guardadas.
-- **Limpeza automática:** nós compactos (20 px), arestas finas (WLAN tracejada, acesso à Internet mais grossa);
-  etiquetas totalmente visíveis apenas a partir de zoom ≥ 0,85 (abaixo, apenas hubs: router/switch/gateway/internet);
-  acima de 25 dispositivos os grupos de sub-rede ativam-se automaticamente; «Apenas online» está ativo por defeito
-  (comutável).
-- Nós virtuais: **🌐 Internet** (com IP WAN do TR-064, senão «?»), **🏠 Gateway** (se o gateway
-  não estiver na lista) e **📶 wlan:…** para dispositivos WLAN sem nó próprio.
-- Emoji de categoria nos nós: 🏠 Router · 🔀 Switch · 🖥 Servidor/NAS · 💻 Cliente · 🖨 Impressora ·
-  💡 Casa inteligente/IoT · ❓ Desconhecido.
+- **Nós (desde a v1.6.1):** círculo neutro com símbolo de categoria (símbolos Lucide, ver `THIRD_PARTY.md`)
+  em vez de cores e emoji. Router, switch, repetidor/AP, servidor/NAS e Internet têm 40 px, os dispositivos
+  finais 34 px. Nos clientes o mapa distingue portátil, tablet e consola pelo nome e pelo motivo de deteção.
+- **Etiqueta em duas linhas:** linha 1 o nome (abreviado com «…» a partir de 20 caracteres; o nome completo
+  aparece como dica ao passar o rato), linha 2 `IP · categoria`, com `(+N)` para filhos recolhidos e
+  `· offline` para dispositivos offline. O nó Internet mostra `Internet` e `WAN <IP>` («?» sem TR-064).
+  As duas linhas têm a mesma cor porque a biblioteca Cytoscape não suporta uma cor por linha.
+- **Gateway como raiz:** só o dispositivo com o IP do gateway (TR-064 ou encaminhamento) recebe um anel
+  forte na cor de destaque com anel exterior tracejado. Repetidores/AP têm uma borda clara.
+- **Offline:** corpo e símbolo esbatidos, borda tracejada; a etiqueta continua legível e indica «offline»,
+  logo a informação não depende da cor.
+- **Arestas:** linhas retas, LAN contínua, WLAN tracejada, PLC pontilhada. As ligações entre locais
+  diferentes são mais ténues. O acesso à Internet é um pouco mais forte.
+- **Legenda:** em baixo à esquerda, recolhível (estado guardado no navegador, recolhida por omissão). Mostra
+  todos os símbolos com a categoria, o anel do gateway, offline e os tipos de linha.
+- **Limpeza automática:** etiquetas completas a partir de zoom ≥ 0,85 (abaixo só os hubs:
+  router/switch/gateway/Internet), texto muito pequeno não é desenhado; acima de 25 dispositivos os grupos
+  de sub-rede ativam-se sozinhos; «Só online» está ativo por omissão.
+- Nós virtuais: **Internet** (com IP WAN), **Gateway** (se o gateway não estiver na lista) e **wlan:…** para
+  dispositivos WLAN sem nó próprio.
+- **Tabela e impressão:** a célula de categoria mostra o mesmo símbolo do mapa mais o texto. Os filtros e a
+  seleção de categoria são listas nativas e mostram só texto.
 
 ---
 
@@ -362,6 +381,12 @@ O separador **Registo** + `docker compose logs netmap-scanner` mostram cada pass
 - aria-labels em botões só de ícone, região live para mensagens de estado.
 - O objetivo é a conformidade total com BITV 2.1 — feedback bem-vindo (issue no repo).
 - **Reduzir movimento (desde a v1.5.2):** se «reduzir movimento» estiver ativo no sistema (`prefers-reduced-motion`), o fox_netmap não mostra animações nem transições; um scan em curso aparece como um ponto fixo com texto. Caso contrário o ponto pulsa só três vezes (menos de 5 segundos) e depois fica parado (WCAG 2.2.2, 2.3.3). O mapa é sempre construído sem animação.
+- **Mapa (desde a v1.6.1):** as categorias reconhecem-se por símbolo e texto, não só pela cor (WCAG 1.4.1).
+  Contrastes verificados nos dois temas: etiquetas pelo menos 4,5:1 (também offline), bordas e símbolos pelo
+  menos 3:1 contra o fundo (WCAG 1.4.3, 1.4.11). A legenda é um elemento nativo `<details>` utilizável por
+  teclado; os seus símbolos e os da tabela são decorativos (`alt=""`) porque o texto da categoria está ao
+  lado. Os nomes abreviados leem-se por inteiro na dica, na tabela e no painel de detalhes. As transições
+  (150 ms) são omitidas com «reduzir movimento».
 - O estado do scan só é anunciado aos leitores de ecrã quando muda de facto.
 
 ---

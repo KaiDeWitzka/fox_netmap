@@ -1,6 +1,6 @@
 # fox_netmap — Benutzerhandbuch
 
-Version 1.3.x · Stand: November 2026
+Version 1.6.1 · Stand: November 2026
 
 > Sprachen / Languages : [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -8,8 +8,9 @@ fox_netmap ist eine interaktive, durchsuchbare Netzwerkkarte für das Heimnetz: 
 über mehrere Subnetze/VLANs, mit Topologie („Verbunden mit“), offenen Ports, Verlauf, Alarmen und
 Exporten (JSON/CSV/PDF-Druck). Daten liegen persistent in SQLite, Scans laufen zyklisch oder manuell.
 
-> Die Abbildungen in diesem Handbuch (`docs/screenshots/*.svg`) sind schematische Darstellungen der
-> echten Oberfläche (Dark Theme) — Aufbau und Elemente entsprechen der App 1:1.
+> Die Kartenbilder `docs/screenshots/01-karte-hell.png` und `01-karte-dunkel.png` sind echte Aufnahmen
+> von v1.6.1 mit Testdaten. Die übrigen Abbildungen (`*.svg`) sind schematische Darstellungen der
+> Oberfläche (Dark Theme); Aufbau und Elemente entsprechen der App.
 
 **Inhaltsverzeichnis**
 
@@ -66,7 +67,11 @@ docker compose up -d --build
 
 ## 2. Die Oberfläche
 
-![Karte mit Subnetz-Gruppen und Detail-Panel](screenshots/01-karte.svg)
+![Karte v1.6.1, helles Theme: Subnetz-Gruppen Zuhause und Remote, Gateway mit Ring, offene Legende](screenshots/01-karte-hell.png)
+
+![Karte v1.6.1, dunkles Theme: Baum mit Repeater, Switch und Endgeräten, Legende eingeklappt](screenshots/01-karte-dunkel.png)
+
+Schematische Übersicht mit Detail-Panel: [01-karte.svg](screenshots/01-karte.svg)
 
 Der Header enthält (v. l. n. r.): Logo/Version, Navigation **Karte / Tabelle / Log**, Suche,
 Filter (Kategorie, Status, Standort), **Nur online**, Layout-Auswahl, Exporte (JSON/CSV),
@@ -94,13 +99,28 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   Raster darunter; Geräte ohne Zuordnung stehen unter dem Baum. Sind für alle Geräte Positionen gespeichert
   (Ziehen), nutzt `auto` diese. Weitere Layouts: `tree` (immer Baum), `force` (Physik), `concentric`,
   `circle`, `grid`. **Reset** setzt gespeicherte Positionen zurück.
-- **Automatisch aufgeräumt:** kompakte Knoten (20 px), dünne Kanten (WLAN gestrichelt, Internet-Anbindung
-  kräftiger); Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs: Router/Switch/Gateway/Internet);
-  ab > 25 Geräten werden Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist default aktiv (umschaltbar).
-- Virtuelle Knoten: **🌐 Internet** (mit WAN-IP aus TR-064, sonst „?“), **🏠 Gateway** (falls das
-  Gateway selbst nicht in der Geräteliste ist) und **📶 wlan:…** für WLAN-Geräte ohne eigenen Knoten.
-- Kategorie-Emoji auf den Knoten: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Drucker ·
-  💡 Smart-Home/IoT · ❓ Unbekannt.
+- **Knoten (seit v1.6.1):** neutraler Kreis mit Kategorie-Symbol (Lucide-Symbole, siehe `THIRD_PARTY.md`)
+  statt Farbe und Emoji. Router, Switch, Repeater/AP, Server/NAS und Internet sind 40 px groß, Endgeräte 34 px.
+  Für Clients unterscheidet die Karte anhand von Name und Erkennungsgrund Laptop, Tablet und Spielkonsole.
+- **Beschriftung zweizeilig:** Zeile 1 der Name (ab 20 Zeichen mit „…“ gekürzt, der volle Name erscheint
+  als Tooltip beim Überfahren), Zeile 2 `IP · Kategorie`, bei eingeklappten Kindern `(+N)`, bei
+  offline-Geräten `· offline`. Der Internet-Knoten zeigt `Internet` und `WAN <IP>` (ohne TR-064 „?“).
+  Beide Zeilen haben dieselbe Farbe, weil die Kartenbibliothek Cytoscape keine Farbe pro Zeile kennt.
+- **Gateway als Wurzel:** Nur das Gerät mit der Gateway-IP (aus TR-064 oder Routing) bekommt einen
+  kräftigen Ring in Akzentfarbe mit gestricheltem Außenring. Repeater/AP haben einen hellen Rand.
+- **Offline:** Körper und Symbol abgeblendet, Rand gestrichelt; die Beschriftung bleibt lesbar und nennt
+  „offline“, die Information hängt also nicht an der Farbe.
+- **Kanten:** gerade Linien, LAN durchgezogen, WLAN gestrichelt, Powerline gepunktet. Verbindungen
+  zwischen verschiedenen Standorten sind blasser. Die Internet-Anbindung ist etwas kräftiger.
+- **Legende:** unten links, einklappbar (Zustand wird im Browser gespeichert, standardmäßig eingeklappt).
+  Sie zeigt alle Symbole mit Kategorienamen sowie Gateway-Ring, offline und die Linienarten.
+- **Automatisch aufgeräumt:** Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs:
+  Router/Switch/Gateway/Internet), sehr kleine Schrift wird gar nicht gezeichnet; ab > 25 Geräten werden
+  Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar).
+- Virtuelle Knoten: **Internet** (mit WAN-IP), **Gateway** (falls das Gateway selbst nicht in der
+  Geräteliste ist) und **wlan:…** für WLAN-Geräte ohne eigenen Knoten.
+- **Tabelle und Druck:** Die Kategoriezelle zeigt dasselbe Symbol wie die Karte plus Text. Die Filter und
+  das Kategorie-Auswahlfeld sind native Auswahllisten und zeigen nur Text.
 
 ---
 
@@ -365,6 +385,12 @@ Log-Seite (Tab **Log**) + `docker compose logs netmap-scanner` zeigen jeden Scan
 - aria-labels auf icon-only-Buttons, Live-Region für Statusmeldungen.
 - Restliche BITV-2.1-Konformität ist Ziel, Feedback willkommen (Issue im Repo).
 - **Bewegung reduzieren (seit v1.5.2):** Ist im Betriebssystem „Bewegung reduzieren“ aktiv (`prefers-reduced-motion`), zeigt fox_netmap keine Animationen und Übergänge; der laufende Scan ist dann als ruhiger Punkt plus Text erkennbar. Ohne diese Einstellung pulsiert der Punkt nur dreimal (unter 5 Sekunden) und bleibt dann stehen (WCAG 2.2.2, 2.3.3). Die Karte wird grundsätzlich ohne Animation aufgebaut.
+- **Karte (seit v1.6.1):** Kategorien sind als Symbol plus Text erkennbar, nicht nur über Farbe (WCAG 1.4.1).
+  Geprüfte Kontraste beider Themes: Beschriftung mindestens 4,5:1 (auch offline), Knotenränder und
+  Symbole mindestens 3:1 gegen den Hintergrund (WCAG 1.4.3, 1.4.11). Die Legende ist ein natives
+  `<details>`-Element und per Tastatur bedienbar; Symbole darin und in der Tabelle sind dekorativ
+  (`alt=""`), weil der Kategorietext daneben steht. Gekürzte Namen sind als Tooltip, in der Tabelle und
+  im Detail-Panel vollständig lesbar. Übergänge (150 ms) entfallen bei „Bewegung reduzieren“.
 - Der Scan-Status wird Screenreadern nur bei echten Änderungen angesagt, nicht bei jeder Abfrage.
 
 ---

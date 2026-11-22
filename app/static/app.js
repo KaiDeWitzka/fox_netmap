@@ -3,36 +3,33 @@
 const EMBED = location.pathname.startsWith("/embed");
 const TOKEN = new URLSearchParams(location.search).get("token") || "";
 
-const CATEGORY_COLORS = {
-  Router: "#f97316",
-  Switch: "#38bdf8",
-  "Server/NAS": "#a78bfa",
-  Client: "#34d399",
-  Drucker: "#f472b6",
-  "Smart-Home/IoT": "#facc15",
-  "Repeater/AP": "#fdba74",
-  "Mobilgerät": "#2dd4bf",
-  Multimedia: "#f87171",
-  Unbekannt: "#9ca3af",
-  WLAN: "#e879f9",
-  Internet: "#94a3b8",
-  Gateway: "#38bdf8",
+// Kartenstil (seit v1.6.1): neutrale Knoten, Kategorie über Symbol und Text, nicht über Farbe (WCAG 1.4.1).
+// Kontrast gegen den Hintergrund: Text >= 4,5:1, Ränder/Symbole >= 3:1 (WCAG 1.4.3, 1.4.11). Geprüft in tests/ui_dom_check.mjs.
+const MAP_PALETTES = {
+  dark: {
+    bg: "#0f172a", body: "#1e293b", border: "#64748b", root: "#38bdf8", repeater: "#cbd5e1", icon: "#e2e8f0",
+    text: "#e2e8f0", textOff: "#cbd5e1", edge: "#64748b", hl: "#facc15", sel: "#ffffff", frame: "#38bdf8", frameText: "#94a3b8",
+  },
+  light: {
+    bg: "#f8fafc", body: "#ffffff", border: "#64748b", root: "#0284c7", repeater: "#334155", icon: "#334155",
+    text: "#0f172a", textOff: "#334155", edge: "#64748b", hl: "#b45309", sel: "#0f172a", frame: "#0284c7", frameText: "#475569",
+  },
 };
 
-const CATEGORY_ICONS = {
-  Router: "📡",
-  Switch: "🔀",
-  "Server/NAS": "🖥️",
-  Client: "💻",
-  Drucker: "🖨️",
-  "Smart-Home/IoT": "💡",
-  "Repeater/AP": "📶",
-  "Mobilgerät": "📱",
-  Multimedia: "📺",
-  Unbekannt: "❓",
-  WLAN: "📶",
-  Internet: "🌐",
-};
+function mapPalette(theme) {
+  const th = theme || document.documentElement.dataset.theme || "dark";
+  return MAP_PALETTES[th] || MAP_PALETTES.dark;
+}
+
+// Netzknoten werden größer gezeichnet, damit die Hierarchie in der Übersicht erkennbar ist.
+const HUB_SIZE = 40;
+const NODE_SIZE = 34;
+const NAME_MAX = 20;
+
+function shortName(v) {
+  const s = String(v || "");
+  return s.length > NAME_MAX ? s.slice(0, NAME_MAX - 1) + "…" : s;
+}
 
 let META = { gateway: "", wan_ip: "", wan_status: "" };
 let SITES = [];
@@ -172,7 +169,7 @@ function applyLayout() {
 
 let lastElements = [];
 
-const TREE = { col: 130, level: 130, row: 78 };
+const TREE = { col: 170, level: 140, row: 92 };
 
 // Ordnet die Knoten als Baum an. Endgeraete (Knoten ohne Kinder) eines Knotens werden kompakt in einem
 // Raster darunter gesetzt, damit 40 Geraete an der FRITZ!Box keine endlose Zeile ergeben. Knoten ohne
@@ -285,6 +282,10 @@ function applyTheme(theme) {
   const t = theme || localStorage.getItem("fox_theme") || document.documentElement.dataset.theme || "dark";
   document.documentElement.dataset.theme = t;
   localStorage.setItem("fox_theme", t);
+  // Karte, Legende und Tabellensymbole folgen dem Theme
+  if (typeof cy !== "undefined" && cy) cy.style(mapStyle());
+  if (typeof renderLegend === "function") renderLegend();
+  if (typeof devices !== "undefined" && devices.length && typeof renderTable === "function") renderTable();
 }
 
 function currentFilters() {
@@ -338,8 +339,9 @@ function fillCategoryOptions() {
 
 async function loadCategories() {
   const r = await api("/api/categories");
-  categories = r.ok ? await r.json() : Object.keys(CATEGORY_COLORS);
+  categories = r.ok ? await r.json() : Object.keys(CATEGORY_ICON_KEYS).filter((c) => !["Internet", "Gateway", "WLAN"].includes(c));
   fillCategoryOptions();
+  renderLegend();
 }
 
 function shouldAutoGroup(n) {
@@ -456,11 +458,10 @@ function buildElements() {
       addNode({
         data: {
           id: "subnet:" + sn,
-          label: (siteName ? siteName + " · " : "") + sn + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
+          label: sn + (siteName ? " · " + siteName : "") + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
           subnet: true,
           virtual: true,
           status: "online",
-          color: CATEGORY_COLORS.Gateway,
         },
       });
     }
@@ -476,17 +477,23 @@ function buildElements() {
       y = Math.sin(a) * R;
     }
     const kids = childCount(d.mac);
-    const label =
-      (CATEGORY_ICONS[d.category] || "❓") + " " + (d.hostname || d.ip || d.mac) + (collapsed.has(d.mac) && kids ? ` (+${kids})` : "");
+    const fullName = d.hostname || d.ip || d.mac;
+    // Zwei Zeilen wie im Soll-Entwurf: Name, darunter "IP · Kategorie" (+N eingeklappt, offline als Text)
+    const second = [d.ip && d.ip !== fullName ? d.ip : "", t("cat." + d.category)].filter(Boolean).join(" · ") +
+      (collapsed.has(d.mac) && kids ? ` (+${kids})` : "") + (d.status === "offline" ? " · " + t("map.offline") : "");
+    const hub = isNetCategory(d.category);
     const nd = {
       data: {
         id: d.mac,
-        label,
+        label: shortName(fullName) + "\n" + second,
+        fullName,
         category: d.category,
         status: d.status,
-        color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
+        icon: iconKeyFor(d.category, d.category_reason, d.hostname),
+        size: hub ? HUB_SIZE : NODE_SIZE,
+        root: !!META.gateway && d.ip === META.gateway,
         ports: d.port_count || 0,
-        hub: isNetCategory(d.category),
+        hub,
         name: (d.hostname || d.ip || d.mac).toLowerCase(),
         subnetKey: d.subnet || "",
       },
@@ -500,10 +507,12 @@ function buildElements() {
     addNode({
       data: {
         id: "internet",
-        label: t("internet.node") + (META.wan_ip ? "  " + META.wan_ip : ""),
+        label: t("internet.node") + (META.wan_ip ? "\nWAN " + META.wan_ip : ""),
+        fullName: t("internet.node"),
         category: "Internet",
         status: "online",
-        color: CATEGORY_COLORS.Internet,
+        icon: "globe",
+        size: NODE_SIZE,
         virtual: true,
         hub: true,
       },
@@ -517,12 +526,17 @@ function buildElements() {
     if (!p || p === d.mac) continue;
     // Kanten zeigen vom Vorgaenger zum Geraet (Eltern -> Kind), damit das Baum-Layout oben beginnt.
     // Auch bei Subnetz-Gruppierung bleiben die Kanten zwischen Geraeten erhalten; der Rahmen ist nur Hintergrund.
-    edges.push({ data: { id: "e:" + p + ">" + d.mac, source: p, target: d.mac, conn: d.connection || "" } });
+    const pd = devices.find((x) => x.mac === p);
+    const siteA = pd && pd.subnet ? SITE_MAP[pd.subnet] || pd.subnet : "";
+    const siteB = d.subnet ? SITE_MAP[d.subnet] || d.subnet : "";
+    // Kanten zwischen Standorten (z. B. VPN) schwächer zeichnen
+    const cross = !!(siteA && siteB && siteA !== siteB);
+    edges.push({ data: { id: "e:" + p + ">" + d.mac, source: p, target: d.mac, conn: d.connection || "", cross } });
   }
 
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
-    addNode({ data: { id: w, label: t("wlan.node"), category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true, hub: true } });
+    addNode({ data: { id: w, label: t("wlan.node"), fullName: t("wlan.node"), category: "WLAN", status: "online", icon: "wifi", size: NODE_SIZE, virtual: true, hub: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
     edges.push({ data: { id: "e:" + w, source: gw ? gw.mac : w.slice(5), target: w, conn: "wlan" } });
   }
@@ -538,9 +552,12 @@ function buildElements() {
         data: {
           id: end,
           label: t("gw.node", { ip: end }),
+          fullName: t("gw.node", { ip: end }),
           category: "Gateway",
           status: "online",
-          color: CATEGORY_COLORS.Gateway,
+          icon: "router",
+          size: HUB_SIZE,
+          root: end === META.gateway,
           virtual: true,
           hub: true,
         },
@@ -575,26 +592,89 @@ function updateZoomLabels() {
   cy.style().selector("node").style("label", label).update();
 }
 
+// Bewegung nur, wenn erwünscht (prefers-reduced-motion), und nur für Zustandswechsel, nicht beim Aufbau.
+function motionMs() {
+  const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return reduce ? "0ms" : "150ms";
+}
+
+function mapStyle(theme) {
+  const P = mapPalette(theme);
+  const tr = { "transition-property": "border-width, border-color, opacity, line-color, width", "transition-duration": motionMs(), "transition-timing-function": "ease-out" };
+  return [
+    {
+      selector: "node",
+      style: {
+        label: "data(label)", "font-size": 11, "line-height": 1.35, "text-wrap": "wrap", "text-max-width": "160px",
+        "text-valign": "bottom", "text-halign": "center", "text-margin-y": 5, color: P.text,
+        "text-outline-color": P.bg, "text-outline-width": 2, "min-zoomed-font-size": 6,
+        width: "data(size)", height: "data(size)", shape: "ellipse",
+        "background-color": P.body, "border-width": 1.5, "border-color": P.border,
+        "background-image": (ele) => iconUri(ele.data("icon") || "unknown", P.icon),
+        "background-width": "55%", "background-height": "55%", "background-clip": "none", "background-image-containment": "inside",
+        ...tr,
+      },
+    },
+    {
+      selector: "node[subnet]",
+      style: {
+        "background-color": P.frame, "background-opacity": 0.06, "background-image": "none", "border-width": 1.5, "border-style": "dashed",
+        "border-color": P.frame, "border-opacity": 0.55, shape: "round-rectangle", label: "data(label)", "text-valign": "top",
+        "text-margin-y": -8, "font-size": 12, "font-weight": 600, color: P.frameText, "text-outline-width": 0, padding: 22,
+      },
+    },
+    { selector: "node[?root]", style: { "border-width": 3, "border-color": P.root, "outline-width": 1.5, "outline-style": "dashed", "outline-color": P.root, "outline-opacity": 0.8, "outline-offset": 4 } },
+    { selector: "node[category='Repeater/AP']", style: { "border-color": P.repeater } },
+    // Offline: nur der Körper wird abgeblendet und gestrichelt, die Beschriftung bleibt lesbar (>= 4,5:1) und nennt "offline"
+    { selector: "node[status='offline']", style: { "background-opacity": 0.45, "background-image-opacity": 0.6, "border-style": "dashed", color: P.textOff } },
+    { selector: "node:selected", style: { "border-width": 3, "border-color": P.sel } },
+    { selector: "node.hl", style: { "border-width": 4, "border-color": P.hl } },
+    { selector: "node.spot", style: { "border-width": 5, "border-color": P.hl } },
+    { selector: "edge", style: { "line-color": P.edge, width: 1.5, opacity: 0.8, "curve-style": "straight", ...tr } },
+    { selector: "edge[conn='wlan']", style: { "line-style": "dashed", "line-dash-pattern": [5, 4] } },
+    { selector: "edge[conn='plc']", style: { "line-style": "dotted" } },
+    { selector: "edge[?cross]", style: { opacity: 0.35 } },
+    { selector: "edge[?wan]", style: { width: 2, opacity: 0.8 } },
+    { selector: "edge.hl", style: { "line-color": P.hl, width: 3, opacity: 1 } },
+    { selector: "edge.spot", style: { "line-color": P.hl, width: 3.5, opacity: 1 } },
+    { selector: ".dim", style: { opacity: 0.12 } },
+  ];
+}
+
+// Legende (unten links, einklappbar): Symbole mit Kategorienamen und Linienarten als Textalternative zur Karte
+function renderLegend() {
+  const box = document.getElementById("legend-list");
+  if (!box) return;
+  const P = mapPalette();
+  const cats = [...new Set([...(categories && categories.length ? categories : Object.keys(CATEGORY_ICON_KEYS)), "Internet"])]
+    .filter((c) => CATEGORY_ICON_KEYS[c]);
+  const line = (dash) => `<svg width="28" height="10" aria-hidden="true" focusable="false"><line x1="1" y1="5" x2="27" y2="5" stroke="${P.edge}" stroke-width="2"${dash ? ` stroke-dasharray="${dash}"` : ""} stroke-linecap="round"/></svg>`;
+  const ring = `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle cx="14" cy="14" r="8" fill="${P.body}" stroke="${P.root}" stroke-width="3"/><circle cx="14" cy="14" r="12" fill="none" stroke="${P.root}" stroke-width="1.5" stroke-dasharray="3 2"/></svg>`;
+  const off = `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><circle cx="14" cy="14" r="10" fill="${P.body}" fill-opacity="0.45" stroke="${P.border}" stroke-width="1.5" stroke-dasharray="3 2"/></svg>`;
+  box.innerHTML =
+    cats.map((c) => `<li><img src="${iconUri(CATEGORY_ICON_KEYS[c], P.icon)}" alt="" width="18" height="18"><span>${esc(c === "Internet" ? t("internet.node") : t("cat." + c))}</span></li>`).join("") +
+    `<li>${ring}<span>${esc(t("legend.gateway"))}</span></li>` +
+    `<li>${off}<span>${esc(t("legend.offline"))}</span></li>` +
+    `<li>${line("")}<span>LAN</span></li>` +
+    `<li>${line("5 4")}<span>WLAN</span></li>` +
+    `<li>${line("1 4")}<span>${esc(t("legend.plc"))}</span></li>` +
+    `<li>${line("").replace('stroke-width="2"', 'stroke-width="2" stroke-opacity="0.35"')}<span>${esc(t("legend.cross"))}</span></li>`;
+}
+
+function bindLegend() {
+  const det = document.getElementById("map-legend");
+  if (!det) return;
+  det.open = localStorage.getItem("fox_legend") === "1";
+  det.addEventListener("toggle", () => localStorage.setItem("fox_legend", det.open ? "1" : "0"));
+}
+
 function renderMap() {
   const container = document.getElementById("map");
   spotlightNode = null;
   if (!cy) {
     cy = cytoscape({
       container,
-      style: [
-        { selector: "node", style: { label: "data(label)", "font-size": 9, "text-valign": "bottom", "text-margin-y": 4, width: 20, height: 20, "background-color": "data(color)", color: "#e2e8f0", "text-background-color": "#0f172a", "text-background-opacity": 0.7, "text-background-padding": 2 } },
-        { selector: "node[subnet]", style: { "background-color": "#38bdf8", "background-opacity": 0.07, "border-width": 1.5, "border-color": "#38bdf8", "border-opacity": 0.55, label: "data(label)", "text-valign": "top", "text-margin-y": -8, "font-size": 12, "font-weight": 600, color: "#94a3b8", padding: 22 } },
-        { selector: "node[status='offline']", style: { opacity: 0.4 } },
-        { selector: "node:selected", style: { "border-width": 3, "border-color": "#fff" } },
-        { selector: "node.hl", style: { "border-width": 4, "border-color": "#facc15" } },
-        { selector: "node.spot", style: { "border-width": 5, "border-color": "#facc15" } },
-        { selector: "edge", style: { "line-color": "#64748b", width: 1, opacity: 0.45, "curve-style": "bezier" } },
-        { selector: "edge[conn='wlan']", style: { "line-style": "dashed", "line-dash-pattern": [4, 3] } },
-        { selector: "edge[?wan]", style: { width: 2, opacity: 0.7 } },
-        { selector: "edge.hl", style: { "line-color": "#facc15", width: 3 } },
-        { selector: "edge.spot", style: { "line-color": "#facc15", width: 3.5 } },
-        { selector: ".dim", style: { opacity: 0.12 } },
-      ],
+      style: mapStyle(),
       wheelSensitivity: 0.2,
     });
     cy.on("tap", "node", (e) => {
@@ -614,6 +694,9 @@ function renderMap() {
       api("/api/device/" + e.target.data("id"), { method: "PATCH", body: JSON.stringify({ x: p.x, y: p.y }) });
     });
     cy.on("zoom", updateZoomLabels);
+    // Voller Name als Tooltip (Beschriftung wird ab 20 Zeichen gekürzt)
+    cy.on("mouseover", "node", (e) => { container.title = e.target.data("fullName") || ""; });
+    cy.on("mouseout", "node", () => { container.title = ""; });
     updateZoomLabels();
   }
   cy.elements().remove();
@@ -890,7 +973,20 @@ function buildCell(d, key) {
     const m = d.mac || "";
     td.textContent = m.startsWith("ip:") ? "–" : m;
     td.title = m.startsWith("ip:") ? `nur IP bekannt (${m.slice(3)})` : m;
-  } else if (key === "category" && !EMBED) {
+  } else if (key === "category") {
+    // Gleiches Symbol wie in Karte und Legende; der Kategoriename steht daneben als Text
+    const img = document.createElement("img");
+    img.className = "cat-icon";
+    img.alt = "";
+    img.width = 16;
+    img.height = 16;
+    img.src = iconUri(iconKeyFor(d.category, d.category_reason, d.hostname), mapPalette().icon);
+    td.appendChild(img);
+    if (EMBED) {
+      td.appendChild(document.createTextNode(t("cat." + d.category)));
+      td.title = t("cat." + d.category);
+      return td;
+    }
     const sel = document.createElement("select");
     for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = t("cat." + c); if (c === d.category) o.selected = true; sel.appendChild(o); }
     sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
@@ -1379,6 +1475,8 @@ async function setLang(l) {
   applyI18n();
   renderTable();
   fillCategoryOptions();
+  renderLegend();
+  if (cy) renderMap();
   if (!EMBED) await api("/api/settings", { method: "PATCH", body: JSON.stringify({ lang: l }) });
 }
 
@@ -1419,6 +1517,7 @@ async function init() {
   bindScan();
   bindTableDrag();
   bindBulk();
+  bindLegend();
   bindLog();
   bindLayout();
   bindGroups();

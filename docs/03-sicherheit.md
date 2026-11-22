@@ -1,6 +1,6 @@
 # fox_netmap – Sicherheitskonzept
 
-Stand: v1.5.0. Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
+Stand: v1.6.1. Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
 BSI IT-Grundschutz und die bekannten Restrisiken. Es wird mit jedem sicherheitsrelevanten
 Release fortgeschrieben.
 
@@ -194,6 +194,18 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   (`PATCH /api/device/{mac}`), die vorher beliebige Werte annahm.
 - Jede Mehrfach-Zuordnung wird mit Anzahl und Ziel protokolliert (OPS.1.1.5).
 
+### 2.17 Kartensymbole ohne fremde Quellen (seit v1.6.1)
+
+- Die Knotensymbole stammen aus Lucide (ISC-Lizenz) und liegen als feste SVG-Pfade in `app/static/icons.js`.
+  Es gibt keinen Abruf von CDN, Schrift- oder Symboldienst; die Oberfläche bleibt ohne Internet vollständig.
+- Die Symbole werden im Browser als `data:image/svg+xml`-URI erzeugt. Die bestehende CSP erlaubt das bereits
+  (`img-src 'self' data: blob:`), sie wurde nicht erweitert. In die URI fließen nur feste Pfade und die
+  Farbe aus der eigenen Palette, keine Gerätedaten; ein Einschleusen über Hostnamen ist damit ausgeschlossen.
+- Data-URIs gelten als gleiche Herkunft, die Zeichenfläche bleibt sauber: Der Karten-Snapshot für den
+  PDF-Export (`cy.png()`) funktioniert weiter (geprüft).
+- Der volle Gerätename als Tooltip wird über die Eigenschaft `title` gesetzt, nicht als HTML.
+- Lizenzhinweise der Fremdkomponenten: [THIRD_PARTY.md](../THIRD_PARTY.md) (CON.8.A6, APP.6).
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |
@@ -209,7 +221,7 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 | CON.8 Software-Entwicklung (A6 Bibliotheken aus vertrauenswürdigen Quellen, A20 Prüfung von Komponenten) | Hash-gepinnte Abhängigkeiten, Trivy-Gate, SBOM |
 | OPS.1.1.3 Patch- und Änderungsmanagement | Dependabot, wöchentlicher Nachscan, Patch-Releases |
 | SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung | Basis-Image per Digest, eigenes Image in GHCR mit Provenance |
-| APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release |
+| APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release, Lizenzhinweise in `THIRD_PARTY.md` |
 | CON.2 Datenschutz, CON.6 Löschen | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Löschfristen für Geräte, Verlauf und Ereignisse |
 | APP.3.1.A14 / CON.8 Schutz gespeicherter Zugangsdaten | Embed-Tokens nur als Hash, Gotify-Token im Header |
 | OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |

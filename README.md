@@ -1,6 +1,8 @@
 # fox_netmap
 Scan and visualize a network as a map
 
+![Karte v1.6.1: Subnetz-Gruppen Zuhause und Remote, Knoten mit Kategorie-Symbolen, Gateway mit Ring, Legende](docs/screenshots/01-karte-hell.png)
+
 - [Anforderungen & Zielarchitektur](docs/01-anforderungen.md)
 
 ## Lizenz
@@ -14,7 +16,8 @@ fox_netmap darf frei genutzt, verändert und weitergegeben werden (auch kommerzi
 - [Benutzerhandbuch](docs/02-benutzerhandbuch.md) — in 6 Sprachen: [de](docs/02-benutzerhandbuch.md) · [en](docs/02-benutzerhandbuch.en.md) · [fr](docs/02-benutzerhandbuch.fr.md) · [es](docs/02-benutzerhandbuch.es.md) · [it](docs/02-benutzerhandbuch.it.md) · [pt](docs/02-benutzerhandbuch.pt.md) (Schnellstart, Bedienung, Screenshots, Settings, Embed, Exporte, Troubleshooting, API)
 - [Anforderungen & Architektur](docs/01-anforderungen.md)
 - [Sicherheitskonzept](docs/03-sicherheit.md) · [Sicherheitslücke melden](SECURITY.md) · [Changelog](CHANGELOG.md)
-- [Plan Knotendesign v1.6.1](docs/plaene/v1.6.1-knotendesign.md) — Kartenknoten nach Soll-Entwurf, mit Entscheidungen und Kontrastwerten
+- [Plan Knotendesign v1.6.1](docs/plaene/v1.6.1-knotendesign.md) — Kartenknoten nach Soll-Entwurf, mit Entscheidungen, Kontrastwerten und Umsetzungsstand
+- [Fremdkomponenten und Lizenzen](THIRD_PARTY.md) — Cytoscape.js, Lucide-Symbole, OUI-Liste
 - [Datenschutzhinweis](docs/04-datenschutz.md) — welche Daten erhoben, gespeichert und nach außen gesendet werden, Löschfristen, datensparsame Konfiguration
 
 ## Quickstart (standalone Docker)
@@ -42,7 +45,7 @@ OUI-Datenbank aktualisieren: `python scripts/update_oui.py ./data` (lädt die IE
 
 ## Releases
 
-- Version steht in `app/__init__.py` (`__version__`), `pyproject.toml` und `app/config.py` (`app_version`). Aktuell: **v1.5.2**
+- Version steht in `app/__init__.py` (`__version__`), `pyproject.toml` und `app/config.py` (`app_version`). Aktuell: **v1.6.1**
 - SemVer ab v1.0.0: Releases tragen Tags im Format `vMAJOR.MINOR.PATCH` (z. B. `v1.0.0`, `v1.1.0`, `v2.0.0`) auf `main`
 - Tag pushen (`git tag v1.1.0 && git push origin v1.1.0`) → Workflow `release.yml` testet (ruff + pytest + UI-DOM), baut das Multi-Arch-Image (amd64/arm64), prüft es mit Trivy, veröffentlicht es in der GitHub Container Registry und erstellt ein GitHub-Release mit SBOM (CycloneDX, SPDX) und Trivy-Bericht
 - Tag muss zu `app.__version__` passen, sonst bricht der Release ab

@@ -1,6 +1,6 @@
 # fox_netmap — Manuel utilisateur
 
-Version 1.3.x · novembre 2026
+Version 1.6.1 · novembre 2026
 
 > Langues : [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -9,8 +9,9 @@ jusqu'à ~200 appareils sur plusieurs sous-réseaux/VLAN, avec la topologie (« 
 les ports ouverts, l'historique, des alarmes et des exports (JSON/CSV/impression PDF).
 Les données sont persistantes en SQLite ; les scans sont cycliques ou manuels.
 
-> Les images de ce manuel (`docs/screenshots/*.svg`) sont des illustrations schématiques de
-> l'interface réelle (thème sombre) — la structure et les éléments correspondent 1:1 à l'application.
+> Les images de carte `docs/screenshots/01-karte-hell.png` et `01-karte-dunkel.png` sont de vraies captures
+> de la v1.6.1 avec des données de test. Les autres images (`*.svg`) sont des illustrations schématiques de
+> l'interface (thème sombre) ; la structure et les éléments correspondent à l'application.
 
 **Sommaire**
 
@@ -66,7 +67,11 @@ docker compose up -d --build
 
 ## 2. L'interface
 
-![Carte avec groupes de sous-réseaux et panneau de détails](screenshots/01-karte.svg)
+![Carte v1.6.1, thème clair : groupes de sous-réseaux Maison et Distant, passerelle avec anneau, légende ouverte](screenshots/01-karte-hell.png)
+
+![Carte v1.6.1, thème sombre : arbre avec répéteur, switch et terminaux, légende repliée](screenshots/01-karte-dunkel.png)
+
+Vue schématique avec panneau de détails : [01-karte.svg](screenshots/01-karte.svg)
 
 L'en-tête contient (de gauche à droite) : logo/version, navigation **Carte / Tableau / Journal**,
 recherche, filtres (catégorie, état, site), **En ligne uniquement**, choix de la disposition,
@@ -94,14 +99,29 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
   grille compacte en dessous ; les appareils sans parent sont sous l'arbre. Si des positions sont enregistrées
   pour tous les appareils (glisser), `auto` les utilise. Autres : `tree` (toujours arbre), `force` (physique),
   `concentric`, `circle`, `grid`. **Réinitialiser** efface les positions enregistrées.
-- **Allègement automatique :** nœuds compacts (20 px), arêtes fines (WLAN en pointillé, accès Internet plus
-  épais) ; étiquettes pleinement visibles à partir du zoom ≥ 0,85 (en dessous, seulement les concentrateurs :
-  routeur/switch/passerelle/internet) ; au-delà de 25 appareils, les groupes de sous-réseaux s'activent
-  automatiquement ; « En ligne uniquement » est actif par défaut (modifiable).
-- Nœuds virtuels : **🌐 Internet** (avec l'IP WAN via TR-064, sinon « ? »), **🏠 Passerelle**
-  (si la passerelle n'est pas dans la liste) et **📶 wlan:…** pour les appareils WLAN sans nœud propre.
-- Emoji de catégorie sur les nœuds : 🏠 Routeur · 🔀 Switch · 🖥 Serveur/NAS · 💻 Client · 🖨 Imprimante ·
-  💡 Domotique/IoT · ❓ Inconnu.
+- **Nœuds (depuis la v1.6.1) :** cercle neutre avec un symbole de catégorie (symboles Lucide, voir
+  `THIRD_PARTY.md`) au lieu de couleurs et d'emoji. Routeur, switch, répéteur/AP, serveur/NAS et Internet font
+  40 px, les terminaux 34 px. Pour les clients, la carte distingue portable, tablette et console de jeu
+  d'après le nom et le motif de détection.
+- **Libellé sur deux lignes :** ligne 1 le nom (abrégé par « … » à partir de 20 caractères, le nom complet
+  apparaît en infobulle au survol), ligne 2 `IP · catégorie`, avec `(+N)` pour les enfants repliés et
+  `· offline` pour les appareils hors ligne. Le nœud Internet affiche `Internet` et `WAN <IP>` (« ? » sans
+  TR-064). Les deux lignes ont la même couleur, car la bibliothèque Cytoscape ne gère pas une couleur par ligne.
+- **Passerelle comme racine :** seul l'appareil ayant l'IP de la passerelle (TR-064 ou routage) reçoit un
+  anneau marqué de couleur d'accent avec un anneau extérieur en pointillé. Les répéteurs/AP ont une bordure claire.
+- **Hors ligne :** corps et symbole atténués, bordure en pointillé ; le libellé reste lisible et indique
+  « offline », l'information ne dépend donc pas de la couleur.
+- **Arêtes :** lignes droites, LAN continu, WLAN en tirets, CPL en pointillé. Les liaisons entre sites
+  différents sont plus pâles. L'accès Internet est un peu plus marqué.
+- **Légende :** en bas à gauche, repliable (état enregistré dans le navigateur, repliée par défaut). Elle
+  montre tous les symboles avec le nom de catégorie, l'anneau de passerelle, hors ligne et les types de lignes.
+- **Allègement automatique :** libellés complets à partir d'un zoom ≥ 0,85 (en dessous seulement les hubs :
+  routeur/switch/passerelle/Internet), un texte très petit n'est pas dessiné ; les groupes de sous-réseaux
+  s'activent automatiquement au-delà de 25 appareils ; « En ligne uniquement » est actif par défaut.
+- Nœuds virtuels : **Internet** (avec IP WAN), **Passerelle** (si la passerelle n'est pas dans la liste) et
+  **wlan:…** pour les appareils WLAN sans nœud propre.
+- **Tableau et impression :** la cellule de catégorie montre le même symbole que la carte, plus le texte.
+  Les filtres et la liste de catégories sont des listes natives et n'affichent que du texte.
 
 ---
 
@@ -365,6 +385,12 @@ L'onglet **Journal** + `docker compose logs netmap-scanner` montrent chaque éta
 - aria-labels sur les boutons icônes, région live pour les messages d'état.
 - La conformité BITV 2.1 complète est l'objectif — retours bienvenus (issue dans le dépôt).
 - **Réduire les animations (depuis la v1.5.2) :** si « réduire les animations » est activé dans le système (`prefers-reduced-motion`), fox_netmap n'affiche ni animation ni transition ; un scan en cours est signalé par un point fixe et un texte. Sinon, le point ne pulse que trois fois (moins de 5 secondes) puis reste fixe (WCAG 2.2.2, 2.3.3). La carte est toujours construite sans animation.
+- **Carte (depuis la v1.6.1) :** les catégories sont reconnaissables par symbole et texte, pas seulement par
+  la couleur (WCAG 1.4.1). Contrastes vérifiés dans les deux thèmes : libellés au moins 4,5:1 (aussi hors
+  ligne), bordures et symboles au moins 3:1 contre le fond (WCAG 1.4.3, 1.4.11). La légende est un élément
+  natif `<details>` utilisable au clavier ; ses symboles et ceux du tableau sont décoratifs (`alt=""`), car le
+  texte de catégorie est à côté. Les noms abrégés restent lisibles en entier en infobulle, dans le tableau et
+  dans le panneau de détails. Les transitions (150 ms) sont supprimées avec « réduire les animations ».
 - L'état du scan n'est annoncé aux lecteurs d'écran que lorsqu'il change réellement.
 
 ---

@@ -1,6 +1,6 @@
 # fox_netmap — User Manual
 
-Version 1.3.x · November 2026
+Version 1.6.1 · November 2026
 
 > Languages: [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -8,8 +8,9 @@ fox_netmap is an interactive, searchable network map for your home network: up t
 across multiple subnets/VLANs, with topology ("connected to"), open ports, history, alarms and
 exports (JSON/CSV/PDF print). Data persists in SQLite; scans run cyclically or manually.
 
-> The images in this manual (`docs/screenshots/*.svg`) are schematic illustrations of the real UI
-> (dark theme) — layout and elements match the app 1:1.
+> The map images `docs/screenshots/01-karte-hell.png` and `01-karte-dunkel.png` are real captures of
+> v1.6.1 with test data. The other images (`*.svg`) are schematic illustrations of the UI (dark theme);
+> layout and elements match the app.
 
 **Contents**
 
@@ -65,7 +66,11 @@ docker compose up -d --build
 
 ## 2. The interface
 
-![Map with subnet groups and detail panel](screenshots/01-karte.svg)
+![Map v1.6.1, light theme: subnet groups Home and Remote, gateway with ring, legend open](screenshots/01-karte-hell.png)
+
+![Map v1.6.1, dark theme: tree with repeater, switch and end devices, legend collapsed](screenshots/01-karte-dunkel.png)
+
+Schematic overview with detail panel: [01-karte.svg](screenshots/01-karte.svg)
 
 The header contains (left to right): logo/version, navigation **Map / Table / Log**, search,
 filters (category, status, site), **Only online**, layout selector, exports (JSON/CSV),
@@ -91,13 +96,28 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
   it; devices without a parent sit below the tree. If positions are saved for all devices (dragging), `auto`
   uses them. Other layouts: `tree` (always tree), `force` (physics), `concentric`, `circle`, `grid`.
   **Reset** clears saved positions.
-- **Auto declutter:** compact nodes (20 px), thin edges (WLAN dashed, internet uplink stronger); labels fully
-  visible only from zoom ≥ 0.85 (below that only hubs: router/switch/gateway/internet); above 25 devices subnet
-  groups are enabled automatically; “Only online” is on by default (toggleable).
-- Virtual nodes: **🌐 Internet** (with WAN IP from TR-064, otherwise "?"), **🏠 Gateway** (if the
-  gateway itself is not in the device list) and **📶 wlan:…** for WLAN devices without their own node.
-- Category emoji on nodes: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Printer ·
-  💡 Smart home/IoT · ❓ Unknown.
+- **Nodes (since v1.6.1):** neutral circle with a category icon (Lucide icons, see `THIRD_PARTY.md`)
+  instead of colour and emoji. Router, switch, repeater/AP, server/NAS and internet are 40 px, end devices 34 px.
+  For clients the map distinguishes laptop, tablet and game console by name and detection reason.
+- **Two-line label:** line 1 is the name (shortened with "…" from 20 characters, the full name appears as a
+  tooltip on hover), line 2 `IP · category`, plus `(+N)` for collapsed children and `· offline` for offline
+  devices. The internet node shows `Internet` and `WAN <IP>` ("?" without TR-064).
+  Both lines share one colour because the map library Cytoscape has no per-line colour.
+- **Gateway as root:** only the device with the gateway IP (from TR-064 or routing) gets a strong accent
+  ring with a dashed outer ring. Repeaters/APs have a light border.
+- **Offline:** body and icon dimmed, dashed border; the label stays readable and says "offline", so the
+  information does not depend on colour.
+- **Edges:** straight lines, LAN solid, WLAN dashed, powerline dotted. Links between different sites are
+  fainter. The internet uplink is slightly stronger.
+- **Legend:** bottom left, collapsible (state stored in the browser, collapsed by default). It lists all
+  icons with category names plus gateway ring, offline and line styles.
+- **Auto declutter:** labels fully visible from zoom ≥ 0.85 (below only hubs: router/switch/gateway/internet),
+  very small text is not drawn; subnet groups switch on automatically above 25 devices; "Online only" is on
+  by default (toggle).
+- Virtual nodes: **Internet** (with WAN IP), **Gateway** (if the gateway itself is not in the device list)
+  and **wlan:…** for WLAN devices without their own node.
+- **Table and print:** the category cell shows the same icon as the map plus text. Filters and the category
+  select are native select lists and show text only.
 
 ---
 
@@ -358,6 +378,12 @@ The **Log** tab + `docker compose logs netmap-scanner` show every scan step.
 - aria-labels on icon-only buttons, live region for status messages.
 - Full BITV 2.1 conformance is the goal — feedback welcome (repo issue).
 - **Reduce motion (since v1.5.2):** if “reduce motion” is enabled in the operating system (`prefers-reduced-motion`), fox_netmap shows no animations or transitions; a running scan is shown as a steady dot plus text. Otherwise the dot pulses only three times (under 5 seconds) and then stays still (WCAG 2.2.2, 2.3.3). The map is always laid out without animation.
+- **Map (since v1.6.1):** categories are shown as icon plus text, not by colour alone (WCAG 1.4.1).
+  Checked contrast in both themes: labels at least 4.5:1 (offline too), node borders and icons at least
+  3:1 against the background (WCAG 1.4.3, 1.4.11). The legend is a native `<details>` element and works
+  with the keyboard; icons in it and in the table are decorative (`alt=""`) because the category text sits
+  next to them. Shortened names are fully readable as tooltip, in the table and in the detail panel.
+  Transitions (150 ms) are dropped with "reduce motion".
 - The scan status is announced to screen readers only when it actually changes, not on every poll.
 
 ---

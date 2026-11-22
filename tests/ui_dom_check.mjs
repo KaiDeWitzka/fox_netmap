@@ -171,6 +171,8 @@ w.URL.revokeObjectURL = () => {};
 w.eval(
   fs.readFileSync(path.join(repo, "app/static/i18n.js"), "utf8") +
     "\n;\n" +
+    fs.readFileSync(path.join(repo, "app/static/icons.js"), "utf8") +
+    "\n;\n" +
     fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8")
 );
 await new Promise((r) => setTimeout(r, 200));
@@ -376,12 +378,48 @@ check(
   "Karte: Ring-Initialpositionen (nicht alle 0,0, verteilt)",
   devNodes.length >= 3 && new Set(devNodes.slice(0, 4).map((e) => `${Math.round(e.position.x)},${Math.round(e.position.y)}`)).size > 1
 );
-check("Karte: Kategorie-Icons im Label", devNodes.some((e) => /^[\u{1F300}-\u{1FAFF}❓]/u.test(e.data.label)));
-check("Karte: Knoten kompakt (width 20) + Kanten duenn/transparent (width 1, opacity 0.45)", (() => {
-  const n = cyInstance._style.find((x) => x.selector === "node");
-  const e = cyInstance._style.find((x) => x.selector === "edge");
-  return !!n && n.style.width === 20 && !!e && e.style.width === 1 && e.style.opacity === 0.45;
+// Knotendesign v1.6.1
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+check("Design: kein Emoji in Knoten-Labels", cyInstance._els.every((e) => !e.data || !e.data.label || !EMOJI.test(e.data.label)));
+check("Design: Geraete-Label zweizeilig (Name, IP · Kategorie)", devNodes.length > 0 && devNodes.every((e) => e.data.label.split("\n").length === 2) && devNodes.some((e) => e.data.label === "nas\n10.0.0.5 · Server/NAS"));
+check("Design: Internet-Label 'Internet' + 'WAN <IP>'", cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label === "Internet\nWAN 79.227.229.246"));
+check("Design: jedes Geraet hat ein Symbol, Netzknoten 40 px, Endgeraete 34 px",
+  devNodes.every((e) => !!e.data.icon) &&
+  cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.size === 40 && e.data.icon === "network") &&
+  cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:dd:ee:ff" && e.data.size === 34 && e.data.icon === "server"));
+check("Design: jede Kategorie hat ein eigenes Symbol (nur Unbekannt = Fragezeichen)",
+  ["Router", "Repeater/AP", "Switch", "Server/NAS", "Client", "Mobilgerät", "Multimedia", "Drucker", "Smart-Home/IoT", "Internet"].every((c) => w.eval(`iconKeyFor(${JSON.stringify(c)})`) !== "unknown") &&
+  w.eval(`iconKeyFor("Unbekannt")`) === "unknown");
+check("Design: Feinsymbole Notebook/Tablet/Konsole", w.eval(`iconKeyFor("Client", "mdns:MacBookPro18,1")`) === "laptop" && w.eval(`iconKeyFor("Mobilgerät", "mdns:iPad13,4")`) === "tablet" && w.eval(`iconKeyFor("Multimedia", "", "PS5-123")`) === "gamepad");
+const sampleUri = w.eval(`iconUri("router", "#e2e8f0")`);
+check("Design: Symbol als lokale data:-URI (CSP img-src data:), mit Zwischenspeicher", sampleUri.startsWith("data:image/svg+xml") && decodeURIComponent(sampleUri).includes("<path") && w.eval(`iconUri("router", "#e2e8f0") === iconUri("router", "#e2e8f0")`));
+check("Design: Wurzelring nur am Gateway", (() => {
+  const roots = cyInstance._els.filter((e) => e.data && e.data.root);
+  return roots.length === 1 && roots[0].data.id === "192.168.178.1";
 })());
+const nodeStyle = cyInstance._style.find((x) => x.selector === "node");
+const edgeStyle = cyInstance._style.find((x) => x.selector === "edge");
+const offStyle = cyInstance._style.find((x) => x.selector === "node[status='offline']");
+check("Design: neutraler Koerper, gerade Kanten 1,5 px, Deckkraft 0,8", !!nodeStyle && nodeStyle.style["background-color"] === "#1e293b" && nodeStyle.style["border-width"] === 1.5 && !!edgeStyle && edgeStyle.style.width === 1.5 && edgeStyle.style.opacity === 0.8 && edgeStyle.style["curve-style"] === "straight");
+check("Design: WLAN gestrichelt, Powerline gepunktet, Standort-Kanten schwach", cyInstance._style.some((x) => x.selector === "edge[conn='wlan']" && x.style["line-style"] === "dashed") && cyInstance._style.some((x) => x.selector === "edge[conn='plc']" && x.style["line-style"] === "dotted") && cyInstance._style.some((x) => x.selector === "edge[?cross]" && x.style.opacity === 0.35));
+check("A11y: Offline blendet nur den Koerper ab (keine Gesamt-Deckkraft), gestrichelt", !!offStyle && offStyle.style.opacity === undefined && offStyle.style["background-opacity"] === 0.45 && offStyle.style["border-style"] === "dashed");
+check("A11y: Labels ab Zoom 0,5 ausgeblendet (min-zoomed-font-size)", nodeStyle.style["min-zoomed-font-size"] === 6 && nodeStyle.style["font-size"] === 11);
+// Kontrast nach WCAG 2.2 (relative Luminanz)
+const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+for (const th of ["dark", "light"]) {
+  const P = JSON.parse(w.eval(`JSON.stringify(mapPalette(${JSON.stringify(th)}))`));
+  const texts = [["text", P.text], ["textOff", P.textOff], ["frameText", P.frameText]];
+  const marks = [["border", P.border], ["root", P.root], ["edge", P.edge], ["hl", P.hl], ["sel", P.sel], ["repeater", P.repeater]];
+  const badT = texts.filter(([, c]) => ratio(c, P.bg) < 4.5).map(([k, c]) => `${k} ${ratio(c, P.bg).toFixed(2)}`);
+  const badM = marks.filter(([, c]) => ratio(c, P.bg) < 3).map(([k, c]) => `${k} ${ratio(c, P.bg).toFixed(2)}`);
+  const iconOk = ratio(P.icon, P.body) >= 3;
+  check(`A11y Kontrast ${th}: Text >= 4,5:1, Raender/Linien/Symbole >= 3:1${badT.length + badM.length ? " – " + [...badT, ...badM].join(", ") : ""}`, badT.length === 0 && badM.length === 0 && iconOk);
+}
+check("Legende: einklappbar (details/summary) mit Symbol + Text je Kategorie und Linienarten",
+  !!$("#map-legend summary") && doc.querySelectorAll("#legend-list li img[alt='']").length === 4 && $("#legend-list").textContent.includes("Switch") &&
+  [...doc.querySelectorAll("#legend-list li")].every((li) => li.textContent.trim().length > 0) &&
+  ["LAN", "WLAN", "Powerline"].every((k) => $("#legend-list").textContent.includes(k)));
 cyInstance._zoom = 0.5;
 cyInstance._handlers["zoom"]();
 check("Karte: Zoom < 0.85 -> Label-Funktion (nur Hubs)", typeof cyInstance._labelStyle === "function" && cyInstance._labelStyle({ data: (k) => (k === "hub" ? true : "HubLabel") }) === "HubLabel" && cyInstance._labelStyle({ data: (k) => (k === "hub" ? false : "ClientLabel") }) === "");
@@ -439,7 +477,7 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   const keys = new Set(Object.values(pos).map((p) => p.x + "," + p.y));
   check(
     "Baum: 40 Endgeraete im Raster (Breite <= 8 Spalten), keine Ueberlagerung, ungebundene Knoten darunter",
-    Math.max(...xs) - Math.min(...xs) <= 8 * 130 && keys.size === Object.keys(pos).length && pos.lonely.y > pos.c39.y
+    Math.max(...xs) - Math.min(...xs) <= 8 * 170 && keys.size === Object.keys(pos).length && pos.lonely.y > pos.c39.y
   );
   const cyc = [{ data: { id: "a" } }, { data: { id: "b" } }, { data: { source: "a", target: "b" } }, { data: { source: "b", target: "a" } }];
   const pc = w.eval("computeTreePositions")(cyc);
@@ -680,8 +718,8 @@ check(
     !cyInstance._els.some((e) => e.data && e.data.source && String(e.data.source).startsWith("subnet:"))
 );
 check(
-  "Standorte: Gruppen-Label mit Standortname (Remote · 192.168.179.0/24)",
-  cyInstance._els.some((e) => e.data && e.data.id === "subnet:192.168.179.0/24" && e.data.label.includes("Remote · 192.168.179.0/24"))
+  "Standorte: Gruppen-Label mit Standortname (192.168.179.0/24 · Remote)",
+  cyInstance._els.some((e) => e.data && e.data.id === "subnet:192.168.179.0/24" && e.data.label.includes("192.168.179.0/24 · Remote"))
 );
 check("Gruppen an: localStorage fox_groups=subnet", w.localStorage.getItem("fox_groups") === "subnet");
 $("#chk-groups").checked = false;
