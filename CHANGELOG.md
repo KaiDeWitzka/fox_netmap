@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.4] – 2026-11-22
+
+App-Icon (Fuchs + Netzwerk) und IPv6-Spalte in der Tabelle (PR #74).
 
 ### Neu
 - **App-Icon:** Fuchs-Kopf mit Netzwerk-Motiv als SVG (`app/static/favicon.svg`) — Favicon in `index.html` und `login.html`, Logo im Header und auf der Login-Seite.
