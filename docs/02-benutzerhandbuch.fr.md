@@ -95,6 +95,8 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
 - **« Grouper les sous-réseaux » :** les appareils sont regroupés par sous-réseau dans un cadre
   (étiquette `sous-réseau · site (nombre)`). Les arêtes restent entre les appareils,
   même entre sous-réseaux.
+ Les cadres commencent sur une grille (position propre par sous-réseau, enfants en anneau autour du centre du groupe) — plus de chevauchement au même point.
+- **« Masquer sans IP » (activé par défaut) :** les appareils sans adresse IP (p. ex. connus seulement par leur nom via TR-064, comme `PC-76-84-…`) n’apparaissent sur la carte que si vous décochez ; ils restent toujours visibles dans le tableau.
 - **Replier/déplier les enfants :** dans le panneau de détails d'un routeur/switch, un bouton
   masque tous les appareils directement connectés ; le nœud affiche alors `(+N)`.
 - **Disposition :** `auto` (défaut) dispose la carte en arbre selon la topologie : Internet en haut, puis

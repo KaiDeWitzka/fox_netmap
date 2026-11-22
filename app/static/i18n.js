@@ -1554,3 +1554,13 @@ const I18N_EXTRA10 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA10[lang] || {});
+
+const I18N_EXTRA11 = {
+  "de": { "chk.noip": "Ohne IP ausblenden", "chk.noipTitle": "Geräte ohne IP-Adresse (z. B. nur per TR-064 bekannt) erst auf der Karte zeigen, wenn angehakt — in der Tabelle bleiben sie sichtbar" },
+  "en": { "chk.noip": "Hide no-IP", "chk.noipTitle": "Show devices without an IP address (e.g. known only via TR-064) on the map only when checked — they stay visible in the table" },
+  "fr": { "chk.noip": "Masquer sans IP", "chk.noipTitle": "N’afficher sur la carte les appareils sans adresse IP (p. ex. connus uniquement via TR-064) que si coché — ils restent visibles dans le tableau" },
+  "es": { "chk.noip": "Ocultar sin IP", "chk.noipTitle": "Mostrar en el mapa los dispositivos sin dirección IP (p. ej. solo conocidos por TR-064) solo si se marca — siguen visibles en la tabla" },
+  "it": { "chk.noip": "Nascondi senza IP", "chk.noipTitle": "Mostra sulla mappa i dispositivi senza indirizzo IP (es. noti solo via TR-064) solo se selezionati — restano visibili nella tabella" },
+  "pt": { "chk.noip": "Ocultar sem IP", "chk.noipTitle": "Mostrar no mapa os dispositivos sem endereço IP (ex.: conhecidos só via TR-064) apenas se marcados — continuam visíveis na tabela" }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA11[lang] || {});

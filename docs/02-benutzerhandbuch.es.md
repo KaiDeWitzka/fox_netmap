@@ -95,6 +95,8 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
 - **«Agrupar subredes»:** los dispositivos se agrupan por subred en un marco (etiqueta
   `subred · sitio (nº)`). Las aristas se mantienen entre dispositivos,
   también entre subredes.
+ Los marcos empiezan sobre una cuadrícula (posición propia por subred, hijos en anillo alrededor del centro del grupo) — ya no se superponen en el mismo punto.
+- **«Ocultar sin IP» (activado por defecto):** los dispositivos sin dirección IP (p. ej. solo conocidos por nombre vía TR-064, como `PC-76-84-…`) aparecen en el mapa solo al desmarcar; en la tabla siempre son visibles.
 - **Plegar/desplegar hijos:** en el panel de detalles de un router/switch, un botón oculta todos
   los dispositivos conectados directamente; el nodo muestra entonces `(+N)`.
 - **Diseño:** `auto` (por defecto) ordena el mapa como árbol según la topología: Internet arriba, debajo

@@ -92,6 +92,8 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
 - **"Only online":** hides offline devices (persisted in localStorage).
 - **"Group subnets":** devices are grouped per subnet in a frame (label `subnet · site (count)`).
   Edges stay between devices, also across subnets.
+ Frames start on a grid (own position per subnet, children in a ring around the group centre) — no more overlapping at the same point.
+- **"Hide no-IP" (default on):** devices without an IP address (e.g. only known by name via TR-064, like `PC-76-84-…`) appear on the map only when you uncheck this; they always stay visible in the table.
 - **Collapse/expand children:** in the detail panel of a router/switch, a button hides all
   directly attached devices; the node then shows `(+N)`.
 - **Layout:** `auto` (default) arranges the map as a tree by topology: internet at the top, below it the
