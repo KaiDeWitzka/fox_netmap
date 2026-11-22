@@ -244,6 +244,8 @@ Verbindungsart `lan`/`wlan`/`plc` wird mitgespeichert. Kanten im UI zeigen vom V
 (Grundlage des Baum-Layouts). Ist `Verbunden mit` eine IP oder ein Hostname, wird sie auf das passende Gerät
 abgebildet; nur wenn keines existiert, entsteht ein virtueller Gateway-Knoten.
 
+**Mehrere Geräte zuordnen (seit v1.6.0):** In der Tabelle die Geräte über die Kästchen in der ersten Spalte markieren (das Kästchen im Kopf wählt alle), oben unter **Verbunden mit** den Router, Switch oder Repeater wählen und **Setzen** drücken. **auto** entfernt die manuelle Zuordnung. Die Änderung gilt für alle markierten Geräte oder für keines. Zuordnungen, die einen Kreis ergeben würden, werden abgelehnt. Die Kästchen sind per Tab und Leertaste bedienbar, das Ergebnis wird für Screenreader angesagt.
+
 **FRITZ!Box-Mesh (ab v1.6.0):** Über TR-064 (`X_AVM-DE_GetMeshListPath`) liest fox_netmap die Mesh-Topologie der
 Box: welches Gerät an welchem Repeater oder LAN-Port hängt, per LAN oder WLAN (Band). Die Detailansicht zeigt den
 Anschluss, z. B. `WLAN · 5 GHz` oder `LAN · LAN 1`. Der TR-064-Benutzer braucht laut AVM-Spezifikation die
@@ -326,6 +328,7 @@ docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
 | `POST /api/scan` · `GET /api/scan/status` | Scan auslösen / Status |
 | `GET /api/settings` · `PATCH /api/settings` | Settings lesen (ohne Secrets) / ändern (422 bei ungültig) |
 | `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | Embed-Tokens verwalten |
+| `POST /api/devices/connect` | Mehrfach-Zuordnung: `{"macs": [...], "connected_to": "<MAC>"}`, `""` = automatisch |
 | `GET /api/export/json` · `GET /api/export/csv?sep=,` | Exporte |
 | `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | Log |
 | `GET /api/meta` | WAN-IP, Gateway, Version, Subnetze (öffentlich) |

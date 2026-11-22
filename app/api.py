@@ -149,9 +149,42 @@ def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_
 class DevicePatch(BaseModel):
     category: str | None = None
     note: str | None = Field(default=None, max_length=2000)
-    connected_to: str | None = None
+    connected_to: str | None = Field(default=None, max_length=64)
     x: float | None = None
     y: float | None = None
+
+
+class BulkConnect(BaseModel):
+    """Mehrfach-Zuordnung von Hand: mehrere Geräte gemeinsam an einen Netzknoten hängen ("" = automatisch)."""
+
+    macs: list[str] = Field(min_length=1, max_length=1000)
+    connected_to: str = Field(default="", max_length=64)
+
+
+def _device_exists(conn, mac: str) -> bool:
+    return conn.execute("SELECT 1 FROM devices WHERE mac = ?", (mac,)).fetchone() is not None
+
+
+def _check_parent(conn, macs: set[str], parent: str) -> None:
+    """Prüft eine manuelle Zuordnung: Ziel existiert, kein Selbstbezug, kein Zyklus über die bestehende Kette."""
+    if not parent:
+        return
+    if parent in macs:
+        raise HTTPException(status_code=422, detail="device cannot be connected to itself")
+    if not _device_exists(conn, parent):
+        raise HTTPException(status_code=422, detail="unknown parent device")
+    seen: set[str] = set()
+    cur: str | None = parent
+    while cur and cur not in seen and len(seen) < 10000:
+        seen.add(cur)
+        row = conn.execute("SELECT connected_to FROM device_layout WHERE mac = ?", (cur,)).fetchone()
+        nxt = row["connected_to"] if row else None
+        if nxt and not _device_exists(conn, nxt):
+            by_ip = conn.execute("SELECT mac FROM devices WHERE ip = ?", (nxt,)).fetchone()
+            nxt = by_ip["mac"] if by_ip else None
+        if nxt in macs:
+            raise HTTPException(status_code=422, detail="assignment would create a cycle")
+        cur = nxt
 
 
 @router.delete("/api/device/{mac}")
@@ -179,6 +212,7 @@ def patch_device(mac: str, body: DevicePatch, request: Request, conn=Depends(get
     if body.note is not None:
         conn.execute("UPDATE devices SET note = ? WHERE mac = ?", (body.note, mac))
     if body.connected_to is not None:
+        _check_parent(conn, {mac}, body.connected_to)
         if body.connected_to == "":
             conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE mac = ?", (mac,))
         else:
@@ -187,6 +221,24 @@ def patch_device(mac: str, body: DevicePatch, request: Request, conn=Depends(get
         db.set_layout(conn, mac, x=body.x, y=body.y)
     conn.commit()
     return db.get_device(conn, mac)
+
+
+@router.post("/api/devices/connect")
+def bulk_connect(body: BulkConnect, request: Request, conn=Depends(get_conn), _=Depends(require_auth)):
+    """Setzt \"Verbunden mit\" für mehrere Geräte in einer Transaktion. Alles oder nichts."""
+    macs = list(dict.fromkeys(body.macs))
+    unknown = [m for m in macs if not _device_exists(conn, m)]
+    if unknown:
+        raise HTTPException(status_code=404, detail=f"{len(unknown)} device(s) not found")
+    _check_parent(conn, set(macs), body.connected_to)
+    for mac in macs:
+        if body.connected_to == "":
+            conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE mac = ?", (mac,))
+        else:
+            db.set_layout(conn, mac, connected_to=body.connected_to, connected_manual=1)
+    conn.commit()
+    log.info("Zuordnung von Hand: %d Geraet(e) -> %s", len(macs), body.connected_to or "automatisch")
+    return {"ok": True, "count": len(macs)}
 
 
 @router.post("/api/scan")

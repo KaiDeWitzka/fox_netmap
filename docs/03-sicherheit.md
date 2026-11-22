@@ -184,6 +184,16 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   Standard 90, `0` = nie. Das gilt auch für Geräte, die weiter online sind (DSGVO Art. 5 Abs. 1 lit. e,
   Speicherbegrenzung). Einstellbar auch in der Oberfläche (0–3650).
 
+### 2.16 Mehrfach-Zuordnung (seit v1.6.0)
+
+- `POST /api/devices/connect` verlangt eine Anmeldung und nimmt höchstens 1000 MAC-Adressen an (Ziel höchstens
+  64 Zeichen). Doppelte Einträge werden zusammengefasst.
+- Alles oder nichts: Ist ein Gerät unbekannt oder das Ziel ungültig, wird nichts geändert (eine Transaktion).
+- Das Ziel muss ein vorhandenes Gerät sein, darf nicht selbst markiert sein und darf keinen Kreis erzeugen. Die
+  Prüfung folgt der bestehenden Kette über MAC und IP. Dieselbe Prüfung gilt jetzt auch für die Einzelzuordnung
+  (`PATCH /api/device/{mac}`), die vorher beliebige Werte annahm.
+- Jede Mehrfach-Zuordnung wird mit Anzahl und Ziel protokolliert (OPS.1.1.5).
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |

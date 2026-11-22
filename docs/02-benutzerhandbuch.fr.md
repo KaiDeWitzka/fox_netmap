@@ -244,6 +244,8 @@ Le type de connexion `lan`/`wlan`/`plc` est aussi enregistré. Les arêtes vont 
 (base de la disposition en arbre). Si « connecté à » est une IP ou un nom d'hôte, il est associé à l'appareil
 correspondant ; un nœud passerelle virtuel n'est créé que si aucun n'existe.
 
+**Affecter plusieurs appareils (depuis v1.6.0) :** dans le tableau, cochez les appareils dans la première colonne (la case d'en-tête sélectionne tout), choisissez le routeur, le switch ou le répéteur sous **Connecté à** puis cliquez sur **Définir**. **auto** supprime l'affectation manuelle. La modification s'applique à tous les appareils cochés ou à aucun. Les affectations qui créeraient une boucle sont refusées. Les cases s'utilisent avec Tab et Espace ; le résultat est annoncé aux lecteurs d'écran.
+
 **Mesh FRITZ!Box (depuis v1.6.0) :** via TR-064 (`X_AVM-DE_GetMeshListPath`), fox_netmap lit la topologie mesh de
 la box : quel appareil est relié à quel répéteur ou port LAN, en LAN ou WLAN (bande). Le panneau de détails affiche
 le port, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Selon AVM, l'utilisateur TR-064 a besoin du droit
@@ -325,6 +327,7 @@ docker compose down -v                 # ATTENTION : supprime ./data (BDD, log, 
 | `POST /api/scan` · `GET /api/scan/status` | déclencher un scan / état |
 | `GET /api/settings` · `PATCH /api/settings` | lire les paramètres (sans secrets) / modifier (422 si invalide) |
 | `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | gérer les jetons d'embed |
+| `POST /api/devices/connect` | affectation multiple : `{"macs": [...], "connected_to": "<MAC>"}`, `""` = auto |
 | `GET /api/export/json` · `GET /api/export/csv?sep=,` | exports |
 | `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | journal |
 | `GET /api/meta` | IP WAN, passerelle, version, sous-réseaux (public) |

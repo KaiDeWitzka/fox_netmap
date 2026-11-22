@@ -134,6 +134,8 @@ function loadColWidths() {
 
 let colWidths = loadColWidths();
 let suppressSortClick = false;
+// Mehrfach-Zuordnung: ausgewählte Geräte (MAC) in der Tabelle
+const selectedMacs = new Set();
 
 const LAYOUTS = { force: "cose", tree: "breadthfirst", circle: "circle", concentric: "concentric", grid: "grid" };
 
@@ -707,10 +709,12 @@ function renderTable() {
   const cols = colOrder.map((k) => { const pair = TABLE_COLS.find(([key]) => key === k); return [k, t(pair[1])]; });
   const colgroup = document.querySelector("#device-table colgroup");
   if (colgroup) {
-    colgroup.innerHTML = colOrder.map((k) => `<col data-key="${esc(k)}"${colWidths[k] ? ` style="width:${Number(colWidths[k]) || 0}px"` : ""}>`).join("");
+    colgroup.innerHTML = (EMBED ? "" : '<col class="sel-col">') + colOrder.map((k) => `<col data-key="${esc(k)}"${colWidths[k] ? ` style="width:${Number(colWidths[k]) || 0}px"` : ""}>`).join("");
   }
-  thead.innerHTML = "<tr>" + cols.map(([k, label]) => `<th data-key="${esc(k)}" scope="col" draggable="true">${esc(label)}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
-  thead.querySelectorAll("th").forEach((th) => {
+  for (const m of [...selectedMacs]) if (!devices.some((d) => d.mac === m)) selectedMacs.delete(m);
+  const selHead = EMBED ? "" : `<th scope="col" class="sel-col"><input type="checkbox" id="sel-all" aria-label="${esc(t("bulk.all"))}"></th>`;
+  thead.innerHTML = "<tr>" + selHead + cols.map(([k, label]) => `<th data-key="${esc(k)}" scope="col" draggable="true">${esc(label)}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
+  thead.querySelectorAll("th[data-key]").forEach((th) => {
     th.addEventListener("click", () => {
       if (suppressSortClick) { suppressSortClick = false; return; }
       const k = th.dataset.key;
@@ -739,6 +743,22 @@ function renderTable() {
   tbody.innerHTML = "";
   for (const d of rows) {
     const tr = document.createElement("tr");
+    if (!EMBED) {
+      const td = document.createElement("td");
+      td.className = "sel-col";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = selectedMacs.has(d.mac);
+      cb.setAttribute("aria-label", t("bulk.row", { v: d.hostname || d.ip || d.mac }));
+      cb.addEventListener("change", () => {
+        if (cb.checked) selectedMacs.add(d.mac); else selectedMacs.delete(d.mac);
+        tr.classList.toggle("selected", cb.checked);
+        updateBulkBar();
+      });
+      tr.classList.toggle("selected", cb.checked);
+      td.appendChild(cb);
+      tr.appendChild(td);
+    }
     for (const key of colOrder) {
       tr.appendChild(buildCell(d, key));
     }
@@ -753,6 +773,63 @@ function renderTable() {
     });
     tbody.appendChild(tr);
   }
+  const all = document.getElementById("sel-all");
+  if (all) {
+    all.addEventListener("change", () => {
+      if (all.checked) devices.forEach((d) => selectedMacs.add(d.mac)); else selectedMacs.clear();
+      renderTable();
+      document.getElementById("sel-all")?.focus();
+    });
+  }
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById("bulk-bar");
+  if (!bar) return;
+  if (EMBED) { bar.hidden = true; return; }
+  const n = selectedMacs.size;
+  document.getElementById("bulk-count").textContent = t("bulk.count", { n });
+  document.getElementById("bulk-apply").disabled = n === 0;
+  document.getElementById("bulk-clear").disabled = n === 0;
+  const all = document.getElementById("sel-all");
+  if (all) {
+    all.checked = n > 0 && n === devices.length;
+    all.indeterminate = n > 0 && n < devices.length;
+  }
+  const sel = document.getElementById("bulk-parent");
+  const prev = sel.value;
+  const parents = devices.filter((x) => isNetCategory(x.category) && !selectedMacs.has(x.mac));
+  sel.innerHTML = `<option value="">${esc(t("d.auto"))}</option>` + parents.map((x) => `<option value="${esc(x.mac)}">${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("");
+  if (parents.some((x) => x.mac === prev)) sel.value = prev;
+}
+
+function bindBulk() {
+  const bar = document.getElementById("bulk-bar");
+  if (!bar) return;
+  if (EMBED) { bar.hidden = true; return; }
+  const result = document.getElementById("bulk-result");
+  document.getElementById("bulk-clear").addEventListener("click", () => {
+    selectedMacs.clear();
+    result.textContent = "";
+    renderTable();
+  });
+  document.getElementById("bulk-apply").addEventListener("click", async () => {
+    const macs = [...selectedMacs];
+    if (!macs.length) return;
+    const target = document.getElementById("bulk-parent").value;
+    const r = await api("/api/devices/connect", { method: "POST", body: JSON.stringify({ macs, connected_to: target }) });
+    if (r.ok) {
+      const body = await r.json();
+      result.textContent = t("bulk.done", { n: body.count });
+      selectedMacs.clear();
+      await loadDevices();
+    } else {
+      let detail = "";
+      try { detail = (await r.json()).detail || ""; } catch (err) { /* ignorieren */ }
+      result.textContent = String(detail).includes("cycle") ? t("bulk.errCycle") : t("bulk.err");
+    }
+  });
 }
 
 const WEB_PORTS = { 80: "http", 8080: "http", 443: "https", 8443: "https" };
@@ -835,25 +912,25 @@ function bindTableDrag() {
   const thead = document.querySelector("#device-table thead");
   let dragKey = null;
   thead.addEventListener("dragstart", (e) => {
-    const th = e.target.closest("th");
+    const th = e.target.closest("th[data-key]");
     if (!th) return;
     dragKey = th.dataset.key;
     e.dataTransfer.setData("text/plain", dragKey);
     e.dataTransfer.effectAllowed = "move";
   });
   thead.addEventListener("dragover", (e) => {
-    const th = e.target.closest("th");
+    const th = e.target.closest("th[data-key]");
     if (th && dragKey) {
       e.preventDefault();
       th.classList.add("drag-over");
     }
   });
   thead.addEventListener("dragleave", (e) => {
-    const th = e.target.closest("th");
+    const th = e.target.closest("th[data-key]");
     if (th) th.classList.remove("drag-over");
   });
   thead.addEventListener("drop", (e) => {
-    const th = e.target.closest("th");
+    const th = e.target.closest("th[data-key]");
     if (!th || !dragKey) return;
     e.preventDefault();
     const target = th.dataset.key;
@@ -1341,6 +1418,7 @@ async function init() {
   bindSidebar();
   bindScan();
   bindTableDrag();
+  bindBulk();
   bindLog();
   bindLayout();
   bindGroups();
