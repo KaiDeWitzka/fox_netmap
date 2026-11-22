@@ -140,26 +140,129 @@ function applyLayout() {
   const choice = currentLayout();
   const hasPos = devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
   let opts;
-  if (choice === "auto") {
-    if (hasPos) {
-      opts = { name: "preset" };
-    } else {
-      const big = devices.length > 60;
-      opts = {
-        name: "cose", animate: false, padding: 30,
-        idealEdgeLength: big ? 90 : 110,
-        nodeRepulsion: big ? 22000 : 15000,
-        nodeOverlap: big ? 30 : 20,
-        spacingFactor: big ? 1.25 : 1.1,
-      };
-    }
-  } else if (choice === "tree") {
-    opts = { name: "breadthfirst", directed: true, spacingFactor: 1.3, animate: false };
+  if (choice === "auto" && hasPos) {
+    opts = { name: "preset" };
+  } else if (choice === "auto" || choice === "tree") {
+    // Baum nach Topologie: Internet -> Router -> Switch -> Endgeraete (Anforderung "Layout", 01-anforderungen.md)
+    const pos = computeTreePositions(lastElements);
+    opts = { name: "preset", animate: false, positions: (node) => pos[node.id()] || node.position() };
+  } else if (choice === "force") {
+    const big = devices.length > 60;
+    opts = {
+      name: "cose", animate: false, padding: 30,
+      idealEdgeLength: big ? 90 : 110,
+      nodeRepulsion: big ? 22000 : 15000,
+      nodeOverlap: big ? 30 : 20,
+      spacingFactor: big ? 1.25 : 1.1,
+    };
   } else {
     opts = { name: LAYOUTS[choice], animate: false };
   }
   cy.layout(opts).run();
   cy.fit(undefined, 40);
+}
+
+let lastElements = [];
+
+const TREE = { col: 130, level: 130, row: 78 };
+
+// Ordnet die Knoten als Baum an. Endgeraete (Knoten ohne Kinder) eines Knotens werden kompakt in einem
+// Raster darunter gesetzt, damit 40 Geraete an der FRITZ!Box keine endlose Zeile ergeben. Knoten ohne
+// Verbindung landen in einem Raster unter dem Baum. Reine Funktion, damit sie testbar ist.
+function computeTreePositions(els) {
+  const nodes = els.filter((e) => e.data && !e.data.source && !e.data.subnet).map((e) => e.data);
+  const ids = new Set(nodes.map((n) => n.id));
+  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+  const kids = {};
+  const indeg = {};
+  for (const e of els) {
+    if (!e.data || !e.data.source) continue;
+    const { source: s, target: t2 } = e.data;
+    if (!ids.has(s) || !ids.has(t2) || s === t2) continue;
+    (kids[s] = kids[s] || []).push(t2);
+    indeg[t2] = (indeg[t2] || 0) + 1;
+  }
+  const label = (id) => String((byId[id] && (byId[id].name || byId[id].label)) || id).toLowerCase();
+  const sortKey = (id) => [byId[id] && byId[id].hub ? 0 : 1, (byId[id] && byId[id].subnetKey) || "", label(id)];
+  const cmp = (a, b) => {
+    const ka = sortKey(a);
+    const kb = sortKey(b);
+    for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] < kb[i] ? -1 : 1;
+    return 0;
+  };
+  // Baum aus dem Graphen: jeder Knoten genau einmal (Schutz gegen Zyklen und Mehrfach-Eltern)
+  const seen = new Set();
+  const tree = {};
+  const build = (id) => {
+    seen.add(id);
+    tree[id] = [];
+    for (const c of (kids[id] || []).slice().sort(cmp)) {
+      if (seen.has(c)) continue;
+      seen.add(c);
+      tree[id].push(c);
+    }
+    for (const c of tree[id]) build(c);
+  };
+  const rootRank = (id) => (id === "internet" ? 0 : byId[id] && byId[id].hub ? 1 : 2);
+  const roots = nodes
+    .map((n) => n.id)
+    .filter((id) => !indeg[id] && (kids[id] || []).length)
+    .sort((a, b) => rootRank(a) - rootRank(b) || cmp(a, b));
+  for (const r of roots) if (!seen.has(r)) build(r);
+  // Zyklen ohne Wurzel: ersten Knoten als Wurzel nehmen
+  for (const n of nodes) if (!seen.has(n.id) && (kids[n.id] || []).length) { roots.push(n.id); build(n.id); }
+
+  const leafCols = (n) => (n <= 2 ? Math.max(1, n) : Math.min(8, Math.ceil(Math.sqrt(n * 1.5))));
+  const split = (id) => {
+    const ch = tree[id] || [];
+    return { branches: ch.filter((c) => tree[c].length), leaves: ch.filter((c) => !tree[c].length) };
+  };
+  const wMemo = {};
+  const width = (id) => {
+    if (wMemo[id] !== undefined) return wMemo[id];
+    const { branches, leaves } = split(id);
+    const leafW = leaves.length ? leafCols(leaves.length) * TREE.col : 0;
+    const sum = branches.reduce((a, b) => a + width(b), 0) + leafW;
+    return (wMemo[id] = Math.max(TREE.col, sum));
+  };
+  const pos = {};
+  let maxY = 0;
+  const place = (id, left, depth) => {
+    const w = width(id);
+    const y = depth * TREE.level;
+    pos[id] = { x: left + w / 2, y };
+    maxY = Math.max(maxY, y);
+    const { branches, leaves } = split(id);
+    const leafW = leaves.length ? leafCols(leaves.length) * TREE.col : 0;
+    let cur = left + (w - (branches.reduce((a, b) => a + width(b), 0) + leafW)) / 2;
+    const half = Math.ceil(branches.length / 2);
+    // Verzweigungen links und rechts, Endgeraete-Raster in der Mitte direkt unter dem Knoten
+    for (const b of branches.slice(0, half)) { place(b, cur, depth + 1); cur += width(b); }
+    const cols = leafCols(leaves.length);
+    leaves.forEach((l, i) => {
+      const ly = (depth + 1) * TREE.level + Math.floor(i / cols) * TREE.row;
+      pos[l] = { x: cur + (i % cols) * TREE.col + TREE.col / 2, y: ly };
+      maxY = Math.max(maxY, ly);
+    });
+    cur += leafW;
+    for (const b of branches.slice(half)) { place(b, cur, depth + 1); cur += width(b); }
+  };
+  let left = 0;
+  for (const r of roots) {
+    if (pos[r]) continue;
+    place(r, left, 0);
+    left += width(r) + TREE.col;
+  }
+  // Nicht zugeordnete Knoten als Raster unter dem Baum
+  const orphans = nodes.map((n) => n.id).filter((id) => !pos[id]).sort(cmp);
+  if (orphans.length) {
+    const cols = Math.max(4, Math.floor(Math.max(left, TREE.col * 4) / TREE.col));
+    const top = (roots.length ? maxY + TREE.level : 0);
+    orphans.forEach((id, i) => {
+      pos[id] = { x: (i % cols) * TREE.col + TREE.col / 2, y: top + Math.floor(i / cols) * TREE.row };
+    });
+  }
+  return pos;
 }
 
 function api(path, opts = {}) {
@@ -273,14 +376,24 @@ async function loadSites() {
   }
 }
 
+function isIpLike(s) {
+  return /^\d+\.\d+\.\d+\.\d+$/.test(s) || (s.includes(":") && !/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(s) && !s.startsWith("ip:"));
+}
+
+// Vorgaenger eines Geraets als Knoten-ID. Reihenfolge: WLAN-Knoten, MAC, IP, Hostname eines bekannten
+// Geraets; erst wenn kein Geraet passt, bleibt eine IP als virtueller Gateway-Knoten stehen (v1.5.4: vorher
+// wurde eine IP sofort zurueckgegeben, die FRITZ!Box erschien dann doppelt als "Gateway").
 function parentId(d) {
   const ct = d.connected_to || "";
   if (!ct) return null;
   if (ct.startsWith("wlan:")) return ct;
   if (devices.some((x) => x.mac === ct)) return ct;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(ct) || ct.includes(":")) return ct;
-  const byIp = devices.find((x) => x.ip === ct);
-  return byIp ? byIp.mac : null;
+  const byIp = devices.find((x) => x.ip && x.ip === ct);
+  if (byIp) return byIp.mac;
+  const lc = ct.toLowerCase();
+  const byHost = devices.find((x) => x.hostname && x.hostname.toLowerCase() === lc);
+  if (byHost) return byHost.mac;
+  return isIpLike(ct) ? ct : null;
 }
 
 function buildElements() {
@@ -332,6 +445,8 @@ function buildElements() {
         color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
         ports: d.port_count || 0,
         hub: d.category === "Router" || d.category === "Switch",
+        name: (d.hostname || d.ip || d.mac).toLowerCase(),
+        subnetKey: d.subnet || "",
       },
       position: { x, y },
     };
@@ -358,39 +473,29 @@ function buildElements() {
     if (!nodeIds.has(d.mac)) continue;
     const p = parentId(d);
     if (!p || p === d.mac) continue;
-    let src = d.mac;
-    let tgt = p;
-    if (grouping && d.subnet) {
-      const pDev = devices.find((x) => x.mac === p) || devices.find((x) => x.ip === p);
-      if (pDev) {
-        const g1 = groupOf(d);
-        const g2 = groupOf(pDev);
-        if (g1 && g2 && g1 === g2) continue;
-        if (g1) {
-          src = g1;
-          if (g2) tgt = g2;
-        }
-      }
-    }
-    edges.push({ data: { source: src, target: tgt } });
+    // Kanten zeigen vom Vorgaenger zum Geraet (Eltern -> Kind), damit das Baum-Layout oben beginnt.
+    // Auch bei Subnetz-Gruppierung bleiben die Kanten zwischen Geraeten erhalten; der Rahmen ist nur Hintergrund.
+    edges.push({ data: { id: "e:" + p + ">" + d.mac, source: p, target: d.mac, conn: d.connection || "" } });
   }
 
   const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
     addNode({ data: { id: w, label: t("wlan.node"), category: "WLAN", status: "online", color: CATEGORY_COLORS.WLAN, virtual: true, hub: true } });
     const gw = devices.find((x) => x.ip === w.slice(5));
-    edges.push({ data: { source: w, target: gw ? gw.mac : w.slice(5) } });
+    edges.push({ data: { id: "e:" + w, source: gw ? gw.mac : w.slice(5), target: w, conn: "wlan" } });
   }
   if (META.gateway) {
     const gw = devices.find((x) => x.ip === META.gateway);
-    edges.push({ data: { source: "internet", target: gw ? gw.mac : META.gateway } });
+    edges.push({ data: { id: "e:internet", source: "internet", target: gw ? gw.mac : META.gateway, wan: true } });
   }
   for (const e of edges) {
-    if (!nodeIds.has(e.data.target)) {
+    for (const end of [e.data.source, e.data.target]) {
+      if (nodeIds.has(end)) continue;
+      if (!isIpLike(end)) continue;
       addNode({
         data: {
-          id: e.data.target,
-          label: t("gw.node", { ip: e.data.target }),
+          id: end,
+          label: t("gw.node", { ip: end }),
           category: "Gateway",
           status: "online",
           color: CATEGORY_COLORS.Gateway,
@@ -400,7 +505,8 @@ function buildElements() {
       });
     }
   }
-  return [...nodes, ...edges];
+  // Kanten zu Knoten, die nicht angezeigt werden (z. B. offline ausgeblendet oder eingeklappt), entfallen.
+  return [...nodes, ...edges.filter((e) => nodeIds.has(e.data.source) && nodeIds.has(e.data.target))];
 }
 
 let spotlightNode = null;
@@ -441,6 +547,8 @@ function renderMap() {
         { selector: "node.hl", style: { "border-width": 4, "border-color": "#facc15" } },
         { selector: "node.spot", style: { "border-width": 5, "border-color": "#facc15" } },
         { selector: "edge", style: { "line-color": "#64748b", width: 1, opacity: 0.45, "curve-style": "bezier" } },
+        { selector: "edge[conn='wlan']", style: { "line-style": "dashed", "line-dash-pattern": [4, 3] } },
+        { selector: "edge[?wan]", style: { width: 2, opacity: 0.7 } },
         { selector: "edge.hl", style: { "line-color": "#facc15", width: 3 } },
         { selector: "edge.spot", style: { "line-color": "#facc15", width: 3.5 } },
         { selector: ".dim", style: { opacity: 0.12 } },
@@ -467,7 +575,8 @@ function renderMap() {
     updateZoomLabels();
   }
   cy.elements().remove();
-  cy.add(buildElements());
+  lastElements = buildElements();
+  cy.add(lastElements);
   applyLayout();
 }
 
@@ -481,7 +590,7 @@ async function showDetail(mac) {
   const children = isNet ? devices.filter((x) => parentId(x) === mac) : [];
   for (const c of children) {
     cy.getElementById(c.mac).addClass("hl");
-    cy.edges().filter((e) => e.data("source") === c.mac).addClass("hl");
+    cy.edges().filter((e) => e.data("target") === c.mac).addClass("hl");
   }
   const el = document.getElementById("detail-content");
   const hostLinks = webLinks(d).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" class="ext-link">${esc(l.label)}</a>`).join(", ");

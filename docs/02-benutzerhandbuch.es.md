@@ -85,13 +85,19 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   resaltan, el resto se atenúa; los detalles se abren a la derecha. Otro clic en el fondo lo limpia.
 - **«Solo en línea»:** oculta los dispositivos sin conexión (se guarda en localStorage).
 - **«Agrupar subredes»:** los dispositivos se agrupan por subred en un marco (etiqueta
-  `subred · sitio (nº)`). Las aristas entre subredes distintas van de grupo a grupo.
+  `subred · sitio (nº)`). Las aristas se mantienen entre dispositivos,
+  también entre subredes.
 - **Plegar/desplegar hijos:** en el panel de detalles de un router/switch, un botón oculta todos
   los dispositivos conectados directamente; el nodo muestra entonces `(+N)`.
-- **Diseño:**
-- **Despeje automático:** nodos más compactos (20 px), aristas más finas/translúcidas, parámetros cose escalados según el número de dispositivos; etiquetas visibles solo desde zoom ≥ 0,85 (debajo, solo concentradores: router/switch/pasarela/internet); con más de 25 dispositivos los grupos de subred se activan automáticamente; «Solo en línea» está activo por defecto (conmutable, se recuerda).
- `auto` (física, por defecto), `force`, `tree`, `concentric`, `circle`, `grid`;
-  **Restablecer** borra las posiciones guardadas.
+- **Diseño:** `auto` (por defecto) ordena el mapa como árbol según la topología: Internet arriba, debajo
+  el router, switches/repetidores y dispositivos finales. Muchos dispositivos finales de un nodo se colocan en
+  una cuadrícula compacta debajo; los dispositivos sin padre quedan bajo el árbol. Si hay posiciones guardadas
+  para todos los dispositivos (arrastrar), `auto` las usa. Otros: `tree` (siempre árbol), `force` (física),
+  `concentric`, `circle`, `grid`. **Restablecer** borra las posiciones guardadas.
+- **Despeje automático:** nodos compactos (20 px), aristas finas (WLAN discontinua, acceso a Internet más
+  gruesa); etiquetas visibles solo desde zoom ≥ 0,85 (debajo, solo concentradores: router/switch/pasarela/internet);
+  con más de 25 dispositivos los grupos de subred se activan automáticamente; «Solo en línea» está activo por
+  defecto (conmutable).
 - Nodos virtuales: **🌐 Internet** (con IP WAN de TR-064, si no «?»), **🏠 Pasarela** (si la
   pasarela no está en la lista) y **📶 wlan:…** para dispositivos WLAN sin nodo propio.
 - Emoji de categoría en los nodos: 🏠 Router · 🔀 Switch · 🖥 Servidor/NAS · 💻 Cliente · 🖨 Impresora ·
@@ -222,8 +228,9 @@ dispara alarmas (webhook/Gotify/Ntfy al detectar un dispositivo nuevo — salvo 
 
 Prioridad: **manual** (panel de detalles) > **SNMP** (CAM+LLDP) > **TR-064** (repetidores) >
 **WLAN** (`wlan:…` si TR-064 marca el host como WLAN) > **pasarela**.
-El tipo de conexión `lan`/`wlan` también se guarda. Con los grupos de subred activados, las
-aristas entre subredes van de grupo a grupo.
+El tipo de conexión `lan`/`wlan` también se guarda. Las aristas van del padre al dispositivo
+(base del diseño en árbol). Si «conectado a» es una IP o un nombre de host, se asigna al dispositivo
+correspondiente; solo si no existe se crea un nodo de pasarela virtual.
 
 ---
 

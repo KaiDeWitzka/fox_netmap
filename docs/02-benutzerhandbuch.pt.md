@@ -85,13 +85,19 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
   evidenciados, o resto escurece; os detalhes abrem à direita. Novo clique no fundo limpa.
 - **«Apenas online»:** esconde dispositivos offline (guardado em localStorage).
 - **«Agrupar sub-redes»:** os dispositivos são agrupados por sub-rede numa moldura (etiqueta
-  `sub-rede · local (nº)`). As arestas entre sub-redes diferentes vão de grupo para grupo.
+  `sub-rede · local (nº)`). As arestas mantêm-se entre dispositivos,
+  também entre sub-redes.
 - **Ocultar/mostrar filhos:** no painel de detalhes de um router/switch, um botão oculta todos os
   dispositivos ligados diretamente; o nó mostra então `(+N)`.
-- **Esquema:**
-- **Limpeza automática:** nós mais compactos (20 px), arestas mais finas/translúcidas, parâmetros cose escalados com o número de dispositivos; etiquetas totalmente visíveis apenas a partir de zoom ≥ 0,85 (abaixo disso, apenas hubs: router/switch/gateway/internet); acima de 25 dispositivos os grupos de sub-rede ativam-se automaticamente; «Apenas online» está ativo por defeito (comutável, guardado).
- `auto` (física, predefinido), `force`, `tree`, `concentric`, `circle`, `grid`;
-  **Repor** limpa as posições guardadas.
+- **Esquema:** `auto` (predefinido) organiza o mapa em árvore pela topologia: Internet em cima, abaixo o
+  router, switches/repetidores e dispositivos finais. Muitos dispositivos finais de um nó ficam numa grelha
+  compacta por baixo; dispositivos sem pai ficam abaixo da árvore. Se houver posições guardadas para todos os
+  dispositivos (arrastar), `auto` usa-as. Outros: `tree` (sempre árvore), `force` (física), `concentric`,
+  `circle`, `grid`. **Repor** limpa as posições guardadas.
+- **Limpeza automática:** nós compactos (20 px), arestas finas (WLAN tracejada, acesso à Internet mais grossa);
+  etiquetas totalmente visíveis apenas a partir de zoom ≥ 0,85 (abaixo, apenas hubs: router/switch/gateway/internet);
+  acima de 25 dispositivos os grupos de sub-rede ativam-se automaticamente; «Apenas online» está ativo por defeito
+  (comutável).
 - Nós virtuais: **🌐 Internet** (com IP WAN do TR-064, senão «?»), **🏠 Gateway** (se o gateway
   não estiver na lista) e **📶 wlan:…** para dispositivos WLAN sem nó próprio.
 - Emoji de categoria nos nós: 🏠 Router · 🔀 Switch · 🖥 Servidor/NAS · 💻 Cliente · 🖨 Impressora ·
@@ -219,8 +225,9 @@ alarmes (webhook/Gotify/Ntfy para novo dispositivo — exceto whitelist).
 
 Prioridade: **manual** (painel de detalhes) > **SNMP** (CAM+LLDP) > **TR-064** (repetidores) >
 **WLAN** (`wlan:…` se o TR-064 marcar o host como WLAN) > **gateway**.
-O tipo de ligação `lan`/`wlan` também é guardado. Com os grupos de sub-redes ativos, as arestas
-entre sub-redes vão de grupo para grupo.
+O tipo de ligação `lan`/`wlan` também é guardado. As arestas vão do pai para o dispositivo
+(base do esquema em árvore). Se «ligado a» for um IP ou nome de host, é associado ao dispositivo
+correspondente; só se não existir é criado um nó gateway virtual.
 
 ---
 

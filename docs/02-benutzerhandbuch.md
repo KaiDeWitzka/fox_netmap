@@ -85,16 +85,20 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   der Rest wird abgedunkelt; Details öffnen sich rechts. Erneuter Klick auf Hintergrund hebt auf.
 - **„Nur online":** Blendet offline-Geräte aus (persistiert in localStorage).
 - **„Subnetze gruppieren":** Geräte werden pro Subnetz in einen Rahmen gruppiert
-  (Label `Subnetz · Standort (Anzahl)`). Kanten zwischen verschiedenen Subnetzen laufen
-  gruppe-zu-gruppe.
+  (Label `Subnetz · Standort (Anzahl)`). Die Kanten bleiben zwischen den Geräten
+  erhalten, auch über Subnetzgrenzen.
 - **Kinder aus-/einblenden:** Im Detail-Panel von Router/Switch blendet ein Button alle direkt
   angebundenen Geräte aus; der Knoten zeigt dann `(+N)`.
-- **Layout:**
-- **Automatisch aufgeräumt:** kompaktere Knoten (20 px), dünnere/transparente Kanten, cose-Parameter skalieren mit der Gerätemenge; Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs: Router/Switch/Gateway/Internet); ab > 25 Geräten werden Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist default aktiv (in localStorage umschaltbar).
- `auto` (Physik, Default), `force`, `tree`, `concentric`, `circle`, `grid`;
-  **Reset** setzt gespeicherte Positionen zurück.
+- **Layout:** `auto` (Default) ordnet die Karte als Baum nach der Topologie an: Internet oben, darunter
+  Router, Switche/Repeater und Endgeräte. Hängen viele Endgeräte an einem Knoten, stehen sie kompakt im
+  Raster darunter; Geräte ohne Zuordnung stehen unter dem Baum. Sind für alle Geräte Positionen gespeichert
+  (Ziehen), nutzt `auto` diese. Weitere Layouts: `tree` (immer Baum), `force` (Physik), `concentric`,
+  `circle`, `grid`. **Reset** setzt gespeicherte Positionen zurück.
+- **Automatisch aufgeräumt:** kompakte Knoten (20 px), dünne Kanten (WLAN gestrichelt, Internet-Anbindung
+  kräftiger); Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs: Router/Switch/Gateway/Internet);
+  ab > 25 Geräten werden Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist default aktiv (umschaltbar).
 - Virtuelle Knoten: **🌐 Internet** (mit WAN-IP aus TR-064, sonst „?“), **🏠 Gateway** (falls das
-  Gateway selbst nicht in der Geräteliste ist) und **📶 wlan:…** für WLAN-Geräte ohne eigenen Knoten.
+  Gateway selbst nicht in der Geräteliste ist) und **📶 wlan:…** für WLAN-Geräte ohne eigenen Knoten.
 - Kategorie-Emoji auf den Knoten: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Drucker ·
   💡 Smart-Home/IoT · ❓ Unbekannt.
 
@@ -221,9 +225,10 @@ gelöscht.
 ## 12. Topologie („Verbunden mit“)
 
 Priorität: **manuell** (Detail-Panel) > **SNMP** (CAM+LLDP) > **TR-064** (Repeater/Hotspot-Geräte) >
-**WLAN** (`wlan:…`, wenn TR-064 den Host als WLAN markiert) > **Gateway**.
-Verbindungsart `lan`/`wlan` wird mitgespeichert. Kanten im UI entsprechend; Cross-Subnetz-Kanten
-laufen gruppe-zu-gruppe (bei aktivierten Subnetz-Gruppen).
+**WLAN** (`wlan:…`, wenn TR-064 den Host als WLAN markiert) > **Gateway**.
+Verbindungsart `lan`/`wlan` wird mitgespeichert. Kanten im UI zeigen vom Vorgänger zum Gerät
+(Grundlage des Baum-Layouts). Ist `Verbunden mit` eine IP oder ein Hostname, wird sie auf das passende Gerät
+abgebildet; nur wenn keines existiert, entsteht ein virtueller Gateway-Knoten.
 
 ---
 

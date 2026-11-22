@@ -86,13 +86,18 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
   annullare.
 - **«Solo online»:** nasconde i dispositivi offline (persistito in localStorage).
 - **«Raggruppa sottoreti»:** i dispositivi vengono raggruppati per sottorete in una cornice
-  (etichetta `sottorete · sito (numero)`). Gli archi tra sottoreti diverse vanno da gruppo a gruppo.
+  (etichetta `sottorete · sito (numero)`). Gli archi restano tra i dispositivi, anche
+  tra sottoreti.
 - **Comprimi/espandi figli:** nel pannello dettagli di router/switch, un pulsante nasconde tutti
   i dispositivi collegati direttamente; il nodo mostra poi `(+N)`.
-- **Layout:**
-- **Pulizia automatica:** nodi più compatti (20 px), archi più sottili/trasparenti, parametri cose scalati in base al numero di dispositivi; etichette visibili solo da zoom ≥ 0,85 (sotto, solo gli hub: router/switch/gateway/internet); oltre 25 dispositivi i gruppi di sottorete si attivano automaticamente; «Solo online» è attivo di default (disattivabile, memorizzato).
- `auto` (fisica, predefinito), `force`, `tree`, `concentric`, `circle`, `grid`;
-  **Ripristina** cancella le posizioni salvate.
+- **Layout:** `auto` (predefinito) dispone la mappa ad albero secondo la topologia: Internet in alto, sotto
+  router, switch/ripetitori e dispositivi finali. Molti dispositivi finali di un nodo stanno in una griglia
+  compatta sotto di esso; i dispositivi senza genitore stanno sotto l'albero. Se sono salvate posizioni per tutti
+  i dispositivi (trascinando), `auto` le usa. Altri: `tree` (sempre albero), `force` (fisica), `concentric`,
+  `circle`, `grid`. **Ripristina** cancella le posizioni salvate.
+- **Pulizia automatica:** nodi compatti (20 px), archi sottili (WLAN tratteggiato, accesso Internet più spesso);
+  etichette visibili solo da zoom ≥ 0,85 (sotto, solo gli hub: router/switch/gateway/internet); oltre 25
+  dispositivi i gruppi di sottorete si attivano automaticamente; «Solo online» è attivo di default (disattivabile).
 - Nodi virtuali: **🌐 Internet** (con IP WAN da TR-064, altrimenti «?»), **🏠 Gateway** (se il
   gateway non è nell'elenco) e **📶 wlan:…** per i dispositivi WLAN senza nodo proprio.
 - Emoji di categoria sui nodi: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Stampante ·
@@ -221,8 +226,9 @@ allarmi (webhook/Gotify/Ntfy per nuovo dispositivo — tranne whitelist).
 
 Priorità: **manuale** (pannello dettagli) > **SNMP** (CAM+LLDP) > **TR-064** (ripetitori) >
 **WLAN** (`wlan:…` se TR-064 indica l'host come WLAN) > **gateway**.
-Anche il tipo di collegamento `lan`/`wlan` è salvato. Con i gruppi di sottorete attivi, gli archi
-tra sottoreti diverse vanno da gruppo a gruppo.
+Anche il tipo di collegamento `lan`/`wlan` è salvato. Gli archi vanno dal genitore al dispositivo
+(base del layout ad albero). Se «collegato a» è un IP o un nome host, viene associato al dispositivo
+corrispondente; solo se non esiste viene creato un nodo gateway virtuale.
 
 ---
 
