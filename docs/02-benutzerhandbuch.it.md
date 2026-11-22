@@ -166,7 +166,7 @@ predefinito env).
 | Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
-| mDNS | `NETZ_MDNS_ENABLED` | hostname via mDNS PTR come fallback |
+| mDNS | `NETZ_MDNS_ENABLED` | hostname via mDNS PTR come fallback (+ DNS-SD, v1.6.0) |
 | Fallback OUI online / max lookup per scansione / URL API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | produttore di MAC sconosciuti cercato online (predefinito `https://api.macvendors.com`), **disattivato per impostazione predefinita** (privacy: i prefissi MAC vengono inviati a terzi), in cache nel DB |
 | Login attivo | `NETZ_AUTH_ENABLED` | login di sessione on/off (utente/password restano solo env) |
 | Tema / lingua | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
@@ -219,6 +219,15 @@ allarmi (webhook/Gotify/Ntfy per nuovo dispositivo — tranne whitelist).
 
 **Retention:** i dispositivi offline vengono eliminati dopo `NETZ_DEVICE_RETENTION_DAYS`
 (30 predefiniti, 0 = mai).
+
+**Categorie di dispositivi (da v1.6.0):** Router, Ripetitore/AP, Switch, Server/NAS, Client, Dispositivo mobile,
+Multimedia, Stampante, Smart home/IoT, Sconosciuto. Ogni segnale assegna punti, vince il totale più alto:
+gateway (100) > ruolo mesh FRITZ!Box (50) > modello mDNS, ad es. `iPhone14,2` (8) > nome host (6) >
+servizio mDNS, ad es. `_ipp._tcp` (4) > produttore OUI (3) > porte aperte (1–5) > indirizzo Wi-Fi privato (1).
+La porta 53 da sola non rende più un dispositivo un router; SMB (445) da solo conta come client. Vengono inoltre
+verificate alcune porte alte univoche (62078 iOS, 8009 Google Cast, 1400 Sonos, 8006 Proxmox), salvo elenco proprio
+in `NETZ_PORTS`. Il pannello dettagli mostra in **Rilevato tramite** il segnale decisivo. Una categoria manuale ha
+sempre la precedenza. La ricerca dei servizi mDNS è una singola richiesta locale (`NETZ_MDNS_ENABLED`).
 
 ---
 

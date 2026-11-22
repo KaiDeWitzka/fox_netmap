@@ -261,6 +261,12 @@ def test_collect_devices_mit_mesh(tmp_path, monkeypatch):
     assert conn_type[REP] == "wlan" and conn_type[PHONE] == "wlan"
     assert conn_type[TV] == "wlan"  # Mesh schlaegt den TR-064-Host-Typ (Hosts melden hier "LAN")
     assert conn_type[PRINTER] == "lan"
+    cat = {d["mac"]: d["category"] for d in devices}
+    assert cat[BOX] == "Router" and cat[REP] == "Repeater/AP" and cat[SWITCH] == "Switch"
+    assert cat[PHONE] == "Mobilgerät" and cat[TV] == "Multimedia" and cat[PRINTER] == "Drucker"
+    assert cat[NAS] == "Server/NAS" and cat[PC] == "Client"
+    reason = {d["mac"]: d["category_reason"] for d in devices}
+    assert reason[BOX] == "gateway" and reason[REP] == "mesh:slave"
 
     # Abschaltbar: ohne Mesh wieder Stern am Gateway
     settings2 = settings.model_copy(update={"fritz_mesh": False})

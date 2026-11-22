@@ -167,7 +167,7 @@ vacío = valor por defecto del entorno).
 | Sitios | `NETZ_SITES` | `Nombre:subred; …` p. ej. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
 | Historial / retención | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historial en horas; borrar dispositivos sin conexión tras N días (0 = nunca) |
 | Auto-exportación / intervalo / carpeta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automático; intervalo en h (0 = tras cada escaneo) |
-| mDNS | `NETZ_MDNS_ENABLED` | hostnames vía mDNS PTR como respaldo |
+| mDNS | `NETZ_MDNS_ENABLED` | hostnames vía mDNS PTR como respaldo (+ DNS-SD, v1.6.0) |
 | Respaldo OUI en línea / máx. consultas por escaneo / URL de API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MAC desconocidas se busca en línea (por defecto `https://api.macvendors.com`), **desactivado por defecto** (protección de datos: los prefijos MAC se envían a un tercero), caché en la BD |
 | Login activado | `NETZ_AUTH_ENABLED` | login por sesión on/off (usuario/contraseña siguen siendo solo env) |
 | Tema / idioma | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
@@ -221,6 +221,15 @@ dispara alarmas (webhook/Gotify/Ntfy al detectar un dispositivo nuevo — salvo 
 
 **Retención:** los dispositivos sin conexión se borran tras `NETZ_DEVICE_RETENTION_DAYS`
 (30 por defecto, 0 = nunca).
+
+**Categorías de dispositivos (desde v1.6.0):** Router, Repetidor/AP, Switch, Servidor/NAS, Cliente, Dispositivo
+móvil, Multimedia, Impresora, Hogar inteligente/IoT, Desconocido. Cada señal suma puntos y gana el total más alto:
+puerta de enlace (100) > rol mesh FRITZ!Box (50) > modelo mDNS, p. ej. `iPhone14,2` (8) > nombre de host (6) >
+servicio mDNS, p. ej. `_ipp._tcp` (4) > fabricante OUI (3) > puertos abiertos (1–5) > dirección Wi-Fi privada (1).
+El puerto 53 solo ya no convierte un dispositivo en router; SMB (445) solo cuenta como cliente. Además se comprueban
+algunos puertos altos inequívocos (62078 iOS, 8009 Google Cast, 1400 Sonos, 8006 Proxmox), salvo lista propia en
+`NETZ_PORTS`. El panel de detalles muestra en **Detectado por** la señal decisiva. Una categoría manual siempre
+prevalece. La búsqueda de servicios mDNS es una única consulta local (`NETZ_MDNS_ENABLED`).
 
 ---
 

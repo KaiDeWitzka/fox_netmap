@@ -166,7 +166,7 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 | Sites | `NETZ_SITES` | `Nom:sous-réseau; …` p. ex. `Maison:192.168.178.0/24; Remote:192.168.179.0/24` |
 | Historique / rétention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historique en heures ; supprimer les appareils hors ligne après N jours (0 = jamais) |
 | Auto-export / intervalle / dossier | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV auto ; intervalle en h (0 = après chaque scan) |
-| mDNS | `NETZ_MDNS_ENABLED` | noms d'hôte via mDNS PTR en secours |
+| mDNS | `NETZ_MDNS_ENABLED` | noms d'hôte via mDNS PTR en secours (+ DNS-SD, v1.6.0) |
 | Repli OUI en ligne / max de requêtes par scan / URL d'API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricant des MAC inconnues recherché en ligne (défaut `https://api.macvendors.com`), **désactivé par défaut** (protection des données : les préfixes MAC sont envoyés à un tiers), mis en cache en BDD |
 | Login activé | `NETZ_AUTH_ENABLED` | login par session on/off (user/pass restent env-only) |
 | Thème / langue | `NETZ_THEME` / `NETZ_LANG` | dark/light ; de/en/fr/es/it/pt |
@@ -221,6 +221,15 @@ liste blanche).
 
 **Rétention :** les appareils hors ligne sont supprimés après `NETZ_DEVICE_RETENTION_DAYS`
 (30 par défaut, 0 = jamais).
+
+**Catégories d'appareils (depuis v1.6.0) :** Routeur, Répéteur/AP, Switch, Serveur/NAS, Client, Appareil mobile,
+Multimédia, Imprimante, Domotique/IoT, Inconnu. Chaque signal donne des points, le total le plus élevé l'emporte :
+passerelle (100) > rôle mesh FRITZ!Box (50) > modèle mDNS, p. ex. `iPhone14,2` (8) > nom d'hôte (6) >
+service mDNS, p. ex. `_ipp._tcp` (4) > fabricant OUI (3) > ports ouverts (1–5) > adresse Wi-Fi privée (1).
+Le port 53 seul ne fait plus d'un appareil un routeur ; SMB (445) seul compte comme client. Quelques ports élevés
+sans ambiguïté sont testés en plus (62078 iOS, 8009 Google Cast, 1400 Sonos, 8006 Proxmox), sauf liste propre dans
+`NETZ_PORTS`. Le panneau de détails indique sous **Détecté via** le signal décisif. Une catégorie définie
+manuellement prime toujours. La recherche de services mDNS est une seule requête locale (`NETZ_MDNS_ENABLED`).
 
 ---
 

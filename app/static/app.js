@@ -10,6 +10,9 @@ const CATEGORY_COLORS = {
   Client: "#34d399",
   Drucker: "#f472b6",
   "Smart-Home/IoT": "#facc15",
+  "Repeater/AP": "#fdba74",
+  "Mobilgerät": "#2dd4bf",
+  Multimedia: "#f87171",
   Unbekannt: "#9ca3af",
   WLAN: "#e879f9",
   Internet: "#94a3b8",
@@ -23,6 +26,9 @@ const CATEGORY_ICONS = {
   Client: "💻",
   Drucker: "🖨️",
   "Smart-Home/IoT": "💡",
+  "Repeater/AP": "📶",
+  "Mobilgerät": "📱",
+  Multimedia: "📺",
   Unbekannt: "❓",
   WLAN: "📶",
   Internet: "🌐",
@@ -383,6 +389,24 @@ function isIpLike(s) {
 // Vorgaenger eines Geraets als Knoten-ID. Reihenfolge: WLAN-Knoten, MAC, IP, Hostname eines bekannten
 // Geraets; erst wenn kein Geraet passt, bleibt eine IP als virtueller Gateway-Knoten stehen (v1.5.4: vorher
 // wurde eine IP sofort zurueckgegeben, die FRITZ!Box erschien dann doppelt als "Gateway").
+// Netzknoten, an denen andere Geraete haengen koennen (Baum-Layout, Kinder-Liste, Zuordnung)
+function isNetCategory(c) {
+  return c === "Router" || c === "Switch" || c === "Repeater/AP";
+}
+
+// Begruendung der automatischen Einordnung (v1.6.0), z. B. "host:iphone" -> "Hostname „iphone“"
+function reasonText(d) {
+  if (d.category_override) return t("why.manual");
+  const r = String(d.category_reason || "");
+  if (!r) return "–";
+  const i = r.indexOf(":");
+  const kind = i < 0 ? r : r.slice(0, i);
+  const val = i < 0 ? "" : r.slice(i + 1);
+  if (kind === "mesh") return t(val === "master" ? "why.meshMaster" : "why.meshSlave");
+  const key = { gateway: "why.gateway", host: "why.host", vendor: "why.vendor", port: "why.port", svc: "why.svc", mdns: "why.model", mac: "why.randomMac" }[kind];
+  return key ? t(key, { v: val }) : r;
+}
+
 // Anschluss laut FRITZ!Box-Mesh lesbar machen: "LAN:1" -> "LAN 1", "AP:5G:0" -> "5 GHz"
 function portLabel(p) {
   const s = String(p || "").toUpperCase();
@@ -460,7 +484,7 @@ function buildElements() {
         status: d.status,
         color: CATEGORY_COLORS[d.category] || CATEGORY_COLORS.Unbekannt,
         ports: d.port_count || 0,
-        hub: d.category === "Router" || d.category === "Switch",
+        hub: isNetCategory(d.category),
         name: (d.hostname || d.ip || d.mac).toLowerCase(),
         subnetKey: d.subnet || "",
       },
@@ -602,7 +626,7 @@ async function showDetail(mac) {
   const d = await r.json();
   cy.nodes().removeClass("hl");
   cy.edges().removeClass("hl");
-  const isNet = d.category === "Router" || d.category === "Switch";
+  const isNet = isNetCategory(d.category);
   const children = isNet ? devices.filter((x) => parentId(x) === mac) : [];
   for (const c of children) {
     cy.getElementById(c.mac).addClass("hl");
@@ -612,7 +636,7 @@ async function showDetail(mac) {
   const hostLinks = webLinks(d).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" class="ext-link">${esc(l.label)}</a>`).join(", ");
   const rows = [
     [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
-    [t("d.category"), esc(t("cat." + d.category))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
+    [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
     [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
     [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
   ];
@@ -623,7 +647,7 @@ async function showDetail(mac) {
   }
   if (!EMBED) {
     html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}"><button id="ed-save">${t("btn.save")}</button></div>`;
-    const parents = devices.filter((x) => x.category === "Router" || x.category === "Switch");
+    const parents = devices.filter((x) => isNetCategory(x.category));
     const cur = d.layout.connected_to || "";
     html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${esc(x.mac)}"${cur === x.mac ? " selected" : ""}>${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
     if (isNet) {

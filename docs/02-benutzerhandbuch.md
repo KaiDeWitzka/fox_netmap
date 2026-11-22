@@ -165,7 +165,7 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 | Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.168.178.0/24; Remote:192.168.179.0/24` |
 | Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
 | Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
-| mDNS | `NETZ_MDNS_ENABLED` | Hostnamen per mDNS-PTR als Fallback |
+| mDNS | `NETZ_MDNS_ENABLED` | Hostnamen per mDNS-PTR als Fallback (+ DNS-SD, v1.6.0) |
 | Online-OUI-Fallback / max. Lookups pro Scan / API-URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | Hersteller unbekannter MACs online nachschlagen (Default `https://api.macvendors.com`), **Default aus** (Datenschutz: MAC-Präfixe gehen an einen Drittanbieter), gecacht in der DB |
 | Login aktiv | `NETZ_AUTH_ENABLED` | Session-Login an/aus (User/Pass bleiben env-only) |
 | Theme / Sprache | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
@@ -219,6 +219,17 @@ löst Alarme aus (Webhook/Gotify/Ntfy bei neuem Gerät — außer Whitelist).
 
 **Retention:** offline-Geräte werden nach `NETZ_DEVICE_RETENTION_DAYS` (Default 30, 0 = nie)
 gelöscht.
+
+**Gerätekategorien (ab v1.6.0):** Router, Repeater/AP, Switch, Server/NAS, Client, Mobilgerät, Multimedia, Drucker,
+Smart-Home/IoT, Unbekannt. Jedes Signal vergibt Punkte, die höchste Summe gewinnt:
+Standard-Gateway (100) > FRITZ!Box-Mesh-Rolle (50) > mDNS-Modell, z. B. `iPhone14,2` (8) > Hostname (6) >
+mDNS-Dienst, z. B. `_ipp._tcp` (4) > Hersteller laut OUI (3) > offene Ports (1–5) > private WLAN-Adresse (1).
+Hostnamen zählen nur am Wortanfang (`ring-tuer` ja, `string` nein). Port 53 allein macht ein Gerät nicht mehr zum
+Router, SMB (445) allein gilt als Client. Mehrdeutige Hersteller wie Apple, Samsung oder TP-Link werden nicht
+gewertet. Zusätzlich zur Portliste prüft der Scanner einige hohe Ports, die eindeutig sind (z. B. 62078 iOS,
+8009 Google Cast, 1400 Sonos, 8006 Proxmox), außer bei einer eigenen Liste in `NETZ_PORTS`. Die Detailansicht
+zeigt unter **Erkannt über**, welches Signal entschieden hat. Eine von Hand gesetzte Kategorie hat immer Vorrang.
+Die mDNS-Dienstsuche ist eine einzelne Anfrage im lokalen Netz und hängt an `NETZ_MDNS_ENABLED`.
 
 ---
 
