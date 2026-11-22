@@ -173,6 +173,8 @@ automático), portas abertas com nomes de serviço, nota, histórico (online/off
 
 ![Definições](screenshots/03-einstellungen.svg)
 
+O formulário está **agrupado por tema** (Geral · Varredura · TR-064 · SNMP · Alarmes · Exportações/Locais/VPN · OUI).
+
 Tudo o que for alterado aqui tem efeito **na próxima scan sem reiniciar o contentor** (os valores
 env do compose continuam a ser os predefinidos para novas instalações; vazio = predefinido env).
 

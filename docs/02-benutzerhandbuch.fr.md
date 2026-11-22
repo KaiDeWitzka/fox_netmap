@@ -175,6 +175,8 @@ auto), ports ouverts avec noms de service, note, historique (en ligne/hors ligne
 
 ![Paramètres](screenshots/03-einstellungen.svg)
 
+Le formulaire est **organisé par thème** (Général · Scan · TR-064 · SNMP · Alarmes · Exports/Sites/VPN · OUI).
+
 Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le conteneur**
 (les valeurs env de la compose restent les défauts pour une installation neuve ; vide = défaut env).
 

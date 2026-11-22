@@ -170,6 +170,8 @@ automatic), open ports with service names, note, history (online/offline/ports) 
 
 ![Settings](screenshots/03-einstellungen.svg)
 
+The form is **grouped by topic** (General · Scan · TR-064 · SNMP · Alarms · Exports/Sites/VPN · OUI).
+
 Everything changed here takes effect **on the next scan without restarting the container**
 (compose env values remain the defaults for fresh installs; empty = env default).
 
