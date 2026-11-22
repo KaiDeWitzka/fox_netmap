@@ -79,9 +79,11 @@
             <label><span data-i18n="st.ports">Eigene Ports (kommagetrennt, leer = Top-N)</span> <input id="st-ports" type="text" placeholder="80,443,8080"></label>
             <label><span data-i18n="st.history">Historie (Stunden)</span> <input id="st-history" type="number" min="1"></label>
             <label><span data-i18n="st.retention">Geräte offline löschen nach (Tagen, 0 = nie)</span> <input id="st-retention" type="number" min="0"></label>
+            <label><span data-i18n="st.eventRetention">Ereignisse löschen nach (Tagen, 0 = nie)</span> <input id="st-eventretention" type="number" min="0" max="3650"></label>
             <label><input id="st-snmp" type="checkbox"> <span data-i18n="st.snmp">SNMP-Scan aktiv</span></label>
             <label><span data-i18n="st.switches">SNMP-Switches (IPs, kommagetrennt)</span> <input id="st-switches" type="text"></label>
-            <label><span data-i18n="st.snmpCommunity">SNMP-Community</span> <input id="st-snmpcommunity" type="password" autocomplete="off"></label>
+            <label><span data-i18n="st.snmpCommunity">SNMP-Community</span> <input id="st-snmpcommunity" type="password" autocomplete="off" aria-describedby="st-snmpcommunity-hint"></label>
+            <p id="st-snmpcommunity-hint" class="muted" data-i18n="st.snmpCommunityHint">Kein Standardwert. Ohne Community wird SNMP übersprungen. Nicht „public“ verwenden.</p>
             <label><span data-i18n="st.fritzUrl">TR-064 Hauptgerät (URL oder host:port)</span> <input id="st-fritzurl" type="text" placeholder="http://192.168.178.1:49000"></label>
             <label><span data-i18n="st.fritzUrls">Weitere TR-064-Endpunkte (kommagetrennt, z. B. Repeater)</span> <input id="st-fritzurls" type="text" placeholder="192.168.178.14:49000"></label>
             <label><span data-i18n="st.fritzUser">TR-064 Benutzer</span> <input id="st-fritzuser" type="text"></label>

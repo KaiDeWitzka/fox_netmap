@@ -158,12 +158,13 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 | Sub-redes | `NETZ_SUBNETS` | separadas por vírgulas, CIDR IPv4 e IPv6 (p. ex. `192.168.178.0/24, 2003:db8::/64`) |
 | Intervalo / timeout da scan | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | segundos; intervalo 30–86400 |
 | Âmbito de portas / portas próprias | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = todas) ou lista própria `80,443,…` |
-| SNMP ativo / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabela CAM + LLDP dos switches (161/udp) |
+| SNMP ativo / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabela CAM + LLDP dos switches (161/udp). Community sem valor predefinido (desde v1.6.0); sem community não há SNMP |
 | TR-064 dispositivo principal / outros endpoints / utilizador / palavra-passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `host:porta`; repetidores como endpoints extra; a palavra-passe é **write-only** (o GET nunca a devolve, vazia = inalterada) |
 | URL de alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; os tokens ficam só em env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP que não disparam o alarme «novo dispositivo» |
 | Locais | `NETZ_SITES` | `Nome:sub-rede; …` p. ex. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
 | Histórico / retenção | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | histórico em horas; apagar dispositivos offline após N dias (0 = nunca) |
+| Retenção de eventos | `NETZ_EVENT_RETENTION_DAYS` | apagar eventos após N dias, predefinição 90 (0 = nunca) |
 | Auto-exportação / intervalo / pasta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automáticos; intervalo em h (0 = após cada scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR como recurso (+ DNS-SD, v1.6.0) |
 | Fallback OUI online / máx. consultas por scan / URL da API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricante de MACs desconhecidos procurado online (predefinição `https://api.macvendors.com`), **desativado por predefinição** (proteção de dados: os prefixos MAC são enviados a terceiros), em cache na BD |
@@ -183,6 +184,8 @@ Em Definições (**Tokens de incorporación**) crie um token — opcionalmente c
 ```html
 <iframe src="https://netmap.example.com/embed?token=ABC123&lang=pt" width="100%" height="600"></iframe>
 ```
+
+O token só é mostrado logo após a criação; apenas um hash é guardado (desde v1.6.0). Copie-o de imediato; depois a lista mostra só os 6 primeiros caracteres.
 
 O embed é só de leitura (sem edição, sem definições), respeita os filtros do token e pode ser
 ajustado com `?theme=dark|light` e `?lang=…`.

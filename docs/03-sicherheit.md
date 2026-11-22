@@ -114,7 +114,7 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 
 - Passwortvergleich zeitkonstant (`hmac.compare_digest`).
 - `GET /api/settings` liefert keine Secrets; FRITZ!Box-Passwort ist write-only.
-- Embed-Tokens: zufällig (192 Bit), ablauffähig, filterbar, nur lesend.
+- Embed-Tokens: zufällig (192 Bit), ablauffähig, filterbar, nur lesend, in der DB nur als Hash (2.12).
 - Die Web-Oberfläche läuft ohne Host-Netzwerk.
 
 ### 2.9 Lieferkette (Supply Chain, seit v1.5.1)
@@ -153,6 +153,37 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   escaped aus (siehe 2.1).
 - Zusätzlich zur Portliste werden bis zu 15 eindeutige hohe Ports je Gerät geprüft (TCP-Connect, gleiche Zeitlimits).
 
+### 2.12 Embed-Tokens gehasht (seit v1.6.0)
+
+- Die Datenbank enthält nur `sha256:<Hash>` des Tokens und einen Hinweis aus den ersten 6 Zeichen. Wer die
+  Datenbank oder ein Backup liest, kann damit keine Karte abrufen.
+- Das Token wird nach dem Erstellen genau einmal angezeigt. Die Liste zeigt nur den Hinweis, gelöscht wird über die
+  Hash-ID (`DELETE /api/tokens/{id}`).
+- Vorhandene Klartext-Tokens werden beim Start einmalig gehasht (idempotente Migration). Bestehende Links bleiben
+  gültig.
+- Bei 192 Bit Zufall reicht ein ungesalzener SHA-256; ein Wörterbuchangriff ist nicht möglich.
+
+### 2.13 Benachrichtigungen (seit v1.6.0)
+
+- Gotify erhält das App-Token im Header `X-Gotify-Key`, nicht mehr als `?token=` in der URL. So landet es nicht in
+  Proxy- oder Zugriffslogs.
+- Webhook, ntfy und Gotify folgen keinen Weiterleitungen (`follow_redirects=False`), damit Inhalte nicht an ein
+  anderes Ziel gehen.
+- Fehler werden protokolliert, aber nur mit Dienstname und Fehlertyp oder HTTP-Status, nie mit URL oder Token.
+  Vorher wurden Fehler still verworfen.
+
+### 2.14 SNMP ohne Standard-Community (seit v1.6.0)
+
+- `NETZ_SNMP_COMMUNITY` hat keinen Standardwert mehr; vorher galt `public`. Ohne gesetzte Community fragt der
+  Scanner kein Gerät per SNMP ab und vermerkt das im Log.
+- Die Einstellungen weisen darauf hin, keine Standard-Community wie `public` zu verwenden.
+
+### 2.15 Löschfrist für Ereignisse (seit v1.6.0)
+
+- Ereignisse (neu, online, offline, Ports geändert) werden nach `NETZ_EVENT_RETENTION_DAYS` Tagen gelöscht,
+  Standard 90, `0` = nie. Das gilt auch für Geräte, die weiter online sind (DSGVO Art. 5 Abs. 1 lit. e,
+  Speicherbegrenzung). Einstellbar auch in der Oberfläche (0–3650).
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |
@@ -169,20 +200,19 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 | OPS.1.1.3 Patch- und Änderungsmanagement | Dependabot, wöchentlicher Nachscan, Patch-Releases |
 | SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung | Basis-Image per Digest, eigenes Image in GHCR mit Provenance |
 | APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release |
-| CON.2 Datenschutz, CON.6 Löschen | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Retention |
+| CON.2 Datenschutz, CON.6 Löschen | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Löschfristen für Geräte, Verlauf und Ereignisse |
+| APP.3.1.A14 / CON.8 Schutz gespeicherter Zugangsdaten | Embed-Tokens nur als Hash, Gotify-Token im Header |
 | OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |
 
 ## 4. Bekannte Restrisiken
 
 | Risiko | Bewertung / geplante Maßnahme |
 |---|---|
-| Embed-Token in der URL und im Klartext in der DB | Geplant v1.6.0: Token gehasht speichern, nur einmal anzeigen |
-| SNMP-Community-Default `public` | Geplant v1.6.0: kein Default, Hinweis in der UI |
+| Embed-Token in der URL | Nötig, damit ein iframe ohne Login funktioniert. `no-referrer` verhindert den Abfluss über den Referer; Tokens laufen ab und sind nur lesend. In der DB liegt nur der Hash (2.12) |
+| SNMPv2c ohne Verschlüsselung | Die Community geht im Klartext durchs Netz. Nur Read-only-Community verwenden, SNMPv3 ist nicht umgesetzt |
 | Sessions nur im Speicher | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte |
 | Scanner ohne `no-new-privileges` | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt |
 | `style-src 'unsafe-inline'` in der CSP | Nötig für Cytoscape; Styles können kein JavaScript ausführen |
-| Ereignisse aktiver Geräte ohne Löschfrist | Geplant v1.6.0: Frist analog zum Verlauf (Datenschutz, Speicherbegrenzung) |
-| Gotify-Token in der URL (`?token=`) | Geplant v1.6.0: Header `X-Gotify-Key` statt Query-Parameter |
 | Paket in GHCR privat | Solange das Repository privat ist; Pull nur mit Token (`read:packages`). Für eine Runtipi-App müsste das Paket öffentlich werden |
 | Fixlose Schwachstellen im Basis-Image | Werden gemeldet, aber nicht als Gate gewertet (`--ignore-unfixed`); Abhilfe über Dependabot-Digest-Updates |
 

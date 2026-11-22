@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     # Mesh-Topologie der FRITZ!Box (TR-064 X_AVM-DE_GetMeshListPath) fuer die Karte nutzen
     fritz_mesh: bool = True
     snmp_enabled: bool = True
-    snmp_community: str = "public"
+    # Kein Standardwert "public" mehr (v1.6.0): ohne gesetzte Community wird SNMP uebersprungen
+    snmp_community: str = ""
     snmp_switches: str = ""
     auth_enabled: bool = True
     auth_user: str = "admin"
@@ -36,6 +37,8 @@ class Settings(BaseSettings):
     notify_ntfy_token: str = ""
     history_hours: int = 720
     device_retention_days: int = 30
+    # Ereignisse (online/offline/Ports/neu) nach N Tagen loeschen, 0 = nie (Datenschutz, Speicherbegrenzung, seit v1.6.0)
+    event_retention_days: int = 90
     theme: str = "dark"
     lang: str = "de"
     auto_export: bool = False
@@ -51,7 +54,7 @@ class Settings(BaseSettings):
     embed_ancestors: str = "*"
     # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
     cookie_secure: str = "auto"
-    app_version: str = "1.6.0-rc.2"
+    app_version: str = "1.6.0-rc.3"
 
     @property
     def subnet_list(self) -> list[str]:
