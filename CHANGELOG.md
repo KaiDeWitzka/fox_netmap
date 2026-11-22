@@ -4,6 +4,44 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.1] – 2026-11-22
+
+Neues Knotendesign der Karte nach dem Soll-Entwurf ([Plan](docs/plaene/v1.6.1-knotendesign.md)).
+
+### Geändert
+- **Knoten:** neutraler Kreis mit Kategorie-Symbol (Lucide, lokal in `app/static/icons.js`) statt farbiger Fläche
+  und Emoji. Hubs (Router, Switch, Repeater/AP, Server/NAS, Internet) 40 px, Endgeräte 34 px. Für Clients
+  Feinsymbole Laptop, Tablet und Spielkonsole.
+- **Beschriftung zweizeilig:** Name (ab 20 Zeichen gekürzt, voller Name als Tooltip) und `IP · Kategorie`,
+  dazu `(+N)` und `· offline`. Internet-Knoten mit `WAN <IP>`. Emojis aus allen sechs Sprachen entfernt.
+- **Gateway als Wurzel** mit Ring in Akzentfarbe, nur für das Gerät mit der Gateway-IP. Repeater mit hellem Rand.
+- **Offline:** Körper abgeblendet und gestrichelt, Beschriftung bleibt lesbar (vorher Deckkraft auf alles).
+- **Kanten:** gerade, LAN durchgezogen, WLAN gestrichelt, Powerline gepunktet, zwischen Standorten blasser.
+- **Subnetz-Rahmen:** Beschriftung `Subnetz · Standort (Anzahl)`.
+- **Baum-Layout:** größere Abstände für die zweizeiligen Beschriftungen.
+- **Übergänge** 150 ms für Auswahl und Hervorhebung, entfallen bei „Bewegung reduzieren“.
+
+### Neu
+- **Legende** unten links, einklappbar (`<details>`, Zustand in `localStorage` `fox_legend`, standardmäßig zu).
+- **Tabelle:** Kategorie-Symbol vor dem Text; Druckansicht ohne Auswahlspalte und Mehrfach-Leiste.
+- `THIRD_PARTY.md` mit den Lizenzen von Cytoscape.js, Lucide und Feather.
+
+### Barrierefreiheit
+- Kategorie nicht mehr nur über Farbe erkennbar (WCAG 1.4.1). Kontraste in beiden Themes automatisch geprüft:
+  Text ≥ 4,5:1, Ränder und Symbole ≥ 3:1 (WCAG 1.4.3, 1.4.11).
+
+### Sicherheit und Datenschutz
+- Keine externen Quellen: Symbole als `data:`-URI aus festen Pfaden, CSP unverändert. Karten-Snapshot für den
+  PDF-Export funktioniert weiter. Sicherheitskonzept §2.17, Datenschutzhinweis ergänzt.
+
+### Dokumentation
+- Benutzerhandbuch in sechs Sprachen (§2, §3, §18) mit echten Karten-Aufnahmen hell und dunkel, README mit Bild.
+
+### Hinweise zum Update
+- Keine Datenbank- oder Konfigurationsänderung. Gespeicherte Kartenpositionen bleiben; wer das neue Baum-Layout mit
+  den größeren Abständen sehen will, nutzt den Knopf **↺ Layout**.
+- Die API ist unverändert; Emojis gab es nur in der Oberfläche.
+
 ## [1.6.0] – 2026-11-22
 
 Fasst die Vorab-Versionen rc.1 bis rc.3 zusammen und ergänzt die Mehrfach-Zuordnung. Erste Version der Reihe 1.6

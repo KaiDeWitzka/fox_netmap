@@ -31,7 +31,7 @@ Interaktive, bearbeitbare Karte des eigenen Heimnetzes (mehrere Subnetze/VLANs, 
 | Suche/Filter | Freitext (IP, Hostname, MAC, Hersteller, Notiz) + Filter: Kategorie, online/offline, Subnetz, „hat offene Ports“; Treffer in Karte hervorgehoben |
 | Klick-Details | Side-Panel mit allen Feldern + Online/Offline-Kurzverlauf; bei Router/Switch: Liste angeschlossener Geräte + Highlight in der Karte |
 | Tabellenansicht | Sortier-/filterbar (gleiches Filterset), direkt editierbar (Kategorie, Notiz, „Verbunden mit“), Spalten ein-/ausblendbar, Export-Buttons dort; Mehrfach-Zuordnung „Verbunden mit“ für markierte Geräte, alles oder nichts, ohne Kreise (seit v1.6.0) |
-| Darstellung | Farbcodierung nach Kategorie + Status; Badge mit Port-Anzahl am Knoten; Dark/Light-Theme (persistent) |
+| Darstellung | Seit v1.6.1: neutraler Knoten mit Kategorie-Symbol (Lucide) statt Farbe, zweizeilige Beschriftung (Name, `IP · Kategorie`), Gateway mit Ring, offline gestrichelt und als Text, Legende; Kontraste ≥ 4,5:1 Text und ≥ 3:1 Ränder/Symbole in beiden Themes; Dark/Light-Theme (persistent) |
 | Embed | Dedizierte `/embed`-URL, read-only (Zoom/Pan/Klick ok), hinter Login; optionaler Share-Token mit Ablaufdatum; pro Token optional nur bestimmte Subnetze/Kategorien |
 | Export | JSON (vollständiges Schema, alle oder gefilterte Geräte); CSV (UTF-8, Komma/Semikolon wählbar, Default Semikolon); PDF = druckoptimierte Ansicht (serverseitiges PDF → Backlog); optional automatische tägliche Exporte in Export-Ordner |
 | Auth | App-eigener Session-Login (Default an, im LAN abschaltbar); RunTipi legt zusätzlich eigenen Login davor |
@@ -79,7 +79,7 @@ Scanner (zyklisch/manuell)
 
 ### 3.5 UI
 
-- **Karte:** Cytoscape.js; hierarchisches Auto-Layout + gespeicherte Drag-Positionen; Klick → Side-Panel; Highlight der Geräte am selben Router/Switch; Freitext-Suche + Filter; Zoom/Pan; Farbcodierung Kategorie/Status; Port-Badge.
+- **Karte:** Cytoscape.js; hierarchisches Auto-Layout + gespeicherte Drag-Positionen; Klick → Side-Panel; Highlight der Geräte am selben Router/Switch; Freitext-Suche + Filter; Zoom/Pan; Kategorie als Symbol (seit v1.6.1, vorher Farbe), Status als Rand und Text; Legende.
 - **Tabelle:** eigene Ansicht, sortier-/filterbar, inline editierbar, Spalten wählbar, Export-Buttons.
 - **Einstellungen:** Scan-Intervall, Subnetze, Port-Umfang, TR-064, SNMP, Alarm-Ziele, Theme, Login an/aus, Whitelist.
 - **Theme:** Dark/Light, persistent.

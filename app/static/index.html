@@ -54,6 +54,10 @@
   <section id="view-map" class="view" data-i18n-aria="map.aria" aria-label="Netzwerkkarte">
     <p class="visually-hidden" data-i18n="map.hint">Interaktive Netzwerkkarte. Alle Geräte und Details sind in der Tabellenansicht auch per Tastatur erreichbar (Zeile fokussieren, dann Enter drücken).</p>
     <div id="map"></div>
+    <details id="map-legend" class="map-legend">
+      <summary data-i18n="legend.title">Legende</summary>
+      <ul id="legend-list"></ul>
+    </details>
   </section>
   <aside id="detail" hidden aria-label="Gerätedetails und Einstellungen" data-i18n-aria="aside.aria">
       <div class="tabs" role="tablist" data-i18n-aria="tabs.aria" aria-label="Detail-Bereich">
@@ -146,6 +150,7 @@
 </main>
 <script src="/static/vendor/cytoscape.min.js"></script>
 <script src="/static/i18n.js"></script>
+<script src="/static/icons.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # fox_netmap — Manual del usuario
 
-Versión 1.3.x · noviembre de 2026
+Versión 1.6.1 · noviembre de 2026
 
 > Idiomas: [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -9,8 +9,9 @@ dispositivos en varias subredes/VLAN, con topología («conectado a»), puertos 
 historial, alarmas y exportaciones (JSON/CSV/impresión PDF). Los datos se guardan de forma
 persistente en SQLite; los escaneos son cíclicos o manuales.
 
-> Las imágenes de este manual (`docs/screenshots/*.svg`) son ilustraciones esquemáticas de la
-> interfaz real (tema oscuro): la estructura y los elementos coinciden 1:1 con la aplicación.
+> Las imágenes del mapa `docs/screenshots/01-karte-hell.png` y `01-karte-dunkel.png` son capturas reales de
+> la v1.6.1 con datos de prueba. Las demás imágenes (`*.svg`) son ilustraciones esquemáticas de la interfaz
+> (tema oscuro); la estructura y los elementos coinciden con la aplicación.
 
 **Índice**
 
@@ -66,7 +67,11 @@ docker compose up -d --build
 
 ## 2. La interfaz
 
-![Mapa con grupos de subred y panel de detalles](screenshots/01-karte.svg)
+![Mapa v1.6.1, tema claro: grupos de subred Casa y Remoto, pasarela con anillo, leyenda abierta](screenshots/01-karte-hell.png)
+
+![Mapa v1.6.1, tema oscuro: árbol con repetidor, switch y dispositivos finales, leyenda plegada](screenshots/01-karte-dunkel.png)
+
+Vista esquemática con panel de detalles: [01-karte.svg](screenshots/01-karte.svg)
 
 La cabecera contiene (de izq. a dcha.): logo/versión, navegación **Mapa / Tabla / Registro**,
 búsqueda, filtros (categoría, estado, sitio), **Solo en línea**, selector de diseño, exportaciones
@@ -94,14 +99,30 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   una cuadrícula compacta debajo; los dispositivos sin padre quedan bajo el árbol. Si hay posiciones guardadas
   para todos los dispositivos (arrastrar), `auto` las usa. Otros: `tree` (siempre árbol), `force` (física),
   `concentric`, `circle`, `grid`. **Restablecer** borra las posiciones guardadas.
-- **Despeje automático:** nodos compactos (20 px), aristas finas (WLAN discontinua, acceso a Internet más
-  gruesa); etiquetas visibles solo desde zoom ≥ 0,85 (debajo, solo concentradores: router/switch/pasarela/internet);
-  con más de 25 dispositivos los grupos de subred se activan automáticamente; «Solo en línea» está activo por
-  defecto (conmutable).
-- Nodos virtuales: **🌐 Internet** (con IP WAN de TR-064, si no «?»), **🏠 Pasarela** (si la
-  pasarela no está en la lista) y **📶 wlan:…** para dispositivos WLAN sin nodo propio.
-- Emoji de categoría en los nodos: 🏠 Router · 🔀 Switch · 🖥 Servidor/NAS · 💻 Cliente · 🖨 Impresora ·
-  💡 Hogar inteligente/IoT · ❓ Desconocido.
+- **Nodos (desde v1.6.1):** círculo neutro con un símbolo de categoría (símbolos Lucide, ver
+  `THIRD_PARTY.md`) en lugar de color y emoji. Router, switch, repetidor/AP, servidor/NAS e Internet miden
+  40 px, los dispositivos finales 34 px. En los clientes el mapa distingue portátil, tableta y consola según
+  el nombre y el motivo de detección.
+- **Etiqueta en dos líneas:** línea 1 el nombre (abreviado con «…» a partir de 20 caracteres; el nombre
+  completo aparece como información emergente al pasar el ratón), línea 2 `IP · categoría`, con `(+N)` para
+  hijos plegados y `· offline` para dispositivos desconectados. El nodo Internet muestra `Internet` y
+  `WAN <IP>` («?» sin TR-064). Ambas líneas tienen el mismo color porque la biblioteca Cytoscape no admite
+  un color por línea.
+- **Pasarela como raíz:** solo el dispositivo con la IP de la pasarela (TR-064 o enrutamiento) recibe un
+  anillo marcado en color de acento con un anillo exterior discontinuo. Repetidores/AP tienen borde claro.
+- **Offline:** cuerpo y símbolo atenuados, borde discontinuo; la etiqueta sigue legible e indica «offline»,
+  así la información no depende del color.
+- **Aristas:** líneas rectas, LAN continua, WLAN discontinua, PLC punteada. Las conexiones entre ubicaciones
+  distintas son más tenues. El acceso a Internet es algo más marcado.
+- **Leyenda:** abajo a la izquierda, plegable (estado guardado en el navegador, plegada por defecto).
+  Muestra todos los símbolos con su categoría, el anillo de pasarela, offline y los tipos de línea.
+- **Despeje automático:** etiquetas completas a partir de zoom ≥ 0,85 (por debajo solo hubs:
+  router/switch/pasarela/Internet), el texto muy pequeño no se dibuja; los grupos de subred se activan
+  automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto.
+- Nodos virtuales: **Internet** (con IP WAN), **Pasarela** (si la pasarela no está en la lista) y
+  **wlan:…** para dispositivos WLAN sin nodo propio.
+- **Tabla e impresión:** la celda de categoría muestra el mismo símbolo que el mapa más el texto. Los filtros
+  y el selector de categoría son listas nativas y solo muestran texto.
 
 ---
 
@@ -365,6 +386,12 @@ La pestaña **Registro** + `docker compose logs netmap-scanner` muestran cada pa
 - aria-labels en botones de solo icono, región live para mensajes de estado.
 - El objetivo es la conformidad completa con BITV 2.1 — sugerencias bienvenidas (issue en el repo).
 - **Reducir movimiento (desde v1.5.2):** si «reducir movimiento» está activo en el sistema (`prefers-reduced-motion`), fox_netmap no muestra animaciones ni transiciones; un escaneo en curso se indica con un punto fijo y texto. En caso contrario el punto solo pulsa tres veces (menos de 5 segundos) y después queda fijo (WCAG 2.2.2, 2.3.3). El mapa se construye siempre sin animación.
+- **Mapa (desde v1.6.1):** las categorías se reconocen por símbolo y texto, no solo por color (WCAG 1.4.1).
+  Contrastes comprobados en ambos temas: etiquetas al menos 4,5:1 (también offline), bordes y símbolos al
+  menos 3:1 frente al fondo (WCAG 1.4.3, 1.4.11). La leyenda es un elemento nativo `<details>` utilizable con
+  teclado; sus símbolos y los de la tabla son decorativos (`alt=""`) porque el texto de categoría está al
+  lado. Los nombres abreviados se leen completos en la información emergente, la tabla y el panel de
+  detalles. Las transiciones (150 ms) se omiten con «reducir movimiento».
 - El estado del escaneo solo se anuncia a los lectores de pantalla cuando cambia de verdad.
 
 ---

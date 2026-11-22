@@ -1,6 +1,6 @@
 # fox_netmap – Datenschutzhinweis
 
-Stand: v1.5.2. Dieser Hinweis beschreibt, welche Daten fox_netmap erhebt, wo sie liegen, wie lange sie
+Stand: v1.6.1. Dieser Hinweis beschreibt, welche Daten fox_netmap erhebt, wo sie liegen, wie lange sie
 gespeichert bleiben und wann Daten das lokale Netz verlassen. Er richtet sich an Betreiberinnen und Betreiber
 der Software. fox_netmap ist ein selbst gehostetes Werkzeug: Es gibt **keinen Cloud-Dienst, keine Telemetrie,
 kein Tracking und keine externen Schriften oder CDNs**. Alle Daten bleiben auf dem eigenen Server, solange
@@ -54,7 +54,7 @@ Servers; für Backups gilt dieselbe Vertraulichkeit wie für das Original.
 
 **Im Browser** speichert fox_netmap ein technisch notwendiges Session-Cookie (`fox_session`, HttpOnly,
 SameSite=Lax, 12 Stunden) und im `localStorage` reine Anzeige-Einstellungen: Sprache, Theme, Layout,
-Tabellenspalten und -breiten, eingeklappte Gruppen. Es werden keine Tracking-Cookies gesetzt; ein
+Tabellenspalten und -breiten, eingeklappte Gruppen, Legende offen oder zu (`fox_legend`, seit v1.6.1). Es werden keine Tracking-Cookies gesetzt; ein
 Cookie-Banner ist daher nicht erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG).
 
 ## 4. Speicherdauer und Löschung
@@ -83,6 +83,7 @@ davon aktiv.
 | Alarm-Webhook (`NETZ_NOTIFY_WEBHOOK`) | MAC, IP, Hostname, Hersteller neuer Geräte | frei konfigurierte URL | aus |
 | Gotify / ntfy (`NETZ_NOTIFY_GOTIFY`, `NETZ_NOTIFY_NTFY`) | Hostname bzw. IP und MAC neuer Geräte | eigener oder öffentlicher Push-Dienst | aus |
 | OUI-Datenbank aktualisieren (`scripts/update_oui.py`) | nur ein Download, keine Gerätedaten | `standards-oui.ieee.org` | manuell |
+| Kartensymbole (seit v1.6.1) | nichts – die Symbole sind in `app/static/icons.js` enthalten, kein Abruf von CDN oder Schriftdienst | – | – |
 | TR-064 / SNMP (inkl. FRITZ!Box-Mesh-Liste seit v1.6.0) | Abfragen an eigene Router und Switche im lokalen Netz | lokal | TR-064 aus, SNMP an (nur lokale Geräte) |
 
 Empfehlung: Für Benachrichtigungen einen selbst gehosteten Dienst nutzen (z. B. eigene Gotify- oder

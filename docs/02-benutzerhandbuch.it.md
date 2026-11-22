@@ -1,6 +1,6 @@
 # fox_netmap — Manuale utente
 
-Versione 1.3.x · novembre 2026
+Versione 1.6.1 · novembre 2026
 
 > Lingue: [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -9,8 +9,9 @@ dispositivi su più sottoreti/VLAN, con topologia («collegato a»), porte apert
 allarmi ed esportazioni (JSON/CSV/stampa PDF). I dati sono persistenti in SQLite; le scansioni
 sono cicliche o manuali.
 
-> Le immagini di questo manuale (`docs/screenshots/*.svg`) sono illustrazioni schematiche
-> dell'interfaccia reale (tema scuro): struttura ed elementi corrispondono 1:1 all'app.
+> Le immagini della mappa `docs/screenshots/01-karte-hell.png` e `01-karte-dunkel.png` sono catture reali
+> della v1.6.1 con dati di prova. Le altre immagini (`*.svg`) sono illustrazioni schematiche dell'interfaccia
+> (tema scuro); struttura ed elementi corrispondono all'app.
 
 **Indice**
 
@@ -66,7 +67,11 @@ docker compose up -d --build
 
 ## 2. L'interfaccia
 
-![Mappa con gruppi di sottorete e pannello dettagli](screenshots/01-karte.svg)
+![Mappa v1.6.1, tema chiaro: gruppi di sottorete Casa e Remoto, gateway con anello, legenda aperta](screenshots/01-karte-hell.png)
+
+![Mappa v1.6.1, tema scuro: albero con ripetitore, switch e dispositivi finali, legenda chiusa](screenshots/01-karte-dunkel.png)
+
+Vista schematica con pannello dettagli: [01-karte.svg](screenshots/01-karte.svg)
 
 L'intestazione contiene (da sx a dx): logo/versione, navigazione **Mappa / Tabella / Log**,
 ricerca, filtri (categoria, stato, sito), **Solo online**, selettore del layout, esportazioni
@@ -95,13 +100,29 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
   compatta sotto di esso; i dispositivi senza genitore stanno sotto l'albero. Se sono salvate posizioni per tutti
   i dispositivi (trascinando), `auto` le usa. Altri: `tree` (sempre albero), `force` (fisica), `concentric`,
   `circle`, `grid`. **Ripristina** cancella le posizioni salvate.
-- **Pulizia automatica:** nodi compatti (20 px), archi sottili (WLAN tratteggiato, accesso Internet più spesso);
-  etichette visibili solo da zoom ≥ 0,85 (sotto, solo gli hub: router/switch/gateway/internet); oltre 25
-  dispositivi i gruppi di sottorete si attivano automaticamente; «Solo online» è attivo di default (disattivabile).
-- Nodi virtuali: **🌐 Internet** (con IP WAN da TR-064, altrimenti «?»), **🏠 Gateway** (se il
-  gateway non è nell'elenco) e **📶 wlan:…** per i dispositivi WLAN senza nodo proprio.
-- Emoji di categoria sui nodi: 🏠 Router · 🔀 Switch · 🖥 Server/NAS · 💻 Client · 🖨 Stampante ·
-  💡 Smart home/IoT · ❓ Sconosciuto.
+- **Nodi (dalla v1.6.1):** cerchio neutro con simbolo di categoria (simboli Lucide, vedi `THIRD_PARTY.md`)
+  al posto di colori ed emoji. Router, switch, ripetitore/AP, server/NAS e Internet misurano 40 px, i
+  dispositivi finali 34 px. Per i client la mappa distingue portatile, tablet e console in base al nome e al
+  motivo di rilevamento.
+- **Etichetta su due righe:** riga 1 il nome (abbreviato con «…» da 20 caratteri; il nome completo appare
+  come tooltip al passaggio del mouse), riga 2 `IP · categoria`, con `(+N)` per i figli nascosti e
+  `· offline` per i dispositivi offline. Il nodo Internet mostra `Internet` e `WAN <IP>` («?» senza TR-064).
+  Entrambe le righe hanno lo stesso colore perché la libreria Cytoscape non prevede un colore per riga.
+- **Gateway come radice:** solo il dispositivo con l'IP del gateway (TR-064 o routing) riceve un anello
+  marcato nel colore d'accento con anello esterno tratteggiato. Ripetitori/AP hanno un bordo chiaro.
+- **Offline:** corpo e simbolo attenuati, bordo tratteggiato; l'etichetta resta leggibile e indica
+  «offline», quindi l'informazione non dipende dal colore.
+- **Archi:** linee dritte, LAN continua, WLAN tratteggiata, powerline punteggiata. I collegamenti tra sedi
+  diverse sono più tenui. L'accesso a Internet è un po' più marcato.
+- **Legenda:** in basso a sinistra, richiudibile (stato salvato nel browser, chiusa per impostazione
+  predefinita). Mostra tutti i simboli con la categoria, l'anello del gateway, offline e i tipi di linea.
+- **Pulizia automatica:** etichette complete da zoom ≥ 0,85 (sotto solo gli hub: router/switch/gateway/Internet),
+  il testo molto piccolo non viene disegnato; oltre 25 dispositivi i gruppi di sottorete si attivano da soli;
+  «Solo online» è attivo per impostazione predefinita.
+- Nodi virtuali: **Internet** (con IP WAN), **Gateway** (se il gateway non è nell'elenco) e **wlan:…** per
+  dispositivi WLAN senza nodo proprio.
+- **Tabella e stampa:** la cella categoria mostra lo stesso simbolo della mappa più il testo. I filtri e la
+  selezione della categoria sono elenchi nativi e mostrano solo testo.
 
 ---
 
@@ -363,6 +384,12 @@ La scheda **Log** + `docker compose logs netmap-scanner` mostrano ogni passo del
 - aria-label sui pulsanti solo icona, regione live per i messaggi di stato.
 - Obiettivo: piena conformità BITV 2.1 — feedback benvenuti (issue nel repo).
 - **Riduci movimento (dalla v1.5.2):** se nel sistema è attivo «riduci movimento» (`prefers-reduced-motion`), fox_netmap non mostra animazioni né transizioni; una scansione in corso è indicata da un punto fisso e da un testo. Altrimenti il punto pulsa solo tre volte (meno di 5 secondi) e poi resta fermo (WCAG 2.2.2, 2.3.3). La mappa viene sempre costruita senza animazione.
+- **Mappa (dalla v1.6.1):** le categorie sono riconoscibili da simbolo e testo, non solo dal colore
+  (WCAG 1.4.1). Contrasti verificati in entrambi i temi: etichette almeno 4,5:1 (anche offline), bordi e
+  simboli almeno 3:1 rispetto allo sfondo (WCAG 1.4.3, 1.4.11). La legenda è un elemento nativo `<details>`
+  utilizzabile da tastiera; i suoi simboli e quelli della tabella sono decorativi (`alt=""`) perché il testo
+  della categoria è accanto. I nomi abbreviati sono leggibili per intero nel tooltip, nella tabella e nel
+  pannello dettagli. Le transizioni (150 ms) vengono omesse con «riduci movimento».
 - Lo stato della scansione viene annunciato ai lettori di schermo solo quando cambia davvero.
 
 ---
