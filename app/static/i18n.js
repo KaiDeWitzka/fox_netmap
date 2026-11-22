@@ -1476,3 +1476,43 @@ const I18N_EXTRA7 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA7[lang] || {});
+
+const I18N_EXTRA8 = {
+  "de": {
+    "hdr.g.view": "Ansicht", "hdr.g.viewAria": "Ansicht: Karte, Tabelle, Log, Suche und Filter",
+    "hdr.g.map": "Karte", "hdr.g.mapAria": "Karte: Gruppierung und Layout",
+    "hdr.g.actions": "Aktionen", "hdr.g.actionsAria": "Aktionen: Scan, Exporte, Drucken",
+    "hdr.g.app": "App", "hdr.g.appAria": "App: Theme, Sprache, Einstellungen, Logout"
+  },
+  "en": {
+    "hdr.g.view": "View", "hdr.g.viewAria": "View: map, table, log, search and filters",
+    "hdr.g.map": "Map", "hdr.g.mapAria": "Map: grouping and layout",
+    "hdr.g.actions": "Actions", "hdr.g.actionsAria": "Actions: scan, exports, print",
+    "hdr.g.app": "App", "hdr.g.appAria": "App: theme, language, settings, logout"
+  },
+  "fr": {
+    "hdr.g.view": "Vue", "hdr.g.viewAria": "Vue : carte, tableau, journal, recherche et filtres",
+    "hdr.g.map": "Carte", "hdr.g.mapAria": "Carte : regroupement et disposition",
+    "hdr.g.actions": "Actions", "hdr.g.actionsAria": "Actions : scan, exports, impression",
+    "hdr.g.app": "App", "hdr.g.appAria": "App : thème, langue, paramètres, déconnexion"
+  },
+  "es": {
+    "hdr.g.view": "Vista", "hdr.g.viewAria": "Vista: mapa, tabla, registro, búsqueda y filtros",
+    "hdr.g.map": "Mapa", "hdr.g.mapAria": "Mapa: agrupación y diseño",
+    "hdr.g.actions": "Acciones", "hdr.g.actionsAria": "Acciones: escanear, exportaciones, imprimir",
+    "hdr.g.app": "App", "hdr.g.appAria": "App: tema, idioma, configuración, cerrar sesión"
+  },
+  "it": {
+    "hdr.g.view": "Vista", "hdr.g.viewAria": "Vista: mappa, tabella, log, ricerca e filtri",
+    "hdr.g.map": "Mappa", "hdr.g.mapAria": "Mappa: raggruppamento e layout",
+    "hdr.g.actions": "Azioni", "hdr.g.actionsAria": "Azioni: scansione, esportazioni, stampa",
+    "hdr.g.app": "App", "hdr.g.appAria": "App: tema, lingua, impostazioni, logout"
+  },
+  "pt": {
+    "hdr.g.view": "Vista", "hdr.g.viewAria": "Vista: mapa, tabela, log, pesquisa e filtros",
+    "hdr.g.map": "Mapa", "hdr.g.mapAria": "Mapa: agrupamento e layout",
+    "hdr.g.actions": "Ações", "hdr.g.actionsAria": "Ações: varrer, exportações, imprimir",
+    "hdr.g.app": "App", "hdr.g.appAria": "App: tema, idioma, definições, terminar sessão"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA8[lang] || {});

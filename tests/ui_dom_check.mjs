@@ -198,6 +198,27 @@ check("init: Karte sichtbar", vis($("#view-map")));
 check("init: Tabelle versteckt", !vis($("#view-table")));
 check("init: Sidebar zu", !vis($("#detail")));
 
+// Header zweizeilig nach Themenschwerpunkten gruppiert (vNext)
+check("Header: zwei Zeilen (.hdr-row)", doc.querySelectorAll("header .hdr-row").length === 2);
+check(
+  "Header: 4 Themengruppen mit sichtbarem Label",
+  doc.querySelectorAll("header .hdr-group").length === 4 &&
+    [...doc.querySelectorAll("header .hdr-label")].every((l) => l.textContent.trim().length > 0)
+);
+check(
+  "Header: Gruppen in den Zeilen (Ansicht | Karte, Aktionen, App)",
+  doc.querySelectorAll("header .hdr-row")[0].querySelectorAll(".hdr-group").length === 1 &&
+    doc.querySelectorAll("header .hdr-row")[1].querySelectorAll(".hdr-group").length === 3
+);
+check(
+  "Header: Einstellungen-Button mit Gear-Icon + Label deutlich sichtbar",
+  !!$("#btn-settings .gear") && !!$("#btn-settings [data-i18n='tab.settings']") && $("#btn-settings").classList.contains("hdr-settings")
+);
+check(
+  "Header: alle IDs stabil geblieben",
+  ["nav", "search", "filter-category", "filter-status", "filter-site", "btn-online", "scan-status", "chk-groups", "layout-select", "btn-layout-reset", "btn-scan", "btn-pdf", "pdf-orientation", "btn-print", "btn-theme", "lang-select", "btn-settings", "btn-logout"].every((id) => !!$("#" + id))
+);
+
 $("#nav [data-view='table']").click();
 check("Tabelle: Tabellenansicht sichtbar", vis($("#view-table")));
 check("Tabelle: Karte versteckt", !vis($("#view-map")));

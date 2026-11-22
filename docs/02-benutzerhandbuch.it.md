@@ -73,9 +73,12 @@ docker compose up -d --build
 
 Vista schematica con pannello dettagli: [01-karte.svg](screenshots/01-karte.svg)
 
-L'intestazione contiene (da sx a dx): logo con **numero di versione** (da `/api/meta`, cambia a ogni release), navigazione **Mappa / Tabella / Log**,
-ricerca, filtri (categoria, stato, sito), **Solo online**, selettore del layout, esportazioni
-(JSON/CSV), **▶ Scan**, stampa (PDF), tema (🌙/☀), **⚙ Impostazioni**, logout.
+L'intestazione è **organizzata in due righe per tema** (ogni gruppo con una piccola etichetta):
+Riga 1 **Vista**: logo con **numero di versione** (da `/api/meta`, cambia a ogni release), navigazione
+**Mappa / Tabella / Log**, ricerca, filtri (categoria, stato, sito), **Solo online**, stato della scansione.
+Riga 2: **Mappa** (raggruppa sottoreti, selettore del layout, ↺ layout), **Azioni** (**▶ Scan**, esportazioni
+JSON/CSV, PDF + orientamento, stampa) e **App** (tema 🌗/☀, lingua, **⚙ Impostazioni** come pulsante ben
+visibile con icona + etichetta, logout).
 
 Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con le schede
 **Dettagli** e **Impostazioni**.

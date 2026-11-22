@@ -42,17 +42,37 @@ body {
   overflow: hidden;
 }
 header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  display: block;
+  padding: 4px 12px 6px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
 }
-header h1 { font-size: 16px; margin: 0 12px 0 0; color: var(--accent); }
+/* Zweizeiliges Menü nach Themenschwerpunkten gruppiert */
+.hdr-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hdr-row + .hdr-row { margin-top: 4px; }
+.hdr-group {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 3px 8px 3px 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.hdr-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); padding: 0 4px 0 6px; white-space: nowrap;
+}
+header h1 { font-size: 16px; margin: 0; color: var(--accent); white-space: nowrap; }
 header h1 #hdr-version { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px; }
 header .spacer { flex: 1; }
+/* Einstellungen-Button deutlich sichtbar: Icon + Label, Akzent-Rahmen */
+#btn-settings.hdr-settings {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 600; color: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--accent); border-radius: 6px;
+}
+#btn-settings.hdr-settings .gear { font-size: 16px; line-height: 1; }
+#btn-settings.hdr-settings:hover, #btn-settings.hdr-settings:focus-visible { background: var(--accent); color: #fff; }
 nav button, header button, header a.hdr-btn {
   background: transparent;
   color: var(--fg);

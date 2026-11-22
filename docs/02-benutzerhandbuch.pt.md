@@ -73,9 +73,12 @@ docker compose up -d --build
 
 Vista esquemática com painel de detalhes: [01-karte.svg](screenshots/01-karte.svg)
 
-O cabeçalho contém (da esq. para a dir.): logótipo com **número de versão** (de `/api/meta`, muda a cada release), navegação **Mapa / Tabela / Registo**,
-pesquisa, filtros (categoria, estado, local), **Apenas online**, seletor de esquema, exportaciones
-(JSON/CSV), **▶ Scan**, imprimir (PDF), tema (🌙/☀), **⚙ Definições**, terminar sessão.
+O cabeçalho está **organizado em duas linhas por tema** (cada grupo com uma pequena etiqueta):
+Linha 1 **Vista**: logótipo com **número de versão** (de `/api/meta`, muda a cada release), navegação
+**Mapa / Tabela / Registo**, pesquisa, filtros (categoria, estado, local), **Apenas online**, estado da varredura.
+Linha 2: **Mapa** (agrupar sub-redes, seletor de esquema, ↺ esquema), **Ações** (**▶ Scan**, exportações
+JSON/CSV, PDF + orientação, imprimir) e **App** (tema 🌗/☀, idioma, **⚙ Definições** como botão bem visível
+com ícone + rótulo, terminar sessão).
 
 Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **Detalhes** e
 **Definições**.
