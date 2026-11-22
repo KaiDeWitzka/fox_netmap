@@ -104,6 +104,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "connection" not in cols:
         conn.execute("ALTER TABLE devices ADD COLUMN connection TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.connection ergaenzt")
+    if "link_port" not in cols:
+        # v1.6.0: Anschluss laut FRITZ!Box-Mesh, z. B. "LAN:1" oder "AP:5G:0"
+        conn.execute("ALTER TABLE devices ADD COLUMN link_port TEXT NOT NULL DEFAULT ''")
+        log.info("Migration: Spalte devices.link_port ergaenzt")
 
 
 def init_db(conn: sqlite3.Connection) -> None:
@@ -165,8 +169,8 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     ).fetchone()
     if row is None:
         conn.execute(
-            "INSERT INTO devices (mac, ip, hostname, vendor, category, status, subnet, source, connection, note, first_seen, last_seen)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO devices (mac, ip, hostname, vendor, category, status, subnet, source, connection, link_port, note, first_seen, last_seen)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 dev["mac"],
                 dev.get("ip", ""),
@@ -177,6 +181,7 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
                 dev.get("subnet", ""),
                 dev.get("source", ""),
                 dev.get("connection", ""),
+                dev.get("link_port", ""),
                 "",
                 now,
                 now,
@@ -185,7 +190,7 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     else:
         category = row["category_override"] or dev.get("category", "Unbekannt")
         conn.execute(
-            "UPDATE devices SET ip=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, last_seen=? WHERE mac=?",
+            "UPDATE devices SET ip=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, last_seen=? WHERE mac=?",
             (
                 dev.get("ip", ""),
                 dev.get("hostname", ""),
@@ -195,6 +200,7 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
                 dev.get("subnet", ""),
                 dev.get("source", ""),
                 dev.get("connection", ""),
+                dev.get("link_port", ""),
                 now,
                 dev["mac"],
             ),

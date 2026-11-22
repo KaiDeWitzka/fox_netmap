@@ -224,11 +224,22 @@ gelöscht.
 
 ## 12. Topologie („Verbunden mit“)
 
-Priorität: **manuell** (Detail-Panel) > **SNMP** (CAM+LLDP) > **TR-064** (Repeater/Hotspot-Geräte) >
+Priorität: **manuell** (Detail-Panel) > **SNMP** (CAM+LLDP) > **FRITZ!Box-Mesh** (TR-064) > **TR-064** (Repeater/Hotspot-Geräte) >
 **WLAN** (`wlan:…`, wenn TR-064 den Host als WLAN markiert) > **Gateway**.
-Verbindungsart `lan`/`wlan` wird mitgespeichert. Kanten im UI zeigen vom Vorgänger zum Gerät
+Verbindungsart `lan`/`wlan`/`plc` wird mitgespeichert. Kanten im UI zeigen vom Vorgänger zum Gerät
 (Grundlage des Baum-Layouts). Ist `Verbunden mit` eine IP oder ein Hostname, wird sie auf das passende Gerät
 abgebildet; nur wenn keines existiert, entsteht ein virtueller Gateway-Knoten.
+
+**FRITZ!Box-Mesh (ab v1.6.0):** Über TR-064 (`X_AVM-DE_GetMeshListPath`) liest fox_netmap die Mesh-Topologie der
+Box: welches Gerät an welchem Repeater oder LAN-Port hängt, per LAN oder WLAN (Band). Die Detailansicht zeigt den
+Anschluss, z. B. `WLAN · 5 GHz` oder `LAN · LAN 1`. Der TR-064-Benutzer braucht laut AVM-Spezifikation die
+Berechtigung „App“ oder „Phone“. Abschalten mit `NETZ_FRITZ_MESH=false`. Die Mesh-Liste wird nur aus dem lokalen Netz geladen
+(nur relativer Pfad, keine Weiterleitungen, max. 5 MB); die Session-ID im Pfad wird nicht protokolliert. Im Log steht
+`Mesh: X Knoten, Y Repeater, Z Zuordnungen`.
+
+**Switch-Heuristik:** Nicht verwaltete Switches sind für die Box unsichtbar. Sieht sie an einem LAN-Port mehrere
+Geräte und ist genau eines davon als Switch kategorisiert, werden die übrigen diesem Switch zugeordnet. Hängen zwei
+Switches am selben Port, bleibt die Zuordnung beim Router; dann hilft die manuelle Zuordnung.
 
 ---
 

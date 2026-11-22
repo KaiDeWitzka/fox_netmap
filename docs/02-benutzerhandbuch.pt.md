@@ -223,11 +223,21 @@ alarmes (webhook/Gotify/Ntfy para novo dispositivo — exceto whitelist).
 
 ## 12. Topologia («ligado a»)
 
-Prioridade: **manual** (painel de detalhes) > **SNMP** (CAM+LLDP) > **TR-064** (repetidores) >
+Prioridade: **manual** (painel de detalhes) > **SNMP** (CAM+LLDP) > **Mesh FRITZ!Box** (TR-064) > **TR-064** (repetidores) >
 **WLAN** (`wlan:…` se o TR-064 marcar o host como WLAN) > **gateway**.
-O tipo de ligação `lan`/`wlan` também é guardado. As arestas vão do pai para o dispositivo
+O tipo de ligação `lan`/`wlan`/`plc` também é guardado. As arestas vão do pai para o dispositivo
 (base do esquema em árvore). Se «ligado a» for um IP ou nome de host, é associado ao dispositivo
 correspondente; só se não existir é criado um nó gateway virtual.
+
+**Mesh FRITZ!Box (desde v1.6.0):** através do TR-064 (`X_AVM-DE_GetMeshListPath`), o fox_netmap lê a topologia
+mesh do router: que dispositivo está ligado a que repetidor ou porta LAN, por LAN ou WLAN (banda). O painel de
+detalhes mostra a porta, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Segundo a AVM, o utilizador TR-064 precisa do direito
+«App» ou «Phone». Desativar com `NETZ_FRITZ_MESH=false`. A lista só é carregada da rede local (caminho
+relativo, sem redirecionamentos, máx. 5 MB); o ID de sessão nunca é registado.
+
+**Heurística de switch:** um switch não gerível é invisível para o router. Se numa porta LAN houver vários
+dispositivos e apenas um for um switch, os restantes são-lhe atribuídos. Com dois switches na mesma porta, tudo
+fica no router; use então a atribuição manual.
 
 ---
 

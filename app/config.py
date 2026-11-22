@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     fritz_urls: str = ""
     fritz_user: str = ""
     fritz_pass: str = ""
+    # Mesh-Topologie der FRITZ!Box (TR-064 X_AVM-DE_GetMeshListPath) fuer die Karte nutzen
+    fritz_mesh: bool = True
     snmp_enabled: bool = True
     snmp_community: str = "public"
     snmp_switches: str = ""
@@ -49,7 +51,7 @@ class Settings(BaseSettings):
     embed_ancestors: str = "*"
     # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
     cookie_secure: str = "auto"
-    app_version: str = "1.5.4"
+    app_version: str = "1.6.0-rc.1"
 
     @property
     def subnet_list(self) -> list[str]:

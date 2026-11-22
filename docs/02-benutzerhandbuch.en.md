@@ -219,11 +219,21 @@ alarms (webhook/Gotify/Ntfy on new device — except whitelisted).
 
 ## 12. Topology ("connected to")
 
-Priority: **manual** (detail panel) > **SNMP** (CAM+LLDP) > **TR-064** (repeater/hotspot devices) >
+Priority: **manual** (detail panel) > **SNMP** (CAM+LLDP) > **FRITZ!Box mesh** (TR-064) > **TR-064** (repeater/hotspot devices) >
 **WLAN** (`wlan:…` when TR-064 marks the host as WLAN) > **gateway**.
-The connection type `lan`/`wlan` is stored as well. Edges point from the parent to the device
+The connection type `lan`/`wlan`/`plc` is stored as well. Edges point from the parent to the device
 (basis of the tree layout). If `connected to` is an IP or hostname, it is mapped to the matching device; only
 if none exists, a virtual gateway node is created.
+
+**FRITZ!Box mesh (since v1.6.0):** Via TR-064 (`X_AVM-DE_GetMeshListPath`) fox_netmap reads the box's mesh
+topology: which device hangs off which repeater or LAN port, via LAN or WLAN (band). The detail panel shows the
+port, e.g. `WLAN · 5 GHz` or `LAN · LAN 1`. According to AVM, the TR-064 user needs the "App" or "Phone" right.
+Disable with `NETZ_FRITZ_MESH=false`. The mesh list is loaded only from the local network (relative path only, no
+redirects, max. 5 MB); the session ID in the path is never logged. The log shows `Mesh: X Knoten, Y Repeater, Z Zuordnungen`.
+
+**Switch heuristic:** Unmanaged switches are invisible to the box. If it sees several devices on one LAN port and
+exactly one of them is categorised as a switch, the others are assigned to that switch. With two switches on the
+same port, the assignment stays with the router; use manual assignment then.
 
 ---
 
