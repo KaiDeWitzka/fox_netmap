@@ -443,6 +443,13 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   const pc = w.eval("computeTreePositions")(cyc);
   check("Baum: Zyklus ohne Endlosschleife, beide Knoten positioniert", !!pc.a && !!pc.b);
 }
+check(
+  "Mesh: Anschluss lesbar (LAN 1, 5 GHz, 2,4 GHz, leer)",
+  w.eval(`portLabel("LAN:1")`) === "LAN 1" && w.eval(`portLabel("AP:5G:0")`) === "5 GHz" &&
+    w.eval(`portLabel("UPLINK:2G:0")`) === "2,4 GHz" && w.eval(`portLabel("")`) === "" &&
+    w.eval(`connectionText({ connection: "wlan", link_port: "AP:5G:0" })`) === "WLAN · 5 GHz" &&
+    w.eval(`connectionText({ connection: "", link_port: "" })`) === "–"
+);
 check("parentId: Hostname wird auf Geraet abgebildet", w.eval(`parentId({ connected_to: "TL-SG108E-GZ" })`) === "d8:47:32:8e:ee:06");
 check("parentId: unbekannte MAC ergibt keinen virtuellen Gateway-Knoten", w.eval(`parentId({ connected_to: "de:ad:be:ef:00:01" })`) === null);
 

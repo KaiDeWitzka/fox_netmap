@@ -133,6 +133,14 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 
 Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht verfügbar: Code-Scanning-Upload (SARIF) und GitHub-Artifact-Attestations. Ersatz: Berichte als Artefakt/Release-Anhang und BuildKit-Attestierungen in der Registry.
 
+### 2.10 FRITZ!Box-Mesh-Abfrage (seit v1.6.0)
+
+- Der Pfad der Mesh-Liste kommt aus der SOAP-Antwort der Box. Akzeptiert werden nur relative Pfade; absolute URLs,
+  `//host` und Schemata werden abgelehnt (Schutz vor SSRF über eine manipulierte Antwort).
+- Abruf nur von der konfigurierten Box, ohne Weiterleitungen, mit Zeitlimit und Größenlimit 5 MB (gestreamt).
+- Der Pfad enthält eine Session-ID. Sie wird weder protokolliert noch gespeichert; Fehlermeldungen nennen nur den Statuscode.
+- Ungültiges JSON oder ein Fehler führt nur zum Rückfall auf die bisherige Topologie, der Scan läuft weiter.
+
 ## 3. Bezug zum IT-Grundschutz
 
 | Baustein / Anforderung | Umsetzung |

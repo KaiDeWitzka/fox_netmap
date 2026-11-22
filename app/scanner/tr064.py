@@ -1,3 +1,4 @@
+import json
 import xml.etree.ElementTree as ET
 
 import httpx
@@ -134,3 +135,153 @@ def fetch_wan(base_url: str, user: str, password: str) -> dict | None:
             "service": service,
         }
     return None
+
+
+# --- Mesh-Topologie (X_AVM-DE_GetMeshListPath) ------------------------------------------------------------
+# AVM liefert ueber TR-064 einen Pfad (mit Session-ID) zu einem JSON-Dokument mit Knoten, Schnittstellen und
+# Verbindungen. Schema: https://fritz.support/resources/Mesh-Topology.pdf (je FRITZ!OS-Version ein JSON-Schema).
+# Laut AVM kann die Topologie Schleifen enthalten (Powerline, WLAN-DBDC); die Eltern werden deshalb per
+# Breitensuche ab dem Mesh-Master bestimmt.
+
+MESH_MAX_BYTES = 5 * 1024 * 1024
+_ZERO_MAC = "00:00:00:00:00:00"
+_LINK_PRIO = {"LAN": 0, "WLAN": 1, "PLC": 2}
+
+
+def _mesh_url(base_url: str, path: str) -> str:
+    """Baut die Abruf-URL. Nur relative Pfade auf derselben Box, keine fremden Hosts (SSRF-Schutz)."""
+    path = (path or "").strip()
+    if not path.startswith("/") or path.startswith("//") or "://" in path or "\\" in path:
+        raise TR064Error("Mesh: ungültiger Pfad in der Antwort")
+    return base_url.rstrip("/") + path
+
+
+def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0) -> dict:
+    base_url = _normalize_base(base_url)
+    res = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "X_AVM-DE_GetMeshListPath", {}, user, password)
+    url = _mesh_url(base_url, res.get("NewX_AVM-DE_MeshListPath", ""))
+    try:
+        with httpx.stream("GET", url, timeout=timeout, follow_redirects=False) as response:
+            if response.status_code >= 400:
+                # Die URL enthaelt eine Session-ID; sie wird nicht protokolliert.
+                raise TR064Error(f"Mesh: HTTP {response.status_code}")
+            body = bytearray()
+            for chunk in response.iter_bytes():
+                body.extend(chunk)
+                if len(body) > MESH_MAX_BYTES:
+                    raise TR064Error("Mesh: Antwort zu groß")
+    except httpx.HTTPError as exc:
+        raise TR064Error(f"Mesh: Verbindungsfehler ({type(exc).__name__})") from exc
+    try:
+        data = json.loads(bytes(body).decode("utf-8", "replace"))
+    except ValueError as exc:
+        raise TR064Error("Mesh: ungültiges JSON") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
+        raise TR064Error("Mesh: keine Knotenliste im JSON")
+    return data
+
+
+def _mac(v) -> str:
+    v = (v or "").strip().lower() if isinstance(v, str) else ""
+    return "" if v in ("", _ZERO_MAC) else v
+
+
+def _band(iface_name: str) -> str:
+    n = (iface_name or "").upper()
+    for tag, band in (("2G", "2,4 GHz"), ("5G", "5 GHz"), ("6G", "6 GHz")):
+        if f":{tag}" in n:
+            return band
+    return ""
+
+
+def parse_mesh(data: dict) -> dict:
+    """Wertet das Mesh-JSON aus.
+
+    Rueckgabe:
+      parents: {mac: {"parent": mac, "conn": "lan"|"wlan"|"plc", "port": Schnittstelle am Elternknoten,
+                      "band": "5 GHz"|..., "role": Rolle des Elternknotens}}
+      nodes:   {mac: {"name", "role", "meshed", "macs"}}  (alle Knoten, macs = Geraete- und Schnittstellen-MACs)
+      master:  MAC des Mesh-Masters oder ""
+    """
+    nodes = [n for n in data.get("nodes", []) if isinstance(n, dict) and n.get("uid")]
+    iface = {}
+    node_mac = {}
+    node_macs = {}
+    for n in nodes:
+        macs = []
+        dm = _mac(n.get("device_mac_address"))
+        if dm:
+            macs.append(dm)
+        for i in n.get("node_interfaces") or []:
+            if not isinstance(i, dict) or not i.get("uid"):
+                continue
+            iface[i["uid"]] = {"node": n["uid"], "name": i.get("name") or "", "type": (i.get("type") or "").upper()}
+            im = _mac(i.get("mac_address"))
+            if im and im not in macs:
+                macs.append(im)
+        if macs:
+            node_mac[n["uid"]] = macs[0]
+            node_macs[n["uid"]] = macs
+
+    adj: dict[str, list] = {n["uid"]: [] for n in nodes}
+    seen_links = set()
+    for n in nodes:
+        for i in n.get("node_interfaces") or []:
+            for link in (i.get("node_links") or []) if isinstance(i, dict) else []:
+                if not isinstance(link, dict) or link.get("state") != "CONNECTED":
+                    continue
+                uid = link.get("uid")
+                if uid in seen_links:
+                    continue
+                seen_links.add(uid)
+                a, b = link.get("node_1_uid"), link.get("node_2_uid")
+                if a not in adj or b not in adj or a == b:
+                    continue
+                ltype = (link.get("type") or "").upper()
+                ia, ib = link.get("node_interface_1_uid"), link.get("node_interface_2_uid")
+                adj[a].append((b, ltype, ia))
+                adj[b].append((a, ltype, ib))
+
+    role = {n["uid"]: (n.get("mesh_role") or "unknown") for n in nodes}
+    masters = [n["uid"] for n in nodes if role[n["uid"]] == "master"]
+    root = masters[0] if masters else (max(adj, key=lambda u: len(adj[u])) if adj else "")
+
+    parents = {}
+    if root:
+        from collections import deque
+
+        visited = {root}
+        queue = deque([root])
+        while queue:
+            cur = queue.popleft()
+            # Mesh-Knoten (Repeater) zuerst, damit Clients nicht ueber einen Nachbar-Client "verbunden" werden
+            for other, ltype, own_iface in sorted(adj[cur], key=lambda x: (role.get(x[0]) == "unknown", _LINK_PRIO.get(x[1], 9))):
+                if other in visited:
+                    continue
+                visited.add(other)
+                queue.append(other)
+                child_mac, parent_mac = node_mac.get(other), node_mac.get(cur)
+                if not child_mac or not parent_mac:
+                    continue
+                port = iface.get(own_iface, {}).get("name", "")
+                info = {
+                    "parent": parent_mac,
+                    "conn": ltype.lower() if ltype in _LINK_PRIO else "",
+                    "port": port,
+                    "band": _band(port) if ltype == "WLAN" else "",
+                    "role": role.get(cur, "unknown"),
+                }
+                for m in node_macs.get(other, [child_mac]):
+                    parents[m] = info
+
+    out_nodes = {}
+    for n in nodes:
+        m = node_mac.get(n["uid"])
+        if m:
+            out_nodes[m] = {
+                "name": n.get("device_name") or "",
+                "role": role[n["uid"]],
+                "meshed": bool(n.get("is_meshed")),
+                "macs": node_macs[n["uid"]],
+            }
+    return {"parents": parents, "nodes": out_nodes, "master": node_mac.get(root, "") if root else ""}

@@ -383,6 +383,22 @@ function isIpLike(s) {
 // Vorgaenger eines Geraets als Knoten-ID. Reihenfolge: WLAN-Knoten, MAC, IP, Hostname eines bekannten
 // Geraets; erst wenn kein Geraet passt, bleibt eine IP als virtueller Gateway-Knoten stehen (v1.5.4: vorher
 // wurde eine IP sofort zurueckgegeben, die FRITZ!Box erschien dann doppelt als "Gateway").
+// Anschluss laut FRITZ!Box-Mesh lesbar machen: "LAN:1" -> "LAN 1", "AP:5G:0" -> "5 GHz"
+function portLabel(p) {
+  const s = String(p || "").toUpperCase();
+  const lan = s.match(/^LAN:(\d+)$/);
+  if (lan) return "LAN " + lan[1];
+  const band = s.match(/:(2|5|6)G(:|$)/);
+  if (band) return (band[1] === "2" ? (LANG === "en" ? "2.4" : "2,4") : band[1]) + " GHz";
+  return "";
+}
+
+function connectionText(d) {
+  if (!d.connection) return "–";
+  const port = portLabel(d.link_port);
+  return d.connection.toUpperCase() + (port ? " · " + port : "");
+}
+
 function parentId(d) {
   const ct = d.connected_to || "";
   if (!ct) return null;
@@ -597,7 +613,7 @@ async function showDetail(mac) {
   const rows = [
     [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
     [t("d.category"), esc(t("cat." + d.category))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
-    [t("d.connection"), esc(d.connection ? d.connection.toUpperCase() : "–")], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
+    [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
     [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
   ];
   let html = `<h2>${esc(d.hostname || d.ip)}</h2><table>` + rows.map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${v ?? ""}</td></tr>`).join("") + "</table>";

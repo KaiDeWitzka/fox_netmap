@@ -226,11 +226,20 @@ liste blanche).
 
 ## 12. Topologie (« connecté à »)
 
-Priorité : **manuel** (panneau de détails) > **SNMP** (CAM+LLDP) > **TR-064** (répéteurs) >
+Priorité : **manuel** (panneau de détails) > **SNMP** (CAM+LLDP) > **Mesh FRITZ!Box** (TR-064) > **TR-064** (répéteurs) >
 **WLAN** (`wlan:…` si TR-064 marque l'hôte comme WLAN) > **passerelle**.
-Le type de connexion `lan`/`wlan` est aussi enregistré. Les arêtes vont du parent vers l'appareil
+Le type de connexion `lan`/`wlan`/`plc` est aussi enregistré. Les arêtes vont du parent vers l'appareil
 (base de la disposition en arbre). Si « connecté à » est une IP ou un nom d'hôte, il est associé à l'appareil
 correspondant ; un nœud passerelle virtuel n'est créé que si aucun n'existe.
+
+**Mesh FRITZ!Box (depuis v1.6.0) :** via TR-064 (`X_AVM-DE_GetMeshListPath`), fox_netmap lit la topologie mesh de
+la box : quel appareil est relié à quel répéteur ou port LAN, en LAN ou WLAN (bande). Le panneau de détails affiche
+le port, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Selon AVM, l'utilisateur TR-064 a besoin du droit
+« App » ou « Phone ». Désactivation : `NETZ_FRITZ_MESH=false`. La liste n'est chargée que depuis le réseau local (chemin
+relatif, sans redirection, 5 Mo max.) ; l'ID de session n'est jamais journalisé.
+**Heuristique switch :** un switch non administrable est invisible pour la box. Si plusieurs appareils sont vus sur
+un port LAN et qu'un seul est un switch, les autres lui sont rattachés. Avec deux switches sur le même port, tout
+reste au routeur ; utilisez alors l'affectation manuelle.
 
 ---
 

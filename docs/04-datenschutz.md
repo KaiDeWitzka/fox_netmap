@@ -82,7 +82,7 @@ davon aktiv.
 | Alarm-Webhook (`NETZ_NOTIFY_WEBHOOK`) | MAC, IP, Hostname, Hersteller neuer Geräte | frei konfigurierte URL | aus |
 | Gotify / ntfy (`NETZ_NOTIFY_GOTIFY`, `NETZ_NOTIFY_NTFY`) | Hostname bzw. IP und MAC neuer Geräte | eigener oder öffentlicher Push-Dienst | aus |
 | OUI-Datenbank aktualisieren (`scripts/update_oui.py`) | nur ein Download, keine Gerätedaten | `standards-oui.ieee.org` | manuell |
-| TR-064 / SNMP | Abfragen an eigene Router und Switche im lokalen Netz | lokal | TR-064 aus, SNMP an (nur lokale Geräte) |
+| TR-064 / SNMP (inkl. FRITZ!Box-Mesh-Liste seit v1.6.0) | Abfragen an eigene Router und Switche im lokalen Netz | lokal | TR-064 aus, SNMP an (nur lokale Geräte) |
 
 Empfehlung: Für Benachrichtigungen einen selbst gehosteten Dienst nutzen (z. B. eigene Gotify- oder
 ntfy-Instanz). Bei öffentlichen Diensten wie `ntfy.sh` sind Gerätenamen und MAC-Adressen für den Betreiber des

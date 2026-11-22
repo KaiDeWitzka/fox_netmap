@@ -4,6 +4,30 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.0-rc.1] – 2026-11-22
+
+Vorab-Version zum Testen an einer echten FRITZ!Box. Wird nicht als `latest` markiert.
+
+### Topologie
+- **FRITZ!Box-Mesh über TR-064:** fox_netmap liest die Mesh-Liste der Box (`X_AVM-DE_GetMeshListPath`) und ordnet
+  Geräte ihrem tatsächlichen Anschluss zu: Repeater, LAN-Port oder WLAN-Band. Priorität jetzt manuell > SNMP >
+  Mesh > TR-064-Repeater > WLAN > Gateway. Abschaltbar mit `NETZ_FRITZ_MESH=false`. Benötigt laut AVM das Recht
+  „App“ oder „Phone“ für den TR-064-Benutzer.
+- **Switch-Heuristik:** Sieht die Box an einem LAN-Port mehrere Geräte und ist genau eines davon ein Switch, hängen
+  die übrigen am Switch. Bei zwei Switches am selben Port bleibt alles beim Router.
+- **Anschluss in der Detailansicht**, z. B. `WLAN · 5 GHz` oder `LAN · LAN 1` (neue Spalte `devices.link_port`,
+  automatische Migration).
+
+### Behoben
+- **WLAN-Erkennung über TR-064 griff nie:** Die Box meldet den Schnittstellentyp als `802.11`, nicht als `wlan`.
+  Jetzt werden `Ethernet`, `802.11` und `HomePlug` korrekt als `lan`, `wlan` und `plc` erkannt.
+
+### Sicherheit
+- Mesh-Abruf nur über relative Pfade (SSRF-Schutz), ohne Weiterleitungen, max. 5 MB; Session-ID wird nicht protokolliert.
+
+### CI
+- Tags mit Vorab-Kennung (z. B. `v1.6.0-rc.1`) erzeugen ein GitHub-Pre-Release und kein `latest`-Image.
+
 ## [1.5.4] – 2026-11-22
 
 ### Karte

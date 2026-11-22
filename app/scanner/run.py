@@ -38,6 +38,7 @@ OVERRIDABLE = {
     "fritz_urls": str,
     "fritz_user": str,
     "fritz_pass": str,
+    "fritz_mesh": lambda v: str(v).lower() in ("1", "true", "yes"),
     "snmp_community": str,
     "notify_webhook": str,
     "notify_gotify": str,
@@ -130,6 +131,41 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
     return list(by_mac.values())
 
 
+def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
+    """Mesh-Topologie vom ersten erreichbaren FRITZ!-Endpunkt (in der Regel der Mesh-Master)."""
+    if not (settings.fritz_mesh and settings.fritz_user and settings.fritz_pass):
+        return None
+    for ep in endpoints:
+        try:
+            info = tr064.parse_mesh(tr064.fetch_mesh(ep, settings.fritz_user, settings.fritz_pass))
+        except tr064.TR064Error as exc:
+            log.warning("Mesh-Topologie nicht abrufbar (%s): %s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc)
+            continue
+        repeaters = sum(1 for n in info["nodes"].values() if n["role"] == "slave")
+        log.info("Mesh: %s Knoten, %s Repeater, %s Zuordnungen", len(info["nodes"]), repeaters, len(info["parents"]))
+        return info
+    return None
+
+
+def mesh_parent_map(mesh_info: dict, devices: list[dict], gateway: str) -> dict[str, str]:
+    """Bildet die Mesh-Eltern auf gescannte Geraete ab.
+
+    Die Mesh-Liste fuehrt Geraete-MAC und Schnittstellen-MACs. Ist der Elternknoten unter keiner davon gescannt,
+    wird der Mesh-Master auf die Gateway-IP abgebildet; andere unbekannte Eltern entfallen (Fallback greift).
+    """
+    known = {oui.normalize_mac(d["mac"]) for d in devices if d.get("mac")}
+    nodes = mesh_info.get("nodes", {})
+    out: dict[str, str] = {}
+    for child, link in mesh_info.get("parents", {}).items():
+        parent = link["parent"]
+        target = next((m for m in nodes.get(parent, {}).get("macs", [parent]) if m in known), "")
+        if not target and parent == mesh_info.get("master") and gateway:
+            target = gateway
+        if target and target != child:
+            out[oui.normalize_mac(child)] = target
+    return out
+
+
 def collect_devices(settings: Settings, conn) -> list[dict]:
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
@@ -167,6 +203,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                     conn.commit()
             except tr064.TR064Error as exc:
                 log.warning("TR-064 nicht erreichbar (%s): %s", ep, exc)
+    mesh_info = fetch_mesh_info(settings, endpoints)
     tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}
     tr064_parent: dict[str, str] = {}
     for h in all_tr064:
@@ -190,6 +227,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             if lldp:
                 log.info("LLDP-MIB: %s Nachbarn zusaetzlich erkannt", len(lldp))
 
+    mesh_parents = mesh_parent_map(mesh_info, devices, gateway) if mesh_info else {}
+    fixed: set[str] = set()
+    lan_ports: dict[str, tuple[str, str]] = {}
     for d in devices:
         if not d.get("mac"):
             continue
@@ -216,8 +256,8 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
             ports=d.get("ports", []),
             tr064_type=d.get("tr064_type", ""),
         )
-        t = (d.get("tr064_type") or "").lower()
-        d["connection"] = "wlan" if "wlan" in t else ("lan" if "lan" in t else "")
+        # TR-064 liefert "Ethernet", "802.11" oder "HomePlug" (vor v1.6.0 wurde nur "wlan"/"lan" erkannt)
+        d["connection"] = topology.conn_type(d.get("tr064_type", ""))
         layout = db.get_layout(conn, d["mac"]) or {}
         manual = layout.get("connected_to") if layout.get("connected_manual") else None
         d["layout"] = {
@@ -227,11 +267,28 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 snmp_map=snmp_map,
                 tr064_parent=tr064_parent,
                 tr064_type=d.get("tr064_type", ""),
+                mesh_parent=mesh_parents,
                 gateway=topology.gateway_for(d.get("ip", ""), gateway, gateway6),
                 gateway6=gateway6,
                 manual=manual,
             )
         }
+        link = mesh_info["parents"].get(d["mac"]) if mesh_info else None
+        if manual:
+            fixed.add(d["mac"])
+        elif d["mac"] in snmp_map:
+            fixed.add(d["mac"])
+        elif link:
+            # Die Mesh-Verbindung ist die tatsaechliche Anbindung (auch fuer Geraete am Repeater)
+            if link["conn"] in ("lan", "wlan"):
+                d["connection"] = link["conn"]
+            d["link_port"] = link["port"]
+            if link["conn"] == "lan":
+                lan_ports[d["mac"]] = (d["layout"]["connected_to"], link["port"])
+    if lan_ports:
+        moved = topology.assign_behind_switch(devices, lan_ports, fixed)
+        if moved:
+            log.info("Mesh: %s Geräte einem Switch am selben LAN-Port zugeordnet", moved)
     return devices
 
 
