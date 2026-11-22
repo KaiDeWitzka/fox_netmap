@@ -9,46 +9,62 @@
 <body>
 <a class="skip-link" href="#main" data-i18n="skip">Zum Inhalt springen</a>
 <header>
-  <h1>fox_netmap <span id="hdr-version"></span></h1>
-  <nav id="nav" aria-label="Ansicht" data-i18n-aria="nav.aria">
-    <button data-view="map" class="active" aria-pressed="true" data-i18n="nav.map">Karte</button>
-    <button data-view="table" aria-pressed="false" data-i18n="nav.table">Tabelle</button>
-    <button data-view="log" aria-pressed="false" data-i18n="nav.log">Log</button>
-  </nav>
-  <input id="search" type="search" data-i18n-aria="search.aria" data-i18n-ph="search.ph" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
-  <select id="filter-category" data-i18n-aria="filter.catAria" aria-label="Kategorie filtern"><option value="" data-i18n="filter.allCategories">Alle Kategorien</option></select>
-  <select id="filter-status" data-i18n-aria="filter.statusAria" aria-label="Status filtern">
-    <option value="" data-i18n="filter.allStatus">alle</option>
-    <option value="online">online</option>
-    <option value="offline">offline</option>
-  </select>
-  <select id="filter-site" data-i18n-aria="filter.siteAria" aria-label="Standort filtern"><option value="" data-i18n="filter.allSites">Alle Standorte</option></select>
-  <button id="btn-online" aria-pressed="false" data-i18n="btn.onlyOnline" data-i18n-title="btn.onlyOnlineTitle" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
-  <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
-  <span class="spacer"></span>
-  <a class="hdr-btn" href="/api/export/json" download>JSON</a>
-  <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
-  <label class="hdr-chk"><input type="checkbox" id="chk-groups" data-i18n-title="chk.groupsTitle" title="Geräte pro Subnetz als Gruppe zusammenfassen"> <span data-i18n="chk.groups">Subnetze gruppieren</span></label>
-  <select id="layout-select" data-i18n-aria="layout.aria" aria-label="Karten-Layout" title="Karten-Layout">
-    <option value="auto" selected data-i18n="layout.auto">Layout: auto</option>
-    <option value="force" data-i18n="layout.force">Force</option>
-    <option value="tree" data-i18n="layout.tree">Hierarchisch</option>
-    <option value="concentric" data-i18n="layout.concentric">Kreise</option>
-    <option value="circle" data-i18n="layout.circle">Kreis</option>
-    <option value="grid" data-i18n="layout.grid">Raster</option>
-  </select>
-  <button id="btn-layout-reset" data-i18n="btn.layoutReset" data-i18n-title="btn.layoutResetTitle" title="Gespeicherte Positionen löschen (Auto-Layout)">↺ Layout</button>
-  <button id="btn-scan" data-i18n="btn.scan" data-i18n-title="btn.scanTitle" title="Scan jetzt auslösen">Jetzt scannen</button>
-  <button id="btn-print" data-i18n="btn.print" data-i18n-title="btn.printTitle" title="Druckansicht (PDF)">Drucken</button>
-  <button id="btn-pdf" data-i18n="btn.pdf" data-i18n-title="btn.pdfTitle" title="Karte + Tabelle als PDF exportieren">PDF</button>
-  <select id="pdf-orientation" data-i18n-title="pdf.orientTitle" title="PDF-Ausrichtung">
-    <option value="portrait" data-i18n="pdf.portrait">hoch</option>
-    <option value="landscape" data-i18n="pdf.landscape">quer</option>
-  </select>
-  <button id="btn-theme" data-i18n-title="title.theme" title="Theme wechseln">🌗</button>
-  <select id="lang-select" data-i18n-aria="lang.aria" aria-label="Sprache / Language"></select>
-  <button id="btn-settings" data-i18n-title="title.settings" title="Einstellungen öffnen">⚙</button>
-  <button id="btn-logout" data-i18n="btn.logout">Logout</button>
+  <div class="hdr-row">
+    <h1>fox_netmap <span id="hdr-version"></span></h1>
+    <div class="hdr-group" role="group" data-i18n-aria="hdr.g.viewAria">
+      <span class="hdr-label" data-i18n="hdr.g.view">Ansicht</span>
+      <nav id="nav" aria-label="Ansicht" data-i18n-aria="nav.aria">
+        <button data-view="map" class="active" aria-pressed="true" data-i18n="nav.map">Karte</button>
+        <button data-view="table" aria-pressed="false" data-i18n="nav.table">Tabelle</button>
+        <button data-view="log" aria-pressed="false" data-i18n="nav.log">Log</button>
+      </nav>
+      <input id="search" type="search" data-i18n-aria="search.aria" data-i18n-ph="search.ph" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
+      <select id="filter-category" data-i18n-aria="filter.catAria" aria-label="Kategorie filtern"><option value="" data-i18n="filter.allCategories">Alle Kategorien</option></select>
+      <select id="filter-status" data-i18n-aria="filter.statusAria" aria-label="Status filtern">
+        <option value="" data-i18n="filter.allStatus">alle</option>
+        <option value="online">online</option>
+        <option value="offline">offline</option>
+      </select>
+      <select id="filter-site" data-i18n-aria="filter.siteAria" aria-label="Standort filtern"><option value="" data-i18n="filter.allSites">Alle Standorte</option></select>
+      <button id="btn-online" aria-pressed="false" data-i18n="btn.onlyOnline" data-i18n-title="btn.onlyOnlineTitle" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
+      <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
+    </div>
+  </div>
+  <div class="hdr-row">
+    <div class="hdr-group" role="group" data-i18n-aria="hdr.g.mapAria">
+      <span class="hdr-label" data-i18n="hdr.g.map">Karte</span>
+      <label class="hdr-chk"><input type="checkbox" id="chk-groups" data-i18n-title="chk.groupsTitle" title="Geräte pro Subnetz als Gruppe zusammenfassen"> <span data-i18n="chk.groups">Subnetze gruppieren</span></label>
+      <select id="layout-select" data-i18n-aria="layout.aria" aria-label="Karten-Layout" title="Karten-Layout">
+        <option value="auto" selected data-i18n="layout.auto">Layout: auto</option>
+        <option value="force" data-i18n="layout.force">Force</option>
+        <option value="tree" data-i18n="layout.tree">Hierarchisch</option>
+        <option value="concentric" data-i18n="layout.concentric">Kreise</option>
+        <option value="circle" data-i18n="layout.circle">Kreis</option>
+        <option value="grid" data-i18n="layout.grid">Raster</option>
+      </select>
+      <button id="btn-layout-reset" data-i18n="btn.layoutReset" data-i18n-title="btn.layoutResetTitle" title="Gespeicherte Positionen löschen (Auto-Layout)">↺ Layout</button>
+    </div>
+    <div class="hdr-group" role="group" data-i18n-aria="hdr.g.actionsAria">
+      <span class="hdr-label" data-i18n="hdr.g.actions">Aktionen</span>
+      <button id="btn-scan" data-i18n="btn.scan" data-i18n-title="btn.scanTitle" title="Scan jetzt auslösen">Jetzt scannen</button>
+      <a class="hdr-btn" href="/api/export/json" download>JSON</a>
+      <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
+      <button id="btn-pdf" data-i18n="btn.pdf" data-i18n-title="btn.pdfTitle" title="Karte + Tabelle als PDF exportieren">PDF</button>
+      <select id="pdf-orientation" data-i18n-title="pdf.orientTitle" title="PDF-Ausrichtung">
+        <option value="portrait" data-i18n="pdf.portrait">hoch</option>
+        <option value="landscape" data-i18n="pdf.landscape">quer</option>
+      </select>
+      <button id="btn-print" data-i18n="btn.print" data-i18n-title="btn.printTitle" title="Druckansicht (PDF)">Drucken</button>
+    </div>
+    <span class="spacer"></span>
+    <div class="hdr-group" role="group" data-i18n-aria="hdr.g.appAria">
+      <span class="hdr-label" data-i18n="hdr.g.app">App</span>
+      <button id="btn-theme" data-i18n-title="title.theme" title="Theme wechseln">🌗</button>
+      <select id="lang-select" data-i18n-aria="lang.aria" aria-label="Sprache / Language"></select>
+      <button id="btn-settings" class="hdr-settings" data-i18n-title="title.settings" title="Einstellungen öffnen"><span class="gear" aria-hidden="true">⚙</span><span data-i18n="tab.settings">Einstellungen</span></button>
+      <button id="btn-logout" data-i18n="btn.logout">Logout</button>
+    </div>
+  </div>
 </header>
 <main id="main" tabindex="-1">
   <section id="view-map" class="view" data-i18n-aria="map.aria" aria-label="Netzwerkkarte">

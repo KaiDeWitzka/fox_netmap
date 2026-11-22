@@ -73,9 +73,12 @@ docker compose up -d --build
 
 Vue schématique avec panneau de détails : [01-karte.svg](screenshots/01-karte.svg)
 
-L'en-tête contient (de gauche à droite) : logo avec **numéro de version** (depuis `/api/meta`, change à chaque release), navigation **Carte / Tableau / Journal**,
-recherche, filtres (catégorie, état, site), **En ligne uniquement**, choix de la disposition,
-exports (JSON/CSV), **▶ Scan**, impression (PDF), thème (🌙/☀), **⚙ Paramètres**, déconnexion.
+L'en-tête est **organisé en deux lignes par thème** (chaque groupe avec une petite étiquette) :
+Ligne 1 **Vue** : logo avec **numéro de version** (depuis `/api/meta`, change à chaque release),
+navigation **Carte / Tableau / Journal**, recherche, filtres (catégorie, état, site), **En ligne uniquement**, état du scan.
+Ligne 2 : **Carte** (regrouper les sous-réseaux, choix de la disposition, ↺ disposition), **Actions**
+(**▶ Scan**, exports JSON/CSV, PDF + orientation, impression) et **App** (thème 🌗/☀, langue,
+**⚙ Paramètres** comme bouton bien visible avec icône + libellé, déconnexion).
 
 Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les onglets
 **Détails** et **Paramètres**.

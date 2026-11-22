@@ -72,9 +72,12 @@ docker compose up -d --build
 
 Schematic overview with detail panel: [01-karte.svg](screenshots/01-karte.svg)
 
-The header contains (left to right): logo with **version number** (from `/api/meta`, changes with every release), navigation **Map / Table / Log**, search,
-filters (category, status, site), **Only online**, layout selector, exports (JSON/CSV),
-**▶ Scan**, print (PDF), theme (🌙/☀), **⚙ Settings**, logout.
+The header is **grouped into two rows by topic** (each group with a small label):
+Row 1 **View**: logo with **version number** (from `/api/meta`, changes with every release),
+navigation **Map / Table / Log**, search, filters (category, status, site), **Only online**, scan status.
+Row 2: **Map** (group subnets, layout selector, ↺ Layout), **Actions** (**▶ Scan**, JSON/CSV exports,
+PDF + orientation, print) and **App** (theme 🌗/☀, language, **⚙ Settings** as a clearly visible
+button with icon + label, logout).
 
 Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and **Settings**.
 

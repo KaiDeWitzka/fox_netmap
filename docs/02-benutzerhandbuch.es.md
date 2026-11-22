@@ -73,9 +73,12 @@ docker compose up -d --build
 
 Vista esquemática con panel de detalles: [01-karte.svg](screenshots/01-karte.svg)
 
-La cabecera contiene (de izq. a dcha.): logo con **número de versión** (de `/api/meta`, cambia con cada release), navegación **Mapa / Tabla / Registro**,
-búsqueda, filtros (categoría, estado, sitio), **Solo en línea**, selector de diseño, exportaciones
-(JSON/CSV), **▶ Scan**, imprimir (PDF), tema (🌙/☀), **⚙ Configuración**, cerrar sesión.
+La cabecera está **organizada en dos filas por temas** (cada grupo con una pequeña etiqueta):
+Fila 1 **Vista**: logo con **número de versión** (de `/api/meta`, cambia con cada release), navegación
+**Mapa / Tabla / Registro**, búsqueda, filtros (categoría, estado, sitio), **Solo en línea**, estado del escaneo.
+Fila 2: **Mapa** (agrupar subredes, selector de diseño, ↺ diseño), **Acciones** (**▶ Scan**, exportaciones
+JSON/CSV, PDF + orientación, imprimir) y **App** (tema 🌗/☀, idioma, **⚙ Configuración** como botón bien
+visible con icono + texto, cerrar sesión).
 
 Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pestañas
 **Detalles** y **Configuración**.

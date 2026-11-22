@@ -73,9 +73,12 @@ docker compose up -d --build
 
 Schematische Übersicht mit Detail-Panel: [01-karte.svg](screenshots/01-karte.svg)
 
-Der Header enthält (v. l. n. r.): Logo mit **Versionsnummer** (kommt aus `/api/meta`, ändert sich mit jedem Release), Navigation **Karte / Tabelle / Log**, Suche,
-Filter (Kategorie, Status, Standort), **Nur online**, Layout-Auswahl, Exporte (JSON/CSV),
-**▶ Scan**, Drucken (PDF), Theme (🌙/☀), **⚙ Einstellungen**, Logout.
+Der Header ist in **zwei Zeilen nach Themenschwerpunkten gruppiert** (jede Gruppe mit kleinem Label):
+Zeile 1 **Ansicht**: Logo mit **Versionsnummer** (kommt aus `/api/meta`, ändert sich mit jedem Release),
+Navigation **Karte / Tabelle / Log**, Suche, Filter (Kategorie, Status, Standort), **Nur online**, Scan-Status.
+Zeile 2: **Karte** (Subnetze gruppieren, Layout-Auswahl, ↺ Layout), **Aktionen** (**▶ Scan**, Exporte JSON/CSV,
+PDF + Ausrichtung, Drucken) und **App** (Theme 🌗/☀, Sprache, **⚙ Einstellungen** als deutlich sichtbarer
+Button mit Icon + Label, Logout).
 
 Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste mit den Tabs
 **Details** und **Einstellungen**.

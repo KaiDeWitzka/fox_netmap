@@ -6,6 +6,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Geändert
+- **Header zweizeilig nach Themenschwerpunkten gruppiert:** Zeile 1 „Ansicht“ (Logo + Versionsnummer,
+  Karte/Tabelle/Log, Suche, Filter, Nur online, Scan-Status), Zeile 2 „Karte“ (Gruppierung, Layout),
+  „Aktionen“ (Scan, JSON/CSV/PDF, Drucken) und „App“ (Theme, Sprache, Einstellungen, Logout).
+  Der **Einstellungen-Button** ist jetzt deutlich sichtbar (⚙-Icon + Label, Akzent-Rahmen).
+
 ### Neu
 - **VPN-Erkennung:** TR-064-Schnittstellentyp „VPN“ (z. B. FRITZ!Box IPSec .201) markiert Geräte als
   VPN-Client — protokollbasiert, ohne Pool-Annahme. Optional zusätzlich Adresspool-Heuristik über das
