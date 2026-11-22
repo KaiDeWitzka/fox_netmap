@@ -2,7 +2,7 @@
 
 from app import db
 
-SW = "d8:47:32:8e:ee:06"
+SW = "02:00:00:8e:ee:06"
 A = "aa:aa:aa:aa:aa:01"
 B = "aa:aa:aa:aa:aa:02"
 C = "aa:aa:aa:aa:aa:03"

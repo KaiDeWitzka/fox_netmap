@@ -9,7 +9,7 @@ dispositivos em várias sub-redes/VLANs, com topologia («ligado a»), portas ab
 alarmes e exportaciones (JSON/CSV/impressão PDF). Os dados são persistentes em SQLite; as
 pesquisas (scans) são cíclicas ou manuais.
 
-> As imagens do mapa `docs/screenshots/01-karte-hell.png` e `01-karte-dunkel.png` são capturas reais da
+> As imagens do mapa `docs/screenshots/01-karte.svg` e `01-karte-dunkel.png` são capturas reais da
 > v1.6.1 com dados de teste. As restantes imagens (`*.svg`) são ilustrações esquemáticas da interface
 > (tema escuro); a estrutura e os elementos correspondem à aplicação.
 
@@ -46,8 +46,8 @@ para que ARP/ping funcionem na rede real).
 git clone https://github.com/KaiDeWitzka/fox_netmap.git
 cd fox_netmap
 # opcional: criar .env, p. ex.
-#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+#   NETZ_FRITZ_URL=http://192.0.2.1:49000
 #   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
 docker compose up -d --build
 ```
@@ -67,9 +67,9 @@ docker compose up -d --build
 
 ## 2. A interface
 
-![Mapa v1.6.1, tema claro: grupos de sub-rede Casa e Remoto, gateway com anel, legenda aberta](screenshots/01-karte-hell.png)
+![Mapa v1.6.1, tema claro: grupos de sub-rede Casa e Remoto, gateway com anel, legenda aberta](screenshots/01-karte.svg)
 
-![Mapa v1.6.1, tema escuro: árvore com repetidor, switch e dispositivos finais, legenda recolhida](screenshots/01-karte-dunkel.png)
+![Mapa v1.6.1, tema escuro: árvore com repetidor, switch e dispositivos finais, legenda recolhida](screenshots/01-karte.svg)
 
 Vista esquemática com painel de detalhes: [01-karte.svg](screenshots/01-karte.svg)
 
@@ -182,15 +182,15 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 
 | Campo | Equivalente env | Significado |
 |---|---|---|
-| Sub-redes | `NETZ_SUBNETS` | separadas por vírgulas, CIDR IPv4 e IPv6 (p. ex. `192.168.178.0/24, 2003:db8::/64`) |
+| Sub-redes | `NETZ_SUBNETS` | separadas por vírgulas, CIDR IPv4 e IPv6 (p. ex. `192.0.2.0/24, 2003:db8::/64`) |
 | Intervalo / timeout da scan | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | segundos; intervalo 30–86400 |
 | Âmbito de portas / portas próprias | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = todas) ou lista própria `80,443,…` |
 | SNMP ativo / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabela CAM + LLDP dos switches (161/udp). Community sem valor predefinido (desde v1.6.0); sem community não há SNMP |
 | TR-064 dispositivo principal / outros endpoints / utilizador / palavra-passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `host:porta`; repetidores como endpoints extra; a palavra-passe é **write-only** (o GET nunca a devolve, vazia = inalterada) |
 | URL de alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; os tokens ficam só em env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP que não disparam o alarme «novo dispositivo» |
-| Locais | `NETZ_SITES` | `Nome:sub-rede; …` p. ex. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
-| Pool de endereços VPN | `NETZ_VPN_POOL` | Padrão `off` (sem suposição). `auto` = convenção FRITZ!: último octeto ≥ 201 na /24 do gateway; também CIDR (`10.8.0.0/24`) e intervalos (`192.168.178.201-192.168.178.254`), separados por vírgula |
+| Locais | `NETZ_SITES` | `Nome:sub-rede; …` p. ex. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |
+| Pool de endereços VPN | `NETZ_VPN_POOL` | Padrão `off` (sem suposição). `auto` = convenção FRITZ!: último octeto ≥ 201 na /24 do gateway; também CIDR (`10.8.0.0/24`) e intervalos (`192.0.2.201-192.0.2.254`), separados por vírgula |
 | Histórico / retenção | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | histórico em horas; apagar dispositivos offline após N dias (0 = nunca) |
 | Retenção de eventos | `NETZ_EVENT_RETENTION_DAYS` | apagar eventos após N dias, predefinição 90 (0 = nunca) |
 | Auto-exportação / intervalo / pasta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automáticos; intervalo em h (0 = após cada scan) |
@@ -289,8 +289,8 @@ fica no router; use então a atribuição manual.
 Exemplo (local VPN como na sua própria rede):
 
 ```env
-NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-NETZ_SITES=Casa:192.168.178.0/24; Remoto:192.168.179.0/24
+NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+NETZ_SITES=Casa:192.0.2.0/24; Remoto:198.51.100.0/24
 ```
 
 → filtro de local no cabeçalho, coluna «Local» na tabela, etiqueta de local nos grupos de

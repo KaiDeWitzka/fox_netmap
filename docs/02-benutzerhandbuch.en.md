@@ -8,7 +8,7 @@ fox_netmap is an interactive, searchable network map for your home network: up t
 across multiple subnets/VLANs, with topology ("connected to"), open ports, history, alarms and
 exports (JSON/CSV/PDF print). Data persists in SQLite; scans run cyclically or manually.
 
-> The map images `docs/screenshots/01-karte-hell.png` and `01-karte-dunkel.png` are real captures of
+> The map images `docs/screenshots/01-karte.svg` and `01-karte-dunkel.png` are real captures of
 > v1.6.1 with test data. The other images (`*.svg`) are schematic illustrations of the UI (dark theme);
 > layout and elements match the app.
 
@@ -45,8 +45,8 @@ so ARP/ping work in the real network).
 git clone https://github.com/KaiDeWitzka/fox_netmap.git
 cd fox_netmap
 # optional: create .env, e.g.
-#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+#   NETZ_FRITZ_URL=http://192.0.2.1:49000
 #   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
 docker compose up -d --build
 ```
@@ -66,9 +66,9 @@ docker compose up -d --build
 
 ## 2. The interface
 
-![Map v1.6.1, light theme: subnet groups Home and Remote, gateway with ring, legend open](screenshots/01-karte-hell.png)
+![Map v1.6.1, light theme: subnet groups Home and Remote, gateway with ring, legend open](screenshots/01-karte.svg)
 
-![Map v1.6.1, dark theme: tree with repeater, switch and end devices, legend collapsed](screenshots/01-karte-dunkel.png)
+![Map v1.6.1, dark theme: tree with repeater, switch and end devices, legend collapsed](screenshots/01-karte.svg)
 
 Schematic overview with detail panel: [01-karte.svg](screenshots/01-karte.svg)
 
@@ -179,15 +179,15 @@ Everything changed here takes effect **on the next scan without restarting the c
 
 | Field | Env equivalent | Meaning |
 |---|---|---|
-| Subnets | `NETZ_SUBNETS` | comma-separated, IPv4 and IPv6 CIDR (e.g. `192.168.178.0/24, 2003:db8::/64`) |
+| Subnets | `NETZ_SUBNETS` | comma-separated, IPv4 and IPv6 CIDR (e.g. `192.0.2.0/24, 2003:db8::/64`) |
 | Scan interval / timeout | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | seconds; interval 30–86400 |
 | Port scope / custom ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = all) or custom list `80,443,…` |
 | SNMP on / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM table + LLDP of switches (161/udp). Community has no default (since v1.6.0); without one SNMP is skipped |
 | TR-064 main device / more endpoints / user / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL or `host:port`; repeaters as extra endpoints; password is **write-only** (never returned by GET, empty = unchanged) |
 | Alarm URLs (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; tokens stay env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs that do not trigger a "new device" alarm |
-| Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.168.178.0/24; Remote:192.168.179.0/24` |
-| VPN address pool | `NETZ_VPN_POOL` | Default `off` (no assumption). `auto` = FRITZ! convention: last octet ≥ 201 in the gateway /24; also CIDRs (`10.8.0.0/24`) and ranges (`192.168.178.201-192.168.178.254`), comma-separated |
+| Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.0.2.0/24; Remote:198.51.100.0/24` |
+| VPN address pool | `NETZ_VPN_POOL` | Default `off` (no assumption). `auto` = FRITZ! convention: last octet ≥ 201 in the gateway /24; also CIDRs (`10.8.0.0/24`) and ranges (`192.0.2.201-192.0.2.254`), comma-separated |
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
 | Event retention | `NETZ_EVENT_RETENTION_DAYS` | delete events after N days, default 90 (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
@@ -288,8 +288,8 @@ same port, the assignment stays with the router; use manual assignment then.
 Example (VPN site as in your own network):
 
 ```env
-NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-NETZ_SITES=Home:192.168.178.0/24; Remote:192.168.179.0/24
+NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+NETZ_SITES=Home:192.0.2.0/24; Remote:198.51.100.0/24
 ```
 
 → site filter in the header, "Site" column in the table, site label in the subnet groups,

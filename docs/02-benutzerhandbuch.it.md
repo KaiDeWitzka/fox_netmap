@@ -9,7 +9,7 @@ dispositivi su più sottoreti/VLAN, con topologia («collegato a»), porte apert
 allarmi ed esportazioni (JSON/CSV/stampa PDF). I dati sono persistenti in SQLite; le scansioni
 sono cicliche o manuali.
 
-> Le immagini della mappa `docs/screenshots/01-karte-hell.png` e `01-karte-dunkel.png` sono catture reali
+> Le immagini della mappa `docs/screenshots/01-karte.svg` e `01-karte-dunkel.png` sono catture reali
 > della v1.6.1 con dati di prova. Le altre immagini (`*.svg`) sono illustrazioni schematiche dell'interfaccia
 > (tema scuro); struttura ed elementi corrispondono all'app.
 
@@ -46,8 +46,8 @@ perché ARP/ping funzionino sulla rete reale).
 git clone https://github.com/KaiDeWitzka/fox_netmap.git
 cd fox_netmap
 # opzionale: creare .env, p. es.
-#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+#   NETZ_FRITZ_URL=http://192.0.2.1:49000
 #   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
 docker compose up -d --build
 ```
@@ -67,9 +67,9 @@ docker compose up -d --build
 
 ## 2. L'interfaccia
 
-![Mappa v1.6.1, tema chiaro: gruppi di sottorete Casa e Remoto, gateway con anello, legenda aperta](screenshots/01-karte-hell.png)
+![Mappa v1.6.1, tema chiaro: gruppi di sottorete Casa e Remoto, gateway con anello, legenda aperta](screenshots/01-karte.svg)
 
-![Mappa v1.6.1, tema scuro: albero con ripetitore, switch e dispositivi finali, legenda chiusa](screenshots/01-karte-dunkel.png)
+![Mappa v1.6.1, tema scuro: albero con ripetitore, switch e dispositivi finali, legenda chiusa](screenshots/01-karte.svg)
 
 Vista schematica con pannello dettagli: [01-karte.svg](screenshots/01-karte.svg)
 
@@ -185,15 +185,15 @@ predefinito env).
 
 | Campo | Equivalente env | Significato |
 |---|---|---|
-| Sottoreti | `NETZ_SUBNETS` | separate da virgole, CIDR IPv4 e IPv6 (p. es. `192.168.178.0/24, 2003:db8::/64`) |
+| Sottoreti | `NETZ_SUBNETS` | separate da virgole, CIDR IPv4 e IPv6 (p. es. `192.0.2.0/24, 2003:db8::/64`) |
 | Intervallo / timeout scansione | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | secondi; intervallo 30–86400 |
 | Ambito porte / porte proprie | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tutte) o elenco proprio `80,443,…` |
 | SNMP attivo / switch / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabella CAM + LLDP degli switch (161/udp). Community senza valore predefinito (da v1.6.0); senza community niente SNMP |
 | TR-064 dispositivo principale / altri endpoint / utente / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL o `host:porta`; ripetitori come endpoint extra; la password è **write-only** (GET non la restituisce mai, vuoto = invariato) |
 | URL allarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; i token restano solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP che non attivano l'allarme «nuovo dispositivo» |
-| Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
-| Pool indirizzi VPN | `NETZ_VPN_POOL` | Default `off` (nessuna presupposizione). `auto` = convenzione FRITZ!: ultimo ottetto ≥ 201 nella /24 del gateway; anche CIDR (`10.8.0.0/24`) e intervalli (`192.168.178.201-192.168.178.254`), separati da virgola |
+| Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |
+| Pool indirizzi VPN | `NETZ_VPN_POOL` | Default `off` (nessuna presupposizione). `auto` = convenzione FRITZ!: ultimo ottetto ≥ 201 nella /24 del gateway; anche CIDR (`10.8.0.0/24`) e intervalli (`192.0.2.201-192.0.2.254`), separati da virgola |
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Retention eventi | `NETZ_EVENT_RETENTION_DAYS` | elimina gli eventi dopo N giorni, predefinito 90 (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
@@ -292,8 +292,8 @@ usare allora l'assegnazione manuale.
 Esempio (sito VPN come nella tua rete):
 
 ```env
-NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-NETZ_SITES=Casa:192.168.178.0/24; Remoto:192.168.179.0/24
+NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+NETZ_SITES=Casa:192.0.2.0/24; Remoto:198.51.100.0/24
 ```
 
 → filtro sito nell'intestazione, colonna «Sito» nella tabella, etichetta sito nei gruppi di

@@ -9,7 +9,7 @@ from app.scanner import run, topology, tr064
 BOX = "3c:a6:2f:00:00:01"
 BOX_LAN = "3c:a6:2f:00:00:02"  # Schnittstellen-MAC der Box (so taucht sie oft im ARP-Cache auf)
 REP = "3c:a6:2f:00:00:20"
-SWITCH = "d8:47:32:00:00:01"
+SWITCH = "02:00:00:00:00:01"
 PC = "aa:00:00:00:00:01"
 NAS = "aa:00:00:00:00:02"
 PHONE = "aa:00:00:00:00:03"
@@ -228,7 +228,7 @@ def test_assign_behind_switch():
 
 
 def test_assign_behind_switch_mehrdeutig_bleibt():
-    devs = [_d(SWITCH, "Switch", BOX), _d("d8:47:32:00:00:02", "Switch", BOX), _d(PC, "Client", BOX)]
+    devs = [_d(SWITCH, "Switch", BOX), _d("02:00:00:00:00:02", "Switch", BOX), _d(PC, "Client", BOX)]
     ports = {d["mac"]: (BOX, "LAN:1") for d in devs}
     assert topology.assign_behind_switch(devs, ports, fixed=set()) == 0
 

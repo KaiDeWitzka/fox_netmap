@@ -1,0 +1,2 @@
+# False-Positive-Fingerprints (gitleaks). Nur Test-Fixtures, keine echten Secrets.
+3a2c478e2e6559b7e6e0a1605c9ad509f42ef94c:tests/conftest.py:generic-api-key
