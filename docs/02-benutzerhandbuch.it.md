@@ -96,6 +96,8 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
 - **«Raggruppa sottoreti»:** i dispositivi vengono raggruppati per sottorete in una cornice
   (etichetta `sottorete · sito (numero)`). Gli archi restano tra i dispositivi, anche
   tra sottoreti.
+ I riquadri partono su una griglia (posizione propria per sottorete, figli ad anello attorno al centro del gruppo) — niente più sovrapposizioni nello stesso punto.
+- **«Nascondi senza IP» (predefinito attivo):** i dispositivi senza indirizzo IP (es. noti solo per nome via TR-064, come `PC-76-84-…`) compaiono sulla mappa solo se si deseleziona; nella tabella restano sempre visibili.
 - **Comprimi/espandi figli:** nel pannello dettagli di router/switch, un pulsante nasconde tutti
   i dispositivi collegati direttamente; il nodo mostra poi `(+N)`.
 - **Layout:** `auto` (predefinito) dispone la mappa ad albero secondo la topologia: Internet in alto, sotto

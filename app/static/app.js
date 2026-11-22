@@ -68,6 +68,8 @@ function applyI18n() {
 
 let collapsed = new Set(JSON.parse(localStorage.getItem("fox_collapsed") || "[]"));
 let groupMode = localStorage.getItem("fox_groups") || "none";
+// Geräte ohne IP (z. B. TR-064-Host nur mit MAC/Name) erst auf der Karte zeigen, wenn angehakt (Default: ausblenden)
+let hideNoIp = localStorage.getItem("fox_noip") ?? "1";
 
 function groupOf(d) {
   return d.subnet ? "subnet:" + d.subnet : null;
@@ -442,7 +444,9 @@ function parentId(d) {
 }
 
 function buildElements() {
-  const n = Math.max(1, devices.length);
+  // Ohne IP nur in der Tabelle, nicht auf der Karte (bis "Ohne IP ausblenden" deaktiviert wird)
+  const list = hideNoIp === "1" ? devices.filter((d) => d.ip) : devices;
+  const n = Math.max(1, list.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
   const grouping = groupMode === "subnet";
   const nodes = [];
@@ -453,29 +457,50 @@ function buildElements() {
     nodeIds.add(nd.data.id);
   };
 
+  // Subnetz-Gruppen zu Beginn auf einem Raster positionieren, damit sie nicht übereinander liegen
+  const groupPos = {};
   if (grouping) {
-    for (const sn of [...new Set(devices.map((d) => d.subnet).filter(Boolean))]) {
+    const subnets = [...new Set(list.map((d) => d.subnet).filter(Boolean))];
+    const cols = Math.max(1, Math.ceil(Math.sqrt(subnets.length)));
+    const G = 460;
+    subnets.forEach((sn, gi) => {
+      const gx = (gi % cols) * G;
+      const gy = Math.floor(gi / cols) * G;
+      groupPos["subnet:" + sn] = { x: gx, y: gy };
       const siteName = SITE_MAP[sn] || "";
       addNode({
         data: {
           id: "subnet:" + sn,
-          label: sn + (siteName ? " · " + siteName : "") + "  (" + devices.filter((d) => d.subnet === sn).length + ")",
+          label: sn + (siteName ? " · " + siteName : "") + "  (" + list.filter((d) => d.subnet === sn).length + ")",
           subnet: true,
           virtual: true,
           status: "online",
         },
+        position: { x: gx, y: gy },
       });
-    }
+    });
   }
 
-  devices.forEach((d, i) => {
+  const groupIdx = {};
+  list.forEach((d, i) => {
     if (isHiddenByCollapse(d.mac)) return;
     let x = d.x;
     let y = d.y;
     if (typeof x !== "number" || typeof y !== "number") {
-      const a = (i / n) * Math.PI * 2;
-      x = Math.cos(a) * R;
-      y = Math.sin(a) * R;
+      const gp = grouping && d.subnet ? groupPos["subnet:" + d.subnet] : null;
+      if (gp) {
+        // Kinder ohne gespeicherte Position ringförmig um das Gruppenzentrum (überlappt nicht mit anderen Gruppen)
+        const cnt = list.filter((x) => x.subnet === d.subnet).length;
+        const k = (groupIdx[d.subnet] = (groupIdx[d.subnet] || 0) + 1);
+        const rr = 80 + 13 * Math.sqrt(Math.max(1, cnt));
+        const a2 = (k / Math.max(1, cnt)) * Math.PI * 2;
+        x = gp.x + Math.cos(a2) * rr;
+        y = gp.y + Math.sin(a2) * rr;
+      } else {
+        const a = (i / n) * Math.PI * 2;
+        x = Math.cos(a) * R;
+        y = Math.sin(a) * R;
+      }
     }
     const kids = childCount(d.mac);
     const fullName = d.hostname || d.ip || d.mac;
@@ -522,7 +547,7 @@ function buildElements() {
     });
   }
 
-  for (const d of devices) {
+  for (const d of list) {
     if (!nodeIds.has(d.mac)) continue;
     const p = parentId(d);
     if (!p || p === d.mac) continue;
@@ -536,10 +561,10 @@ function buildElements() {
     edges.push({ data: { id: "e:" + p + ">" + d.mac, source: p, target: d.mac, conn: d.connection || "", cross } });
   }
 
-  const wlanIds = [...new Set(devices.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
+  const wlanIds = [...new Set(list.filter((d) => (d.connected_to || "").startsWith("wlan:")).map((d) => d.connected_to))];
   for (const w of wlanIds) {
     addNode({ data: { id: w, label: t("wlan.node"), fullName: t("wlan.node"), category: "WLAN", status: "online", icon: "wifi", size: NODE_SIZE, virtual: true, hub: true } });
-    const gw = devices.find((x) => x.ip === w.slice(5));
+    const gw = list.find((x) => x.ip === w.slice(5));
     edges.push({ data: { id: "e:" + w, source: gw ? gw.mac : w.slice(5), target: w, conn: "wlan" } });
   }
   if (META.gateway) {
@@ -1390,13 +1415,23 @@ function bindLayout() {
 
 function bindGroups() {
   const chk = document.getElementById("chk-groups");
-  if (!chk) return;
-  chk.checked = groupMode === "subnet";
-  chk.addEventListener("change", () => {
-    groupMode = chk.checked ? "subnet" : "none";
-    localStorage.setItem("fox_groups", groupMode);
-    renderMap();
-  });
+  if (chk) {
+    chk.checked = groupMode === "subnet";
+    chk.addEventListener("change", () => {
+      groupMode = chk.checked ? "subnet" : "none";
+      localStorage.setItem("fox_groups", groupMode);
+      renderMap();
+    });
+  }
+  const noip = document.getElementById("chk-noip");
+  if (noip) {
+    noip.checked = hideNoIp === "1";
+    noip.addEventListener("change", () => {
+      hideNoIp = noip.checked ? "1" : "0";
+      localStorage.setItem("fox_noip", hideNoIp);
+      renderMap();
+    });
+  }
 }
 
 function bindScan() {

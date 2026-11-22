@@ -95,6 +95,8 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
 - **«Agrupar sub-redes»:** os dispositivos são agrupados por sub-rede numa moldura (etiqueta
   `sub-rede · local (nº)`). As arestas mantêm-se entre dispositivos,
   também entre sub-redes.
+ As molduras começam numa grelha (posição própria por sub-rede, filhos em anel à volta do centro do grupo) — sem sobreposição no mesmo ponto.
+- **«Ocultar sem IP» (ativado por defeito):** os dispositivos sem endereço IP (ex.: conhecidos só por nome via TR-064, como `PC-76-84-…`) só aparecem no mapa ao desmarcar; na tabela ficam sempre visíveis.
 - **Ocultar/mostrar filhos:** no painel de detalhes de um router/switch, um botão oculta todos os
   dispositivos ligados diretamente; o nó mostra então `(+N)`.
 - **Esquema:** `auto` (predefinido) organiza o mapa em árvore pela topologia: Internet em cima, abaixo o

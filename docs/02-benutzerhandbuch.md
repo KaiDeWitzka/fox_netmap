@@ -95,6 +95,11 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
 - **„Subnetze gruppieren":** Geräte werden pro Subnetz in einen Rahmen gruppiert
   (Label `Subnetz · Standort (Anzahl)`). Die Kanten bleiben zwischen den Geräten
   erhalten, auch über Subnetzgrenzen.
+  **Zu Beginn liegen die Rahmen auf einem Raster** (eigene Position pro Subnetz, Kinder
+  ringförmig um das Gruppenzentrum) — keine Überlappung mehr am selben Punkt.
+- **„Ohne IP ausblenden“ (Default an):** Geräte ohne IP-Adresse (z. B. nur per TR-064
+  bekannte Namen wie `PC-76-84-…`) erscheinen erst auf der Karte, wenn man den Haken
+  entfernt; in der Tabelle bleiben sie immer sichtbar.
 - **Kinder aus-/einblenden:** Im Detail-Panel von Router/Switch blendet ein Button alle direkt
   angebundenen Geräte aus; der Knoten zeigt dann `(+N)`.
 - **Layout:** `auto` (Default) ordnet die Karte als Baum nach der Topologie an: Internet oben, darunter

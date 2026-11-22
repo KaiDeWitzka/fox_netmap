@@ -43,6 +43,12 @@ const DEVS = [
         ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "wlan", vpn: 1,
       },
+      {
+        mac: "76:84:18:83:f1:3c", ip: "", hostname: "PC-76-84-18-83-F1-3C", vendor: "",
+        category: "Client", status: "online", subnet: "", site: "", source: "tr064",
+        ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        port_count: 0, x: null, y: null, connection: "",
+      },
 ];
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
@@ -729,16 +735,16 @@ $("#btn-layout-reset").click();
 await sleep(60);
 check("Layout: Reset -> POST /api/layout/reset", calls.some((c) => c.url.includes("/api/layout/reset") && c.method === "POST"));
 
-check("Nur online: Default AN (initial status=online, 3 Zeilen, Button toggled, fox_online=1)", $("#filter-status").value === "online" && doc.querySelectorAll("#device-table tbody tr").length === 3 && $("#btn-online").classList.contains("toggled") && w.localStorage.getItem("fox_online") === "1");
+check("Nur online: Default AN (initial status=online, 4 Zeilen, Button toggled, fox_online=1)", $("#filter-status").value === "online" && doc.querySelectorAll("#device-table tbody tr").length === 4 && $("#btn-online").classList.contains("toggled") && w.localStorage.getItem("fox_online") === "1");
 $("#btn-online").click();
 await sleep(80);
-check("Nur online: Klick -> alle 4 Zeilen, GET ohne status=online, fox_online=0", doc.querySelectorAll("#device-table tbody tr").length === 4 && ![...calls].reverse().find((c) => c.url.includes("/api/devices")).url.includes("status=online") && w.localStorage.getItem("fox_online") === "0");
+check("Nur online: Klick -> alle 5 Zeilen, GET ohne status=online, fox_online=0", doc.querySelectorAll("#device-table tbody tr").length === 5 && ![...calls].reverse().find((c) => c.url.includes("/api/devices")).url.includes("status=online") && w.localStorage.getItem("fox_online") === "0");
 $("#btn-online").click();
 await sleep(80);
-check("Nur online: erneuter Klick -> wieder nur 3 Zeilen (online)", doc.querySelectorAll("#device-table tbody tr").length === 3);
+check("Nur online: erneuter Klick -> wieder nur 4 Zeilen (online)", doc.querySelectorAll("#device-table tbody tr").length === 4);
 $("#btn-online").click();
 await sleep(80);
-check("Nur online: danach wieder alle 4 (Filter reset fuer Gruppen-Checks)", doc.querySelectorAll("#device-table tbody tr").length === 4);
+check("Nur online: danach wieder alle 5 (Filter reset fuer Gruppen-Checks)", doc.querySelectorAll("#device-table tbody tr").length === 5);
 
 const macThIdx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "mac");
 const remoteRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("remote-plug"));
@@ -762,6 +768,11 @@ await sleep(30);
 check(
   "Gruppen an: Subnetz-Nodes fuer alle 3 Subnetze",
   ["subnet:10.0.0.0/24", "subnet:192.168.178.0/24", "subnet:192.168.179.0/24"].every((id) => cyInstance._els.some((e) => e.data && e.data.id === id && e.data.subnet))
+);
+const gpos = cyInstance._els.filter((e) => e.data && e.data.subnet && e.position).map((e) => e.position);
+check(
+  "Gruppen an: Subnetz-Knoten auf eigenem Raster (zu Beginn keine Ueberlappung)",
+  gpos.length === 3 && new Set(gpos.map((p) => p.x + "," + p.y)).size === 3
 );
 check(
   "Gruppen an: Geraete haben Parent (wlan-tv -> subnet:192.168.178.0/24)",
@@ -787,6 +798,16 @@ await sleep(30);
 check(
   "Gruppen aus: keine Subnetz-Nodes mehr, remote-plug ohne Parent",
   !cyInstance._els.some((e) => e.data && e.data.subnet) && cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20" && !e.data.parent)
+);
+check("Ohne IP: Checkbox chk-noip vorhanden + Default angehakt", !!$("#chk-noip") && $("#chk-noip").checked);
+check("Ohne IP: Knoten ohne IP auf der Karte ausgeblendet (Default)", !cyInstance._els.some((e) => e.data && e.data.id === "76:84:18:83:f1:3c"));
+check("Ohne IP: in der Tabelle trotzdem sichtbar (5 Zeilen)", doc.querySelectorAll("#device-table tbody tr").length === 5);
+$("#chk-noip").checked = false;
+$("#chk-noip").dispatchEvent(new w.Event("change"));
+await sleep(30);
+check(
+  "Ohne IP: abgehakt -> Knoten erscheint auf der Karte, fox_noip=0",
+  cyInstance._els.some((e) => e.data && e.data.id === "76:84:18:83:f1:3c") && w.localStorage.getItem("fox_noip") === "0"
 );
 
 const switchFakeNode = {

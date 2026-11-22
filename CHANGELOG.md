@@ -4,6 +4,17 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Geändert
+- **Karte: Subnetz-Gruppen überlappen nicht mehr zu Beginn** — beim Gruppieren bekommen die
+  Rahmen ein eigenes Raster (Position pro Subnetz), Kinder ohne gespeicherte Position stehen
+  ringförmig um das Gruppenzentrum.
+- **Karte: Geräte ohne IP erst auf Wunsch sichtbar** — neue Checkbox „Ohne IP ausblenden“
+  (Gruppe „Karte“, Default an, persistiert in `fox_noip`): Geräte ohne IP (z. B. nur per TR-064
+  bekannte Namen wie `PC-76-84-…`) erscheinen erst auf der Karte, wenn man den Haken entfernt;
+  in der Tabelle bleiben sie immer sichtbar.
+
 ## [1.6.5] – 2026-11-22
 
 IPv6-Fund in großen v6-Netzen (SLAAC/EUI-64, ff02::1, DNS-AAAA), README zweisprachig (de/en), Settings-Menü nach Schwerpunkten gruppiert (PRs #76, #77).
