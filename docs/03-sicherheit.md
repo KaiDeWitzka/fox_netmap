@@ -126,8 +126,9 @@ hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale O
 | Gepinnte CI-Bausteine | Alle GitHub Actions per Commit-SHA (Versionskommentar dahinter), `npm ci` gegen `package-lock.json` |
 | Trivy ohne `trivy-action` | `scripts/trivy.sh` startet `ghcr.io/aquasecurity/trivy` per Digest. Hintergrund: Am 19.03.2026 wurden Tags von `trivy-action` und `setup-trivy` sowie das Binary v0.69.4 manipuliert ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23), CVE-2026-33634, [BSI-Warnung](https://www.bsi.bund.de/SharedDocs/Cybersicherheitswarnungen/DE/2026/2026-237970-1032.pdf?__blob=publicationFile&v=4)). Ein Digest kann nachträglich nicht umgebogen werden. |
 | Schwachstellen-Gate | CI (`docker`-Job) und Release brechen bei fixbaren `CRITICAL`/`HIGH`-Befunden ab; `trivy fs` prüft zusätzlich Dockerfile/Compose (Misconfig) und Secrets. Ausnahmen nur begründet in `.trivyignore` |
-| Nachscan | `image-scan.yml` scannt `latest` wöchentlich gegen die aktuelle Schwachstellen-Datenbank |
-| SBOM | CycloneDX und SPDX (Trivy) als CI-Artefakt und Release-Anhang; zusätzlich BuildKit-SBOM- und Provenance-Attestierung (`mode=max`) am Image in GHCR. Orientierung: BSI TR-03183-2 (SBOM-Formate CycloneDX/SPDX) |
+| Scan pro Merge | `main-scan.yml` läuft bei jedem Push auf `main`: Image bauen, Trivy-Gate (CRITICAL/HIGH mit Fix), SBOM (CycloneDX/SPDX) + Trivy-Bericht als Artefakt (30 Tage), dann Multi-Arch-Push als `:main` / `:sha-<sha>` nach GHCR — nur nach grünem Gate |
+| Nachscan | `image-scan.yml` scannt `latest` **und** `main` wöchentlich gegen die aktuelle Schwachstellen-Datenbank |
+| SBOM | CycloneDX und SPDX (Trivy) je Merge als CI-Artefakt (`main-scan-<sha>`) und je Release als Anhang; zusätzlich BuildKit-SBOM- und Provenance-Attestierung (`mode=max`) am Image in GHCR. Orientierung: BSI TR-03183-2 (SBOM-Formate CycloneDX/SPDX) |
 | Updates | Dependabot wöchentlich für pip, npm, Docker, Actions; 7 Tage Cooldown gegen kurzlebige kompromittierte Releases |
 | Release-Integrität | Image wird nur aus Tags gebaut, die zur App-Version passen, und nur nach grünem Test- und Trivy-Lauf gepusht |
 
