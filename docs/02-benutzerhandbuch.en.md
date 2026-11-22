@@ -179,6 +179,7 @@ Everything changed here takes effect **on the next scan without restarting the c
 | Alarm URLs (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; tokens stay env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs that do not trigger a "new device" alarm |
 | Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.168.178.0/24; Remote:192.168.179.0/24` |
+| VPN address pool | `NETZ_VPN_POOL` | Default `off` (no assumption). `auto` = FRITZ! convention: last octet ≥ 201 in the gateway /24; also CIDRs (`10.8.0.0/24`) and ranges (`192.168.178.201-192.168.178.254`), comma-separated |
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
 | Event retention | `NETZ_EVENT_RETENTION_DAYS` | delete events after N days, default 90 (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
@@ -287,6 +288,12 @@ NETZ_SITES=Home:192.168.178.0/24; Remote:192.168.179.0/24
 
 IPv6: just add a v6 CIDR to the subnets; discovery in large networks via NDP + gateway ping,
 plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8::10]:8080`.
+
+**VPN clients (e.g. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 reports VPN connections with
+interface type "VPN" — such devices are automatically flagged as VPN (a "VPN" badge in table and
+map, a "VPN connection" row in the detail panel, `vpn` field in JSON/CSV/API). WireGuard peers do
+not appear in TR-064; the configurable **VPN address pool** (e.g. `auto`) covers those. VPN devices
+do not trigger a "new device" alarm, because they come and go with the tunnel.
 
 ---
 

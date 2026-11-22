@@ -185,6 +185,7 @@ predefinito env).
 | URL allarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; i token restano solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP che non attivano l'allarme «nuovo dispositivo» |
 | Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
+| Pool indirizzi VPN | `NETZ_VPN_POOL` | Default `off` (nessuna presupposizione). `auto` = convenzione FRITZ!: ultimo ottetto ≥ 201 nella /24 del gateway; anche CIDR (`10.8.0.0/24`) e intervalli (`192.168.178.201-192.168.178.254`), separati da virgola |
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Retention eventi | `NETZ_EVENT_RETENTION_DAYS` | elimina gli eventi dopo N giorni, predefinito 90 (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
@@ -292,6 +293,12 @@ se ICMP è bloccato.
 
 IPv6: basta aggiungere un CIDR v6 alle sottoreti; scoperta nelle reti grandi via NDP + ping del
 gateway, più sweep per quelle piccole; gateway-v6 per la topologia; link web come `[2003:db8::10]:8080`.
+
+**Client VPN (es. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 segnala le connessioni VPN con tipo
+di interfaccia «VPN»: questi dispositivi vengono marcati automaticamente come VPN (badge «VPN» in
+tabella e mappa, riga «Connessione VPN» nel pannello dettagli, campo `vpn` in JSON/CSV/API). I peer
+WireGuard non compaiono in TR-064; per quelli c'è il **pool indirizzi VPN** configurabile (es. `auto`).
+I client VPN non attivano l'allarme «nuovo dispositivo», perché vanno e vengono con il tunnel.
 
 ---
 

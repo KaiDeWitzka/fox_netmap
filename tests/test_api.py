@@ -442,3 +442,40 @@ def test_device_detail_and_export_include_ip6(auth_client, app):
     csv_text = auth_client.get("/api/export/csv").text
     assert "ip6" in csv_text.splitlines()[0]
     assert "fdf1:3afe:ed39::10" in csv_text
+
+
+def test_settings_vpn_pool(auth_client, app):
+    r = auth_client.get("/api/settings")
+    assert r.status_code == 200
+    assert r.json()["vpn_pool"] == "off"  # Default: keine Pool-Annahme
+    assert auth_client.patch("/api/settings", json={"vpn_pool": "keine-ip"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"vpn_pool": "192.168.178.210-192.168.178.201"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"vpn_pool": "auto, 10.8.0.0/24, 192.168.178.201-192.168.178.210"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"vpn_pool": "off"}).status_code == 200
+    conn = db.connect(app.state.db_path)
+    assert db.get_setting(conn, "vpn_pool") == "off"
+    conn.close()
+
+
+def test_devices_api_und_export_mit_vpn(auth_client, app):
+    conn = db.connect(app.state.db_path)
+    db.upsert_device(
+        conn,
+        {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online", "category": "Unbekannt", "hostname": "fritz.box"},
+        db.utcnow(),
+    )
+    conn.commit()
+    conn.close()
+    rows = auth_client.get("/api/devices").json()
+    dev = next(r for r in rows if r["mac"] == "00:7a:a4:9b:d9:68")
+    assert dev["vpn"] == 1
+    assert auth_client.get("/api/device/00:7a:a4:9b:d9:68").json()["vpn"] == 1
+    payload = auth_client.get("/api/export/json").json()
+    jdev = next(d for d in payload["devices"] if d["mac"] == "00:7a:a4:9b:d9:68")
+    assert jdev["vpn"] is True
+    csv_text = auth_client.get("/api/export/csv").text
+    lines = csv_text.splitlines()
+    header = lines[0].split(";")
+    assert "vpn" in header
+    row = next(line for line in lines[1:] if line.startswith("00:7a:a4:9b:d9:68"))
+    assert row.split(";")[header.index("vpn")] == "ja"

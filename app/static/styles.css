@@ -225,6 +225,7 @@ aside#detail {
 .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
 .status-online { background: #34d399; }
 .status-offline { background: #64748b; }
+.badge-vpn { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f59e0b; border: 1px solid #f59e0b; border-radius: 4px; padding: 0 4px; }
 .panel { margin: 0 0 12px; }
 .panel h2 { margin: 0 0 8px; font-size: 14px; }
 .panel label { display: block; margin: 8px 0; font-size: 13px; }

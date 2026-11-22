@@ -14,6 +14,7 @@ from . import db, exporters
 from .auth import is_valid_session
 from .auth import router as auth_router
 from .scanner.categorize import CATEGORIES
+from .scanner.topology import vpn_pool_rules
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -51,6 +52,7 @@ SAFE_SETTINGS = [
     "notify_webhook",
     "notify_gotify",
     "notify_ntfy",
+    "vpn_pool",
 ]
 
 
@@ -371,6 +373,7 @@ class SettingsPatch(BaseModel):
     notify_webhook: str | None = None
     notify_gotify: str | None = None
     notify_ntfy: str | None = None
+    vpn_pool: str | None = None
     auth_enabled: bool | None = None
 
 
@@ -421,6 +424,11 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "oui_online_max muss zwischen 0 und 200 liegen"
     if body.oui_online_url is not None and body.oui_online_url.strip() and not body.oui_online_url.strip().startswith(("http://", "https://")):
         return f"oui_online_url muss eine http(s)-URL sein: {body.oui_online_url.strip()!r}"
+    if body.vpn_pool is not None:
+        try:
+            vpn_pool_rules(body.vpn_pool, "")
+        except ValueError as exc:
+            return f"ungueltiger vpn_pool-Eintrag: {exc}"
     if body.subnets is not None and body.subnets.strip():
         for sn in body.subnets.split(","):
             try:

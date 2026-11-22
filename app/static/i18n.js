@@ -1412,3 +1412,67 @@ const I18N_EXTRA6 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA6[lang] || {});
+
+const I18N_EXTRA7 = {
+  "de": {
+    "st.vpnPool": "VPN-Adresspool (auto / CIDR / Bereich a-b; off = aus)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Default off: kein VPN-Pool angenommen. auto = FRITZ!-Konvention – im /24 des Gateways gelten Adressen ab letzter Oktett 201 als VPN (DHCP endet bei .200). TR-064 meldet VPN-Clients zusätzlich über den Schnittstellentyp (z. B. .201/.202).",
+    "err.vpnPool": "Ungültiger VPN-Pool-Eintrag (CIDR oder Bereich a-b erwartet): {v}",
+    "d.vpn": "VPN-Verbindung",
+    "d.yes": "ja",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "VPN-Client (z. B. IPSec/WireGuard an der FRITZ!Box) – löst keinen „neues Gerät“-Alarm aus"
+  },
+  "en": {
+    "st.vpnPool": "VPN address pool (auto / CIDR / range a-b; off = disabled)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Default off: no VPN pool assumed. auto = FRITZ! convention – in the gateway's /24, addresses with last octet >= 201 count as VPN (DHCP ends at .200). TR-064 additionally reports VPN clients via the interface type.",
+    "err.vpnPool": "Invalid VPN pool entry (CIDR or range a-b expected): {v}",
+    "d.vpn": "VPN connection",
+    "d.yes": "yes",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "VPN client (e.g. IPSec/WireGuard on the FRITZ!Box) – does not trigger a “new device” alarm"
+  },
+  "fr": {
+    "st.vpnPool": "Pool d'adresses VPN (auto / CIDR / plage a-b ; off = désactivé)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Par défaut off : aucun pool VPN supposé. auto = convention FRITZ! – dans le /24 de la passerelle, les adresses dont le dernier octet est >= 201 sont considérées comme VPN (DHCP s'arrête à .200). TR-064 signale en outre les clients VPN via le type d'interface.",
+    "err.vpnPool": "Entrée de pool VPN invalide (CIDR ou plage a-b attendu) : {v}",
+    "d.vpn": "Connexion VPN",
+    "d.yes": "oui",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "Client VPN (p. ex. IPSec/WireGuard sur la FRITZ!Box) – ne déclenche pas d'alarme « nouvel appareil »"
+  },
+  "es": {
+    "st.vpnPool": "Pool de direcciones VPN (auto / CIDR / rango a-b; off = desactivado)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Por defecto off: no se supone ningún pool VPN. auto = convención FRITZ! – en la /24 de la puerta de enlace, las direcciones con último octeto >= 201 se consideran VPN (DHCP termina en .200). TR-064 notifica además los clientes VPN mediante el tipo de interfaz.",
+    "err.vpnPool": "Entrada de pool VPN no válida (CIDR o rango a-b esperado): {v}",
+    "d.vpn": "Conexión VPN",
+    "d.yes": "sí",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "Cliente VPN (p. ej. IPSec/WireGuard en la FRITZ!Box) – no genera alarma de «nuevo dispositivo»"
+  },
+  "it": {
+    "st.vpnPool": "Pool indirizzi VPN (auto / CIDR / intervallo a-b; off = disattivato)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Default off: nessun pool VPN presupposto. auto = convenzione FRITZ! – nella /24 del gateway, gli indirizzi con ultimo ottetto >= 201 sono considerados VPN (DHCP termina a .200). TR-064 segnala inoltre i client VPN tramite il tipo di interfaccia.",
+    "err.vpnPool": "Voce pool VPN non valida (CIDR o intervallo a-b atteso): {v}",
+    "d.vpn": "Connessione VPN",
+    "d.yes": "sì",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "Client VPN (es. IPSec/WireGuard su FRITZ!Box) – non attiva allarme «nuovo dispositivo»"
+  },
+  "pt": {
+    "st.vpnPool": "Pool de endereços VPN (auto / CIDR / intervalo a-b; off = desativado)",
+    "st.vpnPoolPh": "off",
+    "st.vpnPoolHint": "Por padrão off: nenhum pool VPN assumido. auto = convenção FRITZ! – na /24 do gateway, endereços com último octeto >= 201 contam como VPN (DHCP termina em .200). TR-064 reporta ainda clientes VPN pelo tipo de interface.",
+    "err.vpnPool": "Entrada de pool VPN inválida (CIDR ou intervalo a-b esperado): {v}",
+    "d.vpn": "Ligação VPN",
+    "d.yes": "sim",
+    "vpn.badge": "VPN",
+    "vpn.badgeTitle": "Cliente VPN (ex.: IPSec/WireGuard na FRITZ!Box) – não dispara alarme de «novo dispositivo»"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA7[lang] || {});

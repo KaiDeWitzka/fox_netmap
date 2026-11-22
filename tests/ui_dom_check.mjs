@@ -41,7 +41,7 @@ const DEVS = [
         mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
         category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "tr064",
         ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 0, x: null, y: null, connection: "wlan",
+        port_count: 0, x: null, y: null, connection: "wlan", vpn: 1,
       },
 ];
 w.fetch = async (url, opts = {}) => {
@@ -76,6 +76,13 @@ w.fetch = async (url, opts = {}) => {
           ports: [{ port: 80, proto: "tcp", service: "http" }],
           connection: "lan", layout: { connected_to: "192.168.178.1", connected_manual: 0 }, history: [], events: [],
         };
+      if (mac === "aa:bb:cc:00:11:22")
+        return {
+          mac, ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
+          category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", source: "tr064", note: "",
+          first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
+          ports: [], vpn: 1, connection: "wlan", layout: { connected_to: "wlan:192.168.178.1", connected_manual: 0 }, history: [], events: [],
+        };
       return {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "fdf1:3afe:ed39::10", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", note: "",
@@ -103,6 +110,7 @@ w.fetch = async (url, opts = {}) => {
         oui_online_url: "",
         alarm_whitelist: "",
         sites: "",
+        vpn_pool: "off",
         lang: "de",
         scan_timeout: 1.0,
         ports: "",
@@ -819,6 +827,32 @@ check("Mehrfach: POST /api/devices/connect mit MACs und Ziel", !!bulkCall && bul
 check("Mehrfach: Ergebnis per role=status gemeldet, Auswahl geleert", $("#bulk-result").getAttribute("role") === "status" && $("#bulk-result").textContent.includes(String(nSel)) && $("#bulk-apply").disabled);
 check("Mehrfach: Leiste als Gruppe beschriftet", $("#bulk-bar").getAttribute("role") === "group" && !!$("#bulk-bar").getAttribute("aria-labelledby"));
 void rowsBefore;
+
+// VPN-Erkennung (z. B. FRITZ!Box IPSec .201 / WireGuard .202)
+doc.querySelector("button[data-view=table]").click();
+await sleep(30);
+const vpnRow = [...doc.querySelectorAll("#device-table tbody tr")].find((r) => r.textContent.includes("wlan-tv"));
+check("VPN: Badge in Tabellenzeile (wlan-tv)", !!vpnRow && !!vpnRow.querySelector(".badge-vpn") && vpnRow.querySelector(".badge-vpn").textContent === "VPN");
+check("VPN: Knoten traegt data.vpn=1", cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && e.data.vpn === 1));
+check("VPN: Knotenlabel enthaelt VPN", cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && String(e.data.label).includes("VPN")));
+check("VPN: Kartenstil enthaelt node[vpn = 1]", cyInstance._style.some((s) => s.selector === "node[vpn = 1]"));
+const vpnNode = { data(k) { return k === "id" ? "aa:bb:cc:00:11:22" : undefined; }, closedNeighborhood() { return { addClass() {} }; } };
+cyInstance._handlers["tap:node"]({ target: vpnNode });
+await sleep(80);
+check("VPN: Detail zeigt VPN-Verbindung = ja", $("#detail-content").textContent.includes("VPN") && $("#detail-content").textContent.includes("ja"));
+check("VPN: Settings-Feld st-vpnpool mit off (Default) gefuellt", !!$("#st-vpnpool") && $("#st-vpnpool").value === "off");
+const vpnPatchBase = patchCount();
+$("#st-vpnpool").value = "auto, 10.8.0.0/24";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check(
+  "VPN: gueltiger Pool -> PATCH enthaelt vpn_pool",
+  patchCount() === vpnPatchBase + 1 && [...calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH").body.includes('"vpn_pool":"auto, 10.8.0.0/24"')
+);
+$("#st-vpnpool").value = "kaputt";
+$("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
+await sleep(50);
+check("VPN: ungueltiger Pool -> kein PATCH (clientseitige Validierung)", patchCount() === vpnPatchBase + 1);
 
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));

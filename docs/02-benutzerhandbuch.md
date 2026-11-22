@@ -183,6 +183,7 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 | Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
 | Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.168.178.0/24; Remote:192.168.179.0/24` |
+| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (keine Annahme). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.168.178.201-192.168.178.254`), kommagetrennt |
 | Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
 | Ereignis-Löschfrist | `NETZ_EVENT_RETENTION_DAYS` | Ereignisse nach N Tagen löschen, Standard 90 (0 = nie) |
 | Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
@@ -294,6 +295,12 @@ wenn ICMP blockiert ist.
 
 IPv6: v6-CIDR einfach in die Subnetze aufnehmen; Fund bei großen Netzen via NDP + Gateway-Ping,
 bei kleinen zusätzlich Sweep; Gateway-v6 für die Topologie; Web-Links als `[2003:db8::10]:8080`.
+
+**VPN-Clients (z. B. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 meldet VPN-Verbindungen mit
+Schnittstellentyp „VPN“ — solche Geräte werden automatisch als VPN markiert (Badge „VPN“ in Tabelle
+und Karte, Zeile „VPN-Verbindung“ im Detail-Panel, `vpn`-Feld in JSON/CSV/API). WireGuard-Peers
+erscheinen nicht in TR-064; dafür greift der konfigurierbare **VPN-Adresspool** (z. B. `auto`).
+VPN-Geräte lösen keinen „neues Gerät“-Alarm aus, weil sie mit dem Tunnel kommen und gehen.
 
 ---
 
