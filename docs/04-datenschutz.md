@@ -63,7 +63,7 @@ Cookie-Banner ist daher nicht erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG).
 |---|---|---|
 | Online-/Offline-Verlauf | 720 Stunden (30 Tage) | `NETZ_HISTORY_HOURS` bzw. Einstellungen → Historie |
 | Geräte samt Ports, Verlauf, Ereignissen und Kartenposition | gelöscht nach 30 Tagen offline | `NETZ_DEVICE_RETENTION_DAYS` (0 = nie) |
-| Ereignisse von Geräten, die weiter online sind | unbegrenzt | – (Restrisiko, geplant für v1.6.0) |
+| Ereignisse (auch von Geräten, die weiter online sind) | 90 Tage | `NETZ_EVENT_RETENTION_DAYS` (0 = nie), auch in den Einstellungen |
 | Anwendungslog | rotierend, 4 Dateien à 1 MB | – |
 | Exporte in `exports/` | unbegrenzt | manuell löschen |
 | Sessions | nur im Arbeitsspeicher, max. 12 Stunden | – |

@@ -154,12 +154,13 @@ Everything changed here takes effect **on the next scan without restarting the c
 | Subnets | `NETZ_SUBNETS` | comma-separated, IPv4 and IPv6 CIDR (e.g. `192.168.178.0/24, 2003:db8::/64`) |
 | Scan interval / timeout | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | seconds; interval 30–86400 |
 | Port scope / custom ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = all) or custom list `80,443,…` |
-| SNMP on / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM table + LLDP of switches (161/udp) |
+| SNMP on / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM table + LLDP of switches (161/udp). Community has no default (since v1.6.0); without one SNMP is skipped |
 | TR-064 main device / more endpoints / user / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL or `host:port`; repeaters as extra endpoints; password is **write-only** (never returned by GET, empty = unchanged) |
 | Alarm URLs (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; tokens stay env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs that do not trigger a "new device" alarm |
 | Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.168.178.0/24; Remote:192.168.179.0/24` |
 | History / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | history in hours; delete offline devices after N days (0 = never) |
+| Event retention | `NETZ_EVENT_RETENTION_DAYS` | delete events after N days, default 90 (0 = never) |
 | Auto export / interval / folder | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatically; interval in h (0 = after every scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostnames via mDNS PTR as fallback (+ DNS-SD, v1.6.0) |
 | Online OUI fallback / max lookups per scan / API URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | look up vendors of unknown MACs online (default `https://api.macvendors.com`), **off by default** (privacy: MAC prefixes are sent to a third party), cached in the DB |
@@ -179,6 +180,8 @@ In Settings (**Embed tokens**) create a token — optionally with expiry and fil
 ```html
 <iframe src="https://netmap.example.com/embed?token=ABC123&lang=en" width="100%" height="600"></iframe>
 ```
+
+The token is shown only right after creation; only a hash is stored (since v1.6.0). Copy it immediately; the list then shows only the first 6 characters.
 
 The embed is read-only (no editing, no settings), respects the token filters and can be adjusted
 with `?theme=dark|light` and `?lang=…`.

@@ -22,6 +22,7 @@ OVERRIDABLE = {
     "snmp_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
     "history_hours": int,
     "device_retention_days": int,
+    "event_retention_days": int,
     "theme": str,
     "auto_export": lambda v: str(v).lower() in ("1", "true", "yes"),
     "auto_export_interval_hours": int,
@@ -236,7 +237,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         log.info("mDNS: %s Geräte mit Diensten", len(mdns_map))
 
     snmp_map: dict[str, str] = {}
-    if settings.snmp_enabled:
+    if settings.snmp_enabled and not settings.snmp_community.strip():
+        log.info("SNMP übersprungen: keine Community gesetzt (NETZ_SNMP_COMMUNITY, seit v1.6.0 ohne Standardwert)")
+    elif settings.snmp_enabled:
         custom = [s.strip() for s in settings.snmp_switches.split(",") if s.strip()]
         targets = custom or [d["ip"] for d in live if any(p["port"] == 161 for p in d.get("ports", []))]
         if targets:
@@ -351,6 +354,9 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
     db.set_scan_state(conn, last_scan=now, scanning=0)
     conn.commit()
     db.trim_history(conn, settings.history_hours, now)
+    trimmed = db.trim_events(conn, getattr(settings, "event_retention_days", 0))
+    if trimmed:
+        log.info("Retention: %s Ereignisse entfernt (älter als %s Tage)", trimmed, settings.event_retention_days)
     new_online = [d for d in new_devices if d.get("status") == "online"]
     return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices, "new_online": new_online, "removed": removed}
 

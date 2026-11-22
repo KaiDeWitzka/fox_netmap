@@ -159,12 +159,13 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 | Sous-réseaux | `NETZ_SUBNETS` | séparés par des virgules, CIDR IPv4 et IPv6 (p. ex. `192.168.178.0/24, 2003:db8::/64`) |
 | Intervalle / timeout de scan | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | secondes ; intervalle 30–86400 |
 | Portée des ports / ports perso | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tous) ou liste perso `80,443,…` |
-| SNMP activé / switches / communauté | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | table CAM + LLDP des switches (161/udp) |
+| SNMP activé / switches / communauté | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | table CAM + LLDP des switches (161/udp). Pas de communauté par défaut (depuis v1.6.0) ; sans communauté, pas de SNMP |
 | TR-064 appareil principal / autres points / utilisateur / mot de passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `hôte:port` ; répéteurs comme points supplémentaires ; le mot de passe est **write-only** (jamais renvoyé par GET, vide = inchangé) |
 | URL d'alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…` ; les tokens restent env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Liste blanche | `NETZ_ALARM_WHITELIST` | MAC/IP qui ne déclenchent pas d'alarme « nouvel appareil » |
 | Sites | `NETZ_SITES` | `Nom:sous-réseau; …` p. ex. `Maison:192.168.178.0/24; Remote:192.168.179.0/24` |
 | Historique / rétention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historique en heures ; supprimer les appareils hors ligne après N jours (0 = jamais) |
+| Rétention des événements | `NETZ_EVENT_RETENTION_DAYS` | supprimer les événements après N jours, 90 par défaut (0 = jamais) |
 | Auto-export / intervalle / dossier | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV auto ; intervalle en h (0 = après chaque scan) |
 | mDNS | `NETZ_MDNS_ENABLED` | noms d'hôte via mDNS PTR en secours (+ DNS-SD, v1.6.0) |
 | Repli OUI en ligne / max de requêtes par scan / URL d'API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | fabricant des MAC inconnues recherché en ligne (défaut `https://api.macvendors.com`), **désactivé par défaut** (protection des données : les préfixes MAC sont envoyés à un tiers), mis en cache en BDD |
@@ -185,6 +186,8 @@ optionnels (sous-réseaux/catégories). Intégration via :
 ```html
 <iframe src="https://netmap.example.com/embed?token=ABC123&lang=fr" width="100%" height="600"></iframe>
 ```
+
+Le jeton n'est affiché qu'une fois, juste après sa création ; seul un hachage est stocké (depuis v1.6.0). Copiez-le immédiatement ; la liste n'affiche ensuite que les 6 premiers caractères.
 
 L'embed est en lecture seule (pas d'édition, pas de paramètres), respecte les filtres du jeton
 et peut être ajusté avec `?theme=dark|light` et `?lang=…`.

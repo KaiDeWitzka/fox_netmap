@@ -159,12 +159,13 @@ predefinito env).
 | Sottoreti | `NETZ_SUBNETS` | separate da virgole, CIDR IPv4 e IPv6 (p. es. `192.168.178.0/24, 2003:db8::/64`) |
 | Intervallo / timeout scansione | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | secondi; intervallo 30–86400 |
 | Ambito porte / porte proprie | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tutte) o elenco proprio `80,443,…` |
-| SNMP attivo / switch / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabella CAM + LLDP degli switch (161/udp) |
+| SNMP attivo / switch / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabella CAM + LLDP degli switch (161/udp). Community senza valore predefinito (da v1.6.0); senza community niente SNMP |
 | TR-064 dispositivo principale / altri endpoint / utente / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL o `host:porta`; ripetitori come endpoint extra; la password è **write-only** (GET non la restituisce mai, vuoto = invariato) |
 | URL allarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; i token restano solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP che non attivano l'allarme «nuovo dispositivo» |
 | Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.168.178.0/24; Remoto:192.168.179.0/24` |
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
+| Retention eventi | `NETZ_EVENT_RETENTION_DAYS` | elimina gli eventi dopo N giorni, predefinito 90 (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
 | mDNS | `NETZ_MDNS_ENABLED` | hostname via mDNS PTR come fallback (+ DNS-SD, v1.6.0) |
 | Fallback OUI online / max lookup per scansione / URL API | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | produttore di MAC sconosciuti cercato online (predefinito `https://api.macvendors.com`), **disattivato per impostazione predefinita** (privacy: i prefissi MAC vengono inviati a terzi), in cache nel DB |
@@ -184,6 +185,8 @@ In Impostazioni (**Token di incorporamento**) crea un token — opzionalmente co
 ```html
 <iframe src="https://netmap.example.com/embed?token=ABC123&lang=it" width="100%" height="600"></iframe>
 ```
+
+Il token viene mostrato solo subito dopo la creazione; viene salvato solo un hash (da v1.6.0). Copiarlo subito; poi l'elenco mostra solo i primi 6 caratteri.
 
 L'embed è in sola lettura (nessuna modifica, nessuna impostazione), rispetta i filtri del token e
 si può regolare con `?theme=dark|light` e `?lang=…`.

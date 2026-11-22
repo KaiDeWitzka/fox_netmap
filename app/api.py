@@ -30,6 +30,7 @@ SAFE_SETTINGS = [
     "auth_enabled",
     "history_hours",
     "device_retention_days",
+    "event_retention_days",
     "theme",
     "auto_export",
     "auto_export_dir",
@@ -296,6 +297,7 @@ class SettingsPatch(BaseModel):
     snmp_switches: str | None = None
     history_hours: int | None = None
     device_retention_days: int | None = None
+    event_retention_days: int | None = None
     theme: str | None = None
     auto_export: bool | None = None
     auto_export_dir: str | None = None
@@ -335,6 +337,8 @@ def validate_settings(body: SettingsPatch) -> str | None:
         return "history_hours muss zwischen 1 und 87600 liegen"
     if body.device_retention_days is not None and not 0 <= body.device_retention_days <= 3650:
         return "device_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
+    if body.event_retention_days is not None and not 0 <= body.event_retention_days <= 3650:
+        return "event_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
     if body.theme is not None and body.theme not in ("dark", "light"):
         return "theme muss 'dark' oder 'light' sein"
     if body.lang is not None and body.lang not in ("de", "en", "fr", "es", "it", "pt"):
@@ -453,9 +457,9 @@ def tokens_list(conn=Depends(get_conn), _=Depends(require_auth)):
     return db.list_tokens(conn)
 
 
-@router.delete("/api/tokens/{token}")
-def delete_token(token: str, conn=Depends(get_conn), _=Depends(require_auth)):
-    db.delete_token(conn, token)
+@router.delete("/api/tokens/{ident}")
+def delete_token(ident: str, conn=Depends(get_conn), _=Depends(require_auth)):
+    db.delete_token(conn, ident)
     conn.commit()
     return {"ok": True}
 

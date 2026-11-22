@@ -1037,6 +1037,7 @@ function bindSidebar() {
       ports: document.getElementById("st-ports").value,
       history_hours: parseInt(document.getElementById("st-history").value, 10),
       device_retention_days: parseInt(document.getElementById("st-retention").value, 10),
+      event_retention_days: parseInt(document.getElementById("st-eventretention").value, 10),
       snmp_enabled: document.getElementById("st-snmp").checked,
       snmp_switches: document.getElementById("st-switches").value,
       snmp_community: document.getElementById("st-snmpcommunity").value,
@@ -1086,7 +1087,7 @@ function bindSidebar() {
     });
     if (r.ok) {
       const tk = await r.json();
-      document.getElementById("token-result").textContent = t("tk.resultPrefix") + location.origin + tk.embed_url;
+      document.getElementById("token-result").textContent = t("tk.resultPrefix") + location.origin + tk.embed_url + " " + t("tk.once");
       loadTokens();
     }
   });
@@ -1159,6 +1160,8 @@ function validateSettings(v) {
     errs.push(t("err.history"));
   if (!Number.isInteger(v.device_retention_days) || v.device_retention_days < 0 || v.device_retention_days > 3650)
     errs.push(t("err.retention"));
+  if (!Number.isInteger(v.event_retention_days) || v.event_retention_days < 0 || v.event_retention_days > 3650)
+    errs.push(t("err.eventRetention"));
   if (!Number.isInteger(v.auto_export_interval_hours) || v.auto_export_interval_hours < 0 || v.auto_export_interval_hours > 720)
     errs.push(t("err.intervalExport"));
   for (const e of String(v.alarm_whitelist || "").split(",").map((s) => s.trim()).filter(Boolean))
@@ -1247,6 +1250,7 @@ async function loadSettings() {
   document.getElementById("st-ouiurl").value = s.oui_online_url || "";
   document.getElementById("st-history").value = s.history_hours;
   document.getElementById("st-retention").value = s.device_retention_days;
+  document.getElementById("st-eventretention").value = s.event_retention_days ?? 90;
   document.getElementById("st-snmp").checked = String(s.snmp_enabled) === "true" || s.snmp_enabled === true;
   document.getElementById("st-switches").value = s.snmp_switches;
   document.getElementById("st-auth").checked = String(s.auth_enabled) === "true" || s.auth_enabled === true;
@@ -1266,10 +1270,11 @@ async function loadTokens() {
   ul.innerHTML = "";
   for (const tk of list) {
     const li = document.createElement("li");
-    li.textContent = `${location.origin}/embed?token=${tk.token} (${t("tok.expires")}${tk.expires || t("tok.never")}, ${t("tok.subnets")}${tk.subnets || t("tok.all")}, ${t("tok.cats")}${tk.categories || t("tok.all")}) `;
+    li.textContent = `${location.origin}/embed?token=${tk.hint}… (${t("tok.expires")}${tk.expires || t("tok.never")}, ${t("tok.subnets")}${tk.subnets || t("tok.all")}, ${t("tok.cats")}${tk.categories || t("tok.all")}) `;
     const del = document.createElement("button");
     del.textContent = t("tok.delete");
-    del.addEventListener("click", async () => { await api("/api/tokens/" + tk.token, { method: "DELETE" }); loadTokens(); });
+    del.setAttribute("aria-label", t("tok.delete") + " " + tk.hint + "…");
+    del.addEventListener("click", async () => { await api("/api/tokens/" + encodeURIComponent(tk.id), { method: "DELETE" }); loadTokens(); });
     li.appendChild(del);
     ul.appendChild(li);
   }

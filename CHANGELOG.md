@@ -4,6 +4,28 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [1.6.0-rc.3] – 2026-11-22
+
+Dritte Vorab-Version. Wird nicht als `latest` markiert.
+
+### Sicherheit und Datenschutz
+- **Löschfrist für Ereignisse:** Ereignisse werden nach `NETZ_EVENT_RETENTION_DAYS` Tagen gelöscht (Standard 90,
+  `0` = nie), auch bei Geräten, die weiter online sind. Einstellbar in der Oberfläche.
+- **Embed-Tokens gehasht:** In der Datenbank liegt nur noch ein SHA-256-Hash. Das Token wird nur einmal nach dem
+  Anlegen angezeigt, die Liste zeigt die ersten 6 Zeichen. Löschen über `DELETE /api/tokens/{id}`.
+- **Gotify-Token im Header** `X-Gotify-Key` statt in der URL. Benachrichtigungen folgen keinen Weiterleitungen;
+  Fehler werden ohne URL und Token protokolliert statt still verworfen.
+- **SNMP ohne Standard-Community:** `NETZ_SNMP_COMMUNITY` ist standardmäßig leer statt `public`. Ohne Community
+  wird SNMP übersprungen, mit Hinweis im Log und in den Einstellungen.
+
+### Hinweise zum Update
+- Wer SNMP mit `public` genutzt hat, ohne die Community zu setzen, muss `NETZ_SNMP_COMMUNITY` jetzt setzen
+  (Umgebung oder Einstellungen). In der Oberfläche gespeicherte Werte bleiben erhalten.
+- Vorhandene Embed-Tokens werden beim Start gehasht. Bestehende Links bleiben gültig, das vollständige Token ist in
+  der Liste aber nicht mehr sichtbar. Wer es nicht mehr hat, legt ein neues an.
+- Beim ersten Scan werden Ereignisse älter als 90 Tage gelöscht. Wer sie behalten will, setzt vorher
+  `NETZ_EVENT_RETENTION_DAYS=0`.
+
 ## [1.6.0-rc.2] – 2026-11-22
 
 Zweite Vorab-Version. Wird nicht als `latest` markiert.

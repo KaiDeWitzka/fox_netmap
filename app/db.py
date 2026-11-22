@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import sqlite3
@@ -57,7 +58,8 @@ CREATE TABLE IF NOT EXISTS embed_tokens (
     expires TEXT,
     subnets TEXT NOT NULL DEFAULT '',
     categories TEXT NOT NULL DEFAULT '',
-    created TEXT NOT NULL DEFAULT ''
+    created TEXT NOT NULL DEFAULT '',
+    hint TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
@@ -108,10 +110,35 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # v1.6.0: Anschluss laut FRITZ!Box-Mesh, z. B. "LAN:1" oder "AP:5G:0"
         conn.execute("ALTER TABLE devices ADD COLUMN link_port TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.link_port ergaenzt")
+    _migrate_tokens(conn)
     if "category_reason" not in cols:
         # v1.6.0: Begruendung der automatischen Einordnung, z. B. "host:iphone" oder "port:62078"
         conn.execute("ALTER TABLE devices ADD COLUMN category_reason TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.category_reason ergaenzt")
+
+
+TOKEN_PREFIX = "sha256:"
+
+
+def token_key(token: str) -> str:
+    """Embed-Tokens werden nur als SHA-256 gespeichert (seit v1.6.0). Ein Salt ist bei 192 Bit Zufall nicht noetig."""
+    return TOKEN_PREFIX + hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _migrate_tokens(conn: sqlite3.Connection) -> None:
+    tcols = {r["name"] for r in conn.execute("PRAGMA table_info(embed_tokens)")}
+    if not tcols:
+        return
+    if "hint" not in tcols:
+        conn.execute("ALTER TABLE embed_tokens ADD COLUMN hint TEXT NOT NULL DEFAULT ''")
+    rows = conn.execute("SELECT token FROM embed_tokens WHERE token NOT LIKE 'sha256:%'").fetchall()
+    for r in rows:
+        conn.execute(
+            "UPDATE embed_tokens SET token = ?, hint = ? WHERE token = ?", (token_key(r["token"]), r["token"][:6], r["token"])
+        )
+    if rows:
+        conn.commit()
+        log.info("Migration: %s Embed-Tokens auf SHA-256 umgestellt", len(rows))
 
 
 def init_db(conn: sqlite3.Connection) -> None:
@@ -379,13 +406,15 @@ def ensure_user(conn: sqlite3.Connection, username: str, pass_hash: str, now: st
 
 def create_token(conn: sqlite3.Connection, token: str, expires: str, subnets: str, categories: str, now: str) -> None:
     conn.execute(
-        "INSERT INTO embed_tokens (token, expires, subnets, categories, created) VALUES (?,?,?,?,?)",
-        (token, expires, subnets, categories, now),
+        "INSERT INTO embed_tokens (token, expires, subnets, categories, created, hint) VALUES (?,?,?,?,?,?)",
+        (token_key(token), expires, subnets, categories, now, token[:6]),
     )
 
 
 def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
-    row = conn.execute("SELECT * FROM embed_tokens WHERE token = ?", (token,)).fetchone()
+    if not token:
+        return None
+    row = conn.execute("SELECT * FROM embed_tokens WHERE token = ?", (token_key(token),)).fetchone()
     if row is None:
         return None
     if row["expires"]:
@@ -398,11 +427,28 @@ def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
 
 
 def list_tokens(conn: sqlite3.Connection) -> list[dict]:
-    return [dict(r) for r in conn.execute("SELECT token, expires, subnets, categories, created FROM embed_tokens ORDER BY created DESC")]
+    """Ohne Token im Klartext: `id` ist der Hash (zum Loeschen), `hint` die ersten 6 Zeichen zur Wiedererkennung."""
+    rows = conn.execute("SELECT token, hint, expires, subnets, categories, created FROM embed_tokens ORDER BY created DESC")
+    return [
+        {"id": r["token"][len(TOKEN_PREFIX) :], "hint": r["hint"], "expires": r["expires"], "subnets": r["subnets"],
+         "categories": r["categories"], "created": r["created"]}
+        for r in rows
+    ]
 
 
-def delete_token(conn: sqlite3.Connection, token: str) -> None:
-    conn.execute("DELETE FROM embed_tokens WHERE token = ?", (token,))
+def delete_token(conn: sqlite3.Connection, ident: str) -> None:
+    """Loeschen ueber die Listen-ID (Hash) oder, fuer bestehende Skripte, ueber das Token selbst."""
+    conn.execute("DELETE FROM embed_tokens WHERE token IN (?, ?)", (TOKEN_PREFIX + ident, token_key(ident)))
+
+
+def trim_events(conn: sqlite3.Connection, days: int) -> int:
+    """Ereignisse aelter als `days` Tage loeschen (0 = nie). Gilt auch fuer aktive Geraete (seit v1.6.0)."""
+    if days <= 0:
+        return 0
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    cur = conn.execute("DELETE FROM device_events WHERE ts < ?", (cutoff,))
+    conn.commit()
+    return cur.rowcount or 0
 
 
 def trim_history(conn: sqlite3.Connection, hours: int, now: str) -> None:
