@@ -54,7 +54,7 @@ w.fetch = async (url, opts = {}) => {
     }
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
-    if (String(url).includes("/api/meta")) return { version: "1.6.2", gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
+    if (String(url).includes("/api/meta")) return { version: "1.6.3", gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
     if (String(url).includes("/api/sites"))
       return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
@@ -396,7 +396,7 @@ check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
 check("Detail: IPv6-Zeile mit Adresse aus NDP-Match", $("#detail-content").textContent.includes("fdf1:3afe:ed39::10"));
 
 
-check("Header: Version aus /api/meta sichtbar (v1.6.2)", $("#hdr-version") && $("#hdr-version").textContent === "v1.6.2");
+check("Header: Version aus /api/meta sichtbar (v1.6.3)", $("#hdr-version") && $("#hdr-version").textContent === "v1.6.3");
 check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._els.some((e) => e.data && e.data.id === "wlan:192.168.178.1" && e.data.virtual));
 check(
   "Karte: Internet-Knoten mit WAN-IP + Kante zum Gateway",
