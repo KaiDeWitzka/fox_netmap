@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     embed_ancestors: str = "*"
     # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
     cookie_secure: str = "auto"
-    app_version: str = "1.6.1"
+    app_version: str = "1.6.2"
 
     @property
     def subnet_list(self) -> list[str]:
