@@ -299,7 +299,7 @@ Subnetz-Gruppen, `site`-Feld im Export. Das Remote-Subnetz wird per TCP-Probe ge
 wenn ICMP blockiert ist.
 
 IPv6: v6-CIDR einfach in die Subnetze aufnehmen; Fund bei großen Netzen via NDP + Gateway-Ping,
-bei kleinen zusätzlich Sweep; Gateway-v6 für die Topologie; Web-Links als `[2003:db8::10]:8080`.
+bei kleinen zusätzlich Sweep; Gateway-v6 für die Topologie; Web-Links als `[2003:db8::10]:8080`. Bei großen Netzen (z. B. /64) zusätzlich: ff02::1-Multicast-Ping, SLAAC/EUI-64-Kandidaten pro bekannter MAC (ping6) und DNS-AAAA pro Hostname — gefundene globale v6-Adressen landen in `devices.ip6` (Tabelle, Detail, Export).
 
 **VPN-Clients (z. B. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 meldet VPN-Verbindungen mit
 Schnittstellentyp „VPN“ — solche Geräte werden automatisch als VPN markiert (Badge „VPN“ in Tabelle

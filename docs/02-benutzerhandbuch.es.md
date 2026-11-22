@@ -300,7 +300,7 @@ ICMP esté bloqueado.
 
 IPv6: basta añadir un CIDR v6 a las subredes; descubrimiento en redes grandes vía NDP + ping a
 la pasarela, y barrido adicional en redes pequeñas; pasarela-v6 para la topología; enlaces web
-como `[2003:db8::10]:8080`.
+como `[2003:db8::10]:8080`. En redes grandes (p. ej. /64) además: ping multicast ff02::1, candidatos SLAAC/EUI-64 por MAC conocida (ping6) y DNS AAAA por nombre de host — las direcciones v6 globales encontradas van a `devices.ip6` (tabla, detalle, exportación).
 
 **Clientes VPN (p. ej. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 notifica las conexiones VPN con
 tipo de interfaz «VPN»: esos dispositivos se marcan automáticamente como VPN (insignia «VPN» en

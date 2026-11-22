@@ -640,3 +640,70 @@ def test_apply_scan_speichert_vpn_flag(tmp_path):
     d2 = dev("00:7a:a4:9b:d9:68", "192.168.178.201", vpn=False, status="offline", layout={"connected_to": "192.168.178.1"})
     apply_scan(conn, settings, [d2])
     assert db.get_device(conn, d1["mac"])["vpn"] == 0
+
+
+def test_eui64_candidates():
+    import ipaddress
+
+    from app.scanner.discover import eui64_candidates
+
+    net = ipaddress.ip_network("fdf1:3afe:ed39::/64")
+    assert eui64_candidates("00:11:22:33:44:55", net) == ["fdf1:3afe:ed39:0:211:22ff:fe33:4455"]
+    assert eui64_candidates("aa:bb:cc:dd:ee:ff", net) == ["fdf1:3afe:ed39:0:a8bb:ccff:fedd:eeff"]
+    assert eui64_candidates("kaputt", net) == []
+    assert eui64_candidates("aa:bb:cc:dd:ee", net) == []
+
+
+def test_v6_slaac_probe(monkeypatch):
+    from app.scanner import discover
+
+    alive = {"fdf1:3afe:ed39:0:211:22ff:fe33:4455"}
+    monkeypatch.setattr(discover, "ping_host", lambda ip, t: ip in alive)
+    out = discover.v6_slaac_probe(
+        ["fdf1:3afe:ed39::/64"],
+        ["00:11:22:33:44:55", "aa:bb:cc:dd:ee:ff", "ip:192.168.178.9"],
+        0.5,
+        base={"aa:bb:cc:dd:ee:ff": "fdf1:3afe:ed39::99"},
+    )
+    assert out["00:11:22:33:44:55"] == "fdf1:3afe:ed39:0:211:22ff:fe33:4455"
+    assert out["aa:bb:cc:dd:ee:ff"] == "fdf1:3afe:ed39::99"  # Base-Eintrag bleibt, MAC wird nicht erneut geprobt
+    # kleine v6-Netze (sweepbar) werden nicht per SLAAC geprobt
+    out2 = discover.v6_slaac_probe(["2003:db8::/120"], ["00:11:22:33:44:55"], 0.5)
+    assert "00:11:22:33:44:55" not in out2
+
+
+def test_ping6_all_nodes_parse(monkeypatch):
+    from app.scanner import discover
+
+    class R:
+        stdout = (
+            "PING ff02::1(ff02::1) 56 data bytes\n"
+            "64 bytes from fe80::1%eth0: icmp_seq=1 ttl=64\n"
+            "64 bytes from fdf1:3afe:ed39::5%eth0: icmp_seq=1 ttl=64\n"
+        )
+
+    monkeypatch.setattr(discover.subprocess, "run", lambda *a, **k: R())
+    assert discover.ping6_all_nodes(1.0) == ["fdf1:3afe:ed39::5", "fe80::1"]
+
+
+def test_resolve_aaaa(monkeypatch):
+    import socket
+
+    from app.scanner import names
+
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda h, p, fam: [
+            (socket.AF_INET6, None, None, "", ("fe80::1", 0, 0, 0)),
+            (socket.AF_INET6, None, None, "", ("fdf1:3afe:ed39::10", 0, 0, 0)),
+        ],
+    )
+    assert names.resolve_aaaa("nas.fritz.box") == "fdf1:3afe:ed39::10"
+
+    def _fail(*a, **k):
+        raise socket.gaierror()
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fail)
+    assert names.resolve_aaaa("unbekannt.local") == ""
+    assert names.resolve_aaaa("") == ""

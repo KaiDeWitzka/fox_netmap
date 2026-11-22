@@ -292,7 +292,7 @@ NETZ_SITES=Home:192.168.178.0/24; Remote:192.168.179.0/24
 `site` field in exports. The remote subnet is discovered via TCP probe even when ICMP is blocked.
 
 IPv6: just add a v6 CIDR to the subnets; discovery in large networks via NDP + gateway ping,
-plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8::10]:8080`.
+plus sweep for small ones; gateway-v6 for the topology; web links as `[2003:db8::10]:8080`. In large networks (e.g. /64) additionally: ff02::1 multicast ping, SLAAC/EUI-64 candidates per known MAC (ping6) and DNS AAAA per hostname — discovered global v6 addresses land in `devices.ip6` (table, detail, export).
 
 **VPN clients (e.g. FRITZ!Box IPSec/WireGuard .201/.202):** TR-064 reports VPN connections with
 interface type "VPN" — such devices are automatically flagged as VPN (a "VPN" badge in table and
