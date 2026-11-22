@@ -218,6 +218,14 @@ check(
   "Header: alle IDs stabil geblieben",
   ["nav", "search", "filter-category", "filter-status", "filter-site", "btn-online", "scan-status", "chk-groups", "layout-select", "btn-layout-reset", "btn-scan", "btn-pdf", "pdf-orientation", "btn-print", "btn-theme", "lang-select", "btn-settings", "btn-logout"].every((id) => !!$("#" + id))
 );
+check("Icon: Favicon-Link in index.html + Logo im Header", html.includes('rel="icon"') && html.includes("/static/favicon.svg") && !!$("header h1 .hdr-logo"));
+check(
+  "Icon: favicon.svg existiert und enthaelt Fuchs-Kopf + Netzwerk",
+  (() => {
+    const svg = fs.readFileSync(path.join(repo, "app/static/favicon.svg"), "utf8");
+    return svg.includes("<svg") && svg.includes("#f97316") && svg.includes("circle") && svg.includes("M12 6");
+  })()
+);
 
 $("#nav [data-view='table']").click();
 check("Tabelle: Tabellenansicht sichtbar", vis($("#view-table")));
@@ -350,6 +358,17 @@ check(
   !!bodyRow && bodyCells[0].textContent.includes("10.0.0.5") && bodyCells[2].textContent.startsWith("nas")
 );
 check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
+check("IPv6-Spalte: Header th[data-key=ip6] mit Label", !!doc.querySelector('#device-table th[data-key="ip6"]') && doc.querySelector('#device-table th[data-key="ip6"]').textContent.includes("IPv6"));
+check(
+  "IPv6-Spalte: nas-Zeile zeigt fdf1:3afe:ed39::10, andere Zeilen Strich",
+  (() => {
+    const rows = [...doc.querySelectorAll("#device-table tbody tr")];
+    const nas = rows.find((r) => r.textContent.includes("nas"));
+    const idx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "ip6");
+    const other = rows.find((r) => !r.textContent.includes("nas"));
+    return !!nas && nas.children[idx].textContent.trim() === "fdf1:3afe:ed39::10" && !!other && other.children[idx].textContent.trim() === "–";
+  })()
+);
 
 const resizer = doc.querySelector("#device-table thead th .resizer");
 const rKey = resizer.closest("th").dataset.key;

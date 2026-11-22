@@ -4,6 +4,12 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Neu
+- **App-Icon:** Fuchs-Kopf mit Netzwerk-Motiv als SVG (`app/static/favicon.svg`) — Favicon in `index.html` und `login.html`, Logo im Header und auf der Login-Seite.
+- **IPv6 in der Tabelle:** neue Spalte „IPv6“ direkt nach der IP-Spalte (Wert aus `devices.ip6` via NDP-MAC-Match, „–“ wenn keine bekannt).
+
 ## [1.6.3] – 2026-11-22
 
 VPN-Erkennung, `link_port` im Export, Scan & gehärtetes Image bei jedem Merge auf `main`, zweizeiliger Header (PRs #69–#72).

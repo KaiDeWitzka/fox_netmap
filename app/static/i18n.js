@@ -1516,3 +1516,13 @@ const I18N_EXTRA8 = {
   }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA8[lang] || {});
+
+const I18N_EXTRA9 = {
+  "de": { "cols.ip6": "IPv6" },
+  "en": { "cols.ip6": "IPv6" },
+  "fr": { "cols.ip6": "IPv6" },
+  "es": { "cols.ip6": "IPv6" },
+  "it": { "cols.ip6": "IPv6" },
+  "pt": { "cols.ip6": "IPv6" }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA9[lang] || {});

@@ -137,6 +137,7 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
 - **Alterar categoria em linha:** lista pendente na coluna de categoria.
 - Host/IP com portas de interface web (80/8080/443/8443) são apresentados como ligações clicáveis
   (http + https, IPv6 entre `[…]`).
+- **Coluna IPv6:** endereço v6 encontrado (correspondência MAC NDP, coluna "IPv6") diretamente na tabela, "–" se desconhecido.
 - Dispositivos sem MAC (p. ex. IPs avulsos da sub-rede VPN) mostram «–» como MAC.
 
 ---

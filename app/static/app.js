@@ -102,7 +102,7 @@ let sortKey = "hostname";
 let sortDir = 1;
 
 const TABLE_COLS = [
-  ["hostname", "cols.hostname"], ["ip", "cols.ip"], ["mac", "cols.mac"], ["vendor", "cols.vendor"], ["source", "cols.source"],
+  ["hostname", "cols.hostname"], ["ip", "cols.ip"], ["ip6", "cols.ip6"], ["mac", "cols.mac"], ["vendor", "cols.vendor"], ["source", "cols.source"],
   ["category", "cols.category"], ["status", "cols.status"], ["subnet", "cols.subnet"], ["site", "cols.site"],
   ["ports_str", "cols.ports"], ["connected_to", "cols.connected"], ["note", "cols.note"], ["last_seen", "cols.lastSeen"],
 ];
@@ -982,6 +982,10 @@ function buildCell(d, key) {
       b.title = t("vpn.badgeTitle");
       td.appendChild(b);
     }
+  } else if (key === "ip6") {
+    const v6 = d.ip6 || "";
+    td.textContent = v6 || "–";
+    td.title = v6;
   } else if (key === "mac") {
     const m = d.mac || "";
     td.textContent = m.startsWith("ip:") ? "–" : m;

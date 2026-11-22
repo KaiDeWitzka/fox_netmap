@@ -61,8 +61,11 @@ header {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--muted); padding: 0 4px 0 6px; white-space: nowrap;
 }
-header h1 { font-size: 16px; margin: 0; color: var(--accent); white-space: nowrap; }
+header h1 { font-size: 16px; margin: 0; color: var(--accent); white-space: nowrap; display: flex; align-items: center; gap: 7px; }
 header h1 #hdr-version { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+.hdr-logo { width: 24px; height: 24px; border-radius: 6px; flex: none; }
+.login-page h1 { display: flex; align-items: center; gap: 8px; }
+.login-page .hdr-logo { width: 28px; height: 28px; }
 header .spacer { flex: 1; }
 /* Einstellungen-Button deutlich sichtbar: Icon + Label, Akzent-Rahmen */
 #btn-settings.hdr-settings {
