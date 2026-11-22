@@ -17,6 +17,19 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
   `devices.vpn` (DB-Migration automatisch).
 - **Alarme:** VPN-Geräte lösen keinen „neues Gerät“-Alarm aus (kommen und gehen mit dem Tunnel);
   sie werden stattdessen als „neues VPN-Gerät (kein Alarm)“ ins Log geschrieben.
+## [1.6.2] – 2026-11-22
+
+Versionsnummer im UI-Header und IPv6-Adresse pro Gerät (PR #67).
+
+### Neu
+- **Versionsnummer im Header:** `fox_netmap vX.Y.Z` neben dem Titel; die Nummer kommt aus `/api/meta`
+  und ändert sich mit jedem Release automatisch.
+- **IPv6 pro Gerät:** IPv6-Adresse aus dem NDP-Cache über die MAC-Adresse zugeordnet (Link-Local-Adressen
+  `fe80::` ausgeschlossen) in neuer Spalte `devices.ip6`. Sichtbar im Detail-Panel, in JSON/CSV-Export
+  und API. Die Datenbank-Migration legt die Spalte beim Start automatisch an.
+
+### Hinweise zum Update
+- Keine Konfigurationsänderung nötig; bestehende Datenbanken werden migriert (`devices.ip6`).
 
 ## [1.6.1] – 2026-11-22
 
