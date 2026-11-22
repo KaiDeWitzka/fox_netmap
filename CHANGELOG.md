@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.6] – 2026-11-22
+
+Karte: Subnetz-Gruppen starten auf Raster (keine Überlappung), Geräte ohne IP erst per Haken sichtbar (PR #79).
 
 ### Geändert
 - **Karte: Subnetz-Gruppen überlappen nicht mehr zu Beginn** — beim Gruppieren bekommen die
