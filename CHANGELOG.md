@@ -6,6 +6,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Geändert
+- **Einstellungen nach Schwerpunkten gruppiert:** Das Settings-Formular ist jetzt in 7
+  `<fieldset>`-Gruppen mit Legende gegliedert (Allgemein · Scan · TR-064 · SNMP · Alarme ·
+  Exporte/Standorte/VPN · OUI), i18n in allen 6 Sprachen. Alle Feld-IDs unverändert.
+
 ### Neu
 - **IPv6-Fund bei großen Netzen verbessert:** zusätzlich zu NDP/Gateway jetzt `ff02::1`-Multicast-Ping,
   **SLAAC/EUI-64-Kandidaten pro bekannter MAC** (aus ARP/TR-064) im konfigurierten v6-Subnetz per `ping6`

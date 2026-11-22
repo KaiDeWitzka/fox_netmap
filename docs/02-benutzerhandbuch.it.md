@@ -175,6 +175,8 @@ manualmente, vuoto = automatico), porte aperte con nomi di servizio, nota, crono
 
 ![Impostazioni](screenshots/03-einstellungen.svg)
 
+Il modulo è **raggruppato per tema** (Generale · Scansione · TR-064 · SNMP · Allarmi · Esportazioni/Siti/VPN · OUI).
+
 Tutto ciò che viene modificato qui ha effetto **alla prossima scansione senza riavviare il
 contenitore** (i valori env del compose restano i predefiniti per nuove installazioni; vuoto =
 predefinito env).

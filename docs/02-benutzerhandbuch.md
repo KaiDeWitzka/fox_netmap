@@ -174,6 +174,8 @@ Ereignisse. **Speichern** persistiert Kategorie/Notiz/manuelle Verbindung.
 
 ![Einstellungen](screenshots/03-einstellungen.svg)
 
+Das Formular ist nach **Themenschwerpunkten gruppiert** (Allgemein · Scan · TR-064 · SNMP · Alarme · Exporte/Standorte/VPN · OUI).
+
 Alle hier änderbaren Werte wirken **beim nächsten Scan ohne Container-Neustart** (die Compose-
 Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 

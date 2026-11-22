@@ -176,6 +176,8 @@ manual, vacío = automático), puertos abiertos con nombres de servicio, nota, h
 
 ![Configuración](screenshots/03-einstellungen.svg)
 
+El formulario está **agrupado por temas** (General · Escaneo · TR-064 · SNMP · Alarmas · Exportaciones/Sitios/VPN · OUI).
+
 Todo lo que se cambie aquí surte efecto **en el siguiente escaneo sin reiniciar el contenedor**
 (los valores env del compose siguen siendo los valores por defecto en instalaciones nuevas;
 vacío = valor por defecto del entorno).

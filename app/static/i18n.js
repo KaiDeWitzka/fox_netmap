@@ -1526,3 +1526,31 @@ const I18N_EXTRA9 = {
   "pt": { "cols.ip6": "IPv6" }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA9[lang] || {});
+
+const I18N_EXTRA10 = {
+  "de": {
+    "st.g.general": "Allgemein", "st.g.scan": "Scan", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Alarme", "st.g.export": "Exporte, Standorte & VPN", "st.g.oui": "OUI (Hersteller)"
+  },
+  "en": {
+    "st.g.general": "General", "st.g.scan": "Scan", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Alarms", "st.g.export": "Exports, sites & VPN", "st.g.oui": "OUI (vendor)"
+  },
+  "fr": {
+    "st.g.general": "Général", "st.g.scan": "Scan", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Alarmes", "st.g.export": "Exports, sites & VPN", "st.g.oui": "OUI (fabricant)"
+  },
+  "es": {
+    "st.g.general": "General", "st.g.scan": "Escaneo", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Alarmas", "st.g.export": "Exportaciones, sitios y VPN", "st.g.oui": "OUI (fabricante)"
+  },
+  "it": {
+    "st.g.general": "Generale", "st.g.scan": "Scansione", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Allarmi", "st.g.export": "Esportazioni, siti e VPN", "st.g.oui": "OUI (produttore)"
+  },
+  "pt": {
+    "st.g.general": "Geral", "st.g.scan": "Varredura", "st.g.tr064": "TR-064 (FRITZ!Box)",
+    "st.g.snmp": "SNMP", "st.g.alarms": "Alarmes", "st.g.export": "Exportações, locais e VPN", "st.g.oui": "OUI (fabricante)"
+  }
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA10[lang] || {});
