@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.3] – 2026-11-22
+
+VPN-Erkennung, `link_port` im Export, Scan & gehärtetes Image bei jedem Merge auf `main`, zweizeiliger Header (PRs #69–#72).
 
 ### Geändert
 - **Header zweizeilig nach Themenschwerpunkten gruppiert:** Zeile 1 „Ansicht“ (Logo + Versionsnummer,
