@@ -27,6 +27,9 @@ Go-public (PR #81): Repository öffentlich (MIT), Anonymisierung von Tests/Doku/
 - **READMEs:** GHCR-Paket öffentlich — `docker pull` ohne Login
 - **Repository public:** MIT-Lizenz, GitHub Secret Protection + Push Protection + Private Vulnerability Reporting + Dependabot in den Settings aktiviert, GHCR-Paket `fox_netmap` public (Pull ohne Login)
 
+### Code-Scanning
+- **CodeQL-Workflow im Repo:** `.github/workflows/codeql.yml` (Python + JavaScript, push/PR auf `main` + woechentlich; `github/codeql-action` v4.39.4 per SHA gepinnt). Ergaenzt das Default-Setup in den GitHub-Settings; Alerts landen im Security-Tab.
+
 ## [1.6.6] – 2026-11-22
 
 Karte: Subnetz-Gruppen starten auf Raster (keine Überlappung), Geräte ohne IP erst per Haken sichtbar (PR #79).
