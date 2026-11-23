@@ -4,7 +4,12 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.8] – 2026-11-23
+
+CI-Security nach dem Go-public: CodeQL-Workflow im Repo (SHA-gepinnt) + CodeQL-Alert #1 gefixt (PRs #83, #84).
+
+### Neu
+- **CodeQL-Workflow im Repo:** `.github/workflows/codeql.yml` (Python + JavaScript, push/PR auf `main` + woechentlich; `github/codeql-action` v4.39.4 per SHA gepinnt). Default-Setup in den GitHub-Settings deaktiviert; Alerts landen im Security-Tab.
 
 ### Behoben
 - **CodeQL `js/bad-tag-filter` (Security-Alert #1):** Test-Regex in `tests/ui_dom_check.mjs` jetzt case-insensitive (`/<script>/i`) — erkennt auch `<SCRIPT>`-Tags; UI-Checks weiterhin grün.
@@ -27,8 +32,6 @@ Go-public (PR #81): Repository öffentlich (MIT), Anonymisierung von Tests/Doku/
 - **READMEs:** GHCR-Paket öffentlich — `docker pull` ohne Login
 - **Repository public:** MIT-Lizenz, GitHub Secret Protection + Push Protection + Private Vulnerability Reporting + Dependabot in den Settings aktiviert, GHCR-Paket `fox_netmap` public (Pull ohne Login)
 
-### Code-Scanning
-- **CodeQL-Workflow im Repo:** `.github/workflows/codeql.yml` (Python + JavaScript, push/PR auf `main` + woechentlich; `github/codeql-action` v4.39.4 per SHA gepinnt). Ergaenzt das Default-Setup in den GitHub-Settings; Alerts landen im Security-Tab.
 
 ## [1.6.6] – 2026-11-22
 
