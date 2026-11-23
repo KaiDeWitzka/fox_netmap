@@ -566,27 +566,27 @@ def test_discover_mixed_v4_v6_sort(monkeypatch):
     import ipaddress
 
     monkeypatch.setattr(discover, "arp_table", lambda: {"192.168.178.34": "aa:bb:cc:00:00:01"})
-    monkeypatch.setattr(discover, "neigh6_table", lambda: {"fdf1:3afe:ed39:0:27a:a4ff:fe9b:d968": "aa:bb:cc:00:00:02"})
+    monkeypatch.setattr(discover, "neigh6_table", lambda: {"2001:db8:0:27a:a4ff:fe9b:d968": "aa:bb:cc:00:00:02"})
     monkeypatch.setattr(discover, "ping_sweep", lambda subnet, timeout=1.0, max_hosts=0: {"192.168.178.34"})
     monkeypatch.setattr(discover, "tcp_probe_sweep", lambda subnet, skip, timeout=0.8, max_hosts=0: set())
     monkeypatch.setattr(discover, "ping_host", lambda ip, timeout: True)
-    monkeypatch.setattr(discover.topology, "gateway_ip6", lambda: "fdf1:3afe:ed39::1")
-    devs = discover.discover(["192.168.178.0/24", "fdf1:3afe:ed39::/64"], timeout=0.1)
+    monkeypatch.setattr(discover.topology, "gateway_ip6", lambda: "2001:db8::1")
+    devs = discover.discover(["192.168.178.0/24", "2001:db8::/64"], timeout=0.1)
     ips = [d["ip"] for d in devs]
     assert "192.168.178.34" in ips
-    assert any(i.startswith("fdf1:") for i in ips)
+    assert any(i.startswith("2001:db8:") for i in ips)
     assert ips == sorted(ips, key=lambda s: (ipaddress.ip_address(s).version, int(ipaddress.ip_address(s))))
-    assert discover.ip_sort_key("10.0.0.2") < discover.ip_sort_key("fdf1::1")
+    assert discover.ip_sort_key("10.0.0.2") < discover.ip_sort_key("2001:db8::1")
 
 
 def test_v6_by_mac():
     neigh6 = {
-        "fdf1:3afe:ed39::10": "AA:BB:CC:DD:EE:FF",
+        "2001:db8::10": "AA:BB:CC:DD:EE:FF",
         "fe80::1": "aa:bb:cc:dd:ee:ff",  # Link-Local -> ignorieren
-        "fdf1:3afe:ed39::20": "",  # ohne MAC -> ignorieren
+        "2001:db8::20": "",  # ohne MAC -> ignorieren
     }
     m = discover.v6_by_mac(neigh6)
-    assert m == {"aa:bb:cc:dd:ee:ff": "fdf1:3afe:ed39::10"}
+    assert m == {"aa:bb:cc:dd:ee:ff": "2001:db8::10"}
     assert discover.v6_by_mac({}) == {}
 
 
@@ -600,7 +600,7 @@ def test_vpn_pool_heuristik():
     assert is_vpn_ip("192.168.178.254", "auto", "192.168.178.1") is True
     assert is_vpn_ip("192.168.178.200", "auto", "192.168.178.1") is False
     assert is_vpn_ip("192.168.179.201", "auto", "192.168.178.1") is False  # fremdes Subnetz unberuehrt
-    assert is_vpn_ip("fdf1:3afe:ed39::201", "auto", "192.168.178.1") is False  # IPv6 nie per Pool
+    assert is_vpn_ip("2001:db8::201", "auto", "192.168.178.1") is False  # IPv6 nie per Pool
     assert is_vpn_ip("192.168.178.201", "off", "192.168.178.1") is False
     assert is_vpn_ip("192.168.178.201", "", "192.168.178.1") is False  # Default leer = aus, keine Annahme
     assert is_vpn_ip("", "auto", "192.168.178.1") is False
@@ -647,9 +647,9 @@ def test_eui64_candidates():
 
     from app.scanner.discover import eui64_candidates
 
-    net = ipaddress.ip_network("fdf1:3afe:ed39::/64")
-    assert eui64_candidates("00:11:22:33:44:55", net) == ["fdf1:3afe:ed39:0:211:22ff:fe33:4455"]
-    assert eui64_candidates("aa:bb:cc:dd:ee:ff", net) == ["fdf1:3afe:ed39:0:a8bb:ccff:fedd:eeff"]
+    net = ipaddress.ip_network("2001:db8::/64")
+    assert eui64_candidates("00:11:22:33:44:55", net) == ["2001:db8::211:22ff:fe33:4455"]
+    assert eui64_candidates("aa:bb:cc:dd:ee:ff", net) == ["2001:db8::a8bb:ccff:fedd:eeff"]
     assert eui64_candidates("kaputt", net) == []
     assert eui64_candidates("aa:bb:cc:dd:ee", net) == []
 
@@ -657,16 +657,16 @@ def test_eui64_candidates():
 def test_v6_slaac_probe(monkeypatch):
     from app.scanner import discover
 
-    alive = {"fdf1:3afe:ed39:0:211:22ff:fe33:4455"}
+    alive = {"2001:db8::211:22ff:fe33:4455"}
     monkeypatch.setattr(discover, "ping_host", lambda ip, t: ip in alive)
     out = discover.v6_slaac_probe(
-        ["fdf1:3afe:ed39::/64"],
+        ["2001:db8::/64"],
         ["00:11:22:33:44:55", "aa:bb:cc:dd:ee:ff", "ip:192.168.178.9"],
         0.5,
-        base={"aa:bb:cc:dd:ee:ff": "fdf1:3afe:ed39::99"},
+        base={"aa:bb:cc:dd:ee:ff": "2001:db8::99"},
     )
-    assert out["00:11:22:33:44:55"] == "fdf1:3afe:ed39:0:211:22ff:fe33:4455"
-    assert out["aa:bb:cc:dd:ee:ff"] == "fdf1:3afe:ed39::99"  # Base-Eintrag bleibt, MAC wird nicht erneut geprobt
+    assert out["00:11:22:33:44:55"] == "2001:db8::211:22ff:fe33:4455"
+    assert out["aa:bb:cc:dd:ee:ff"] == "2001:db8::99"  # Base-Eintrag bleibt, MAC wird nicht erneut geprobt
     # kleine v6-Netze (sweepbar) werden nicht per SLAAC geprobt
     out2 = discover.v6_slaac_probe(["2003:db8::/120"], ["00:11:22:33:44:55"], 0.5)
     assert "00:11:22:33:44:55" not in out2
@@ -679,11 +679,11 @@ def test_ping6_all_nodes_parse(monkeypatch):
         stdout = (
             "PING ff02::1(ff02::1) 56 data bytes\n"
             "64 bytes from fe80::1%eth0: icmp_seq=1 ttl=64\n"
-            "64 bytes from fdf1:3afe:ed39::5%eth0: icmp_seq=1 ttl=64\n"
+            "64 bytes from 2001:db8::5%eth0: icmp_seq=1 ttl=64\n"
         )
 
     monkeypatch.setattr(discover.subprocess, "run", lambda *a, **k: R())
-    assert discover.ping6_all_nodes(1.0) == ["fdf1:3afe:ed39::5", "fe80::1"]
+    assert discover.ping6_all_nodes(1.0) == ["2001:db8::5", "fe80::1"]
 
 
 def test_resolve_aaaa(monkeypatch):
@@ -696,10 +696,10 @@ def test_resolve_aaaa(monkeypatch):
         "getaddrinfo",
         lambda h, p, fam: [
             (socket.AF_INET6, None, None, "", ("fe80::1", 0, 0, 0)),
-            (socket.AF_INET6, None, None, "", ("fdf1:3afe:ed39::10", 0, 0, 0)),
+            (socket.AF_INET6, None, None, "", ("2001:db8::10", 0, 0, 0)),
         ],
     )
-    assert names.resolve_aaaa("nas.fritz.box") == "fdf1:3afe:ed39::10"
+    assert names.resolve_aaaa("nas.fritz.box") == "2001:db8::10"
 
     def _fail(*a, **k):
         raise socket.gaierror()

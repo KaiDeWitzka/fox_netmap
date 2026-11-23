@@ -4,6 +4,21 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Go-public-Vorbereitung
+- **Anonymisierung:** echte WAN-IP, v6-Präfix, Hostnamen (`mrrobot`) und MACs aus Tests, Doku
+  und Screenshots entfernt (TEST-NET-Adressen `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.10`,
+  `2001:db8::/32`, Beispiel-MACs `02:00:00:…`); echte Screenshot-PNGs entfernt, Doku verweist auf
+  die schematischen SVGs
+- **Secret-Scan in der CI:** `.gitleaksignore` (False Positive `auth_pass="secret"` in
+  `tests/conftest.py`) + Workflow `gitleaks.yml` (Action per SHA gepinnt, volle History via
+  `--log-opts="--all"`)
+- **Community-Dateien:** `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, Issue-Templates (Bug/Feature),
+  PR-Template
+- **SECURITY.md:** Supported Versions aktualisiert (1.6.x), Meldung via Private Vulnerability Reporting
+- **READMEs:** GHCR-Paket öffentlich — `docker pull` ohne Login
+
 ## [1.6.6] – 2026-11-22
 
 Karte: Subnetz-Gruppen starten auf Raster (keine Überlappung), Geräte ohne IP erst per Haken sichtbar (PR #79).

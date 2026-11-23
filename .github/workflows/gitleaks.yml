@@ -1,0 +1,35 @@
+name: gitleaks
+
+# Secret-Scan der kompletten Git-History bei jedem Push/PR (gratis auf GitHub).
+# gitleaks-Binary aus gepinntem Release (v8.24.3) mit Checksummen-Prüfung —
+# kein trivy-action-ähnliches Problem wie CVE-2026-33634.
+# False Positives (Test-Fixtures) stehen in .gitleaksignore.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # volle History scannen
+      - name: gitleaks v8.24.3 installieren (Checksumme prüfen)
+        run: |
+          set -eu
+          V=8.24.3
+          cd /tmp
+          curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" -o "gitleaks_${V}_linux_x64.tar.gz"
+          curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_checksums.txt" -o "gitleaks_${V}_checksums.txt"
+          # sha256sum -c erwartet die Datei unter dem Namen aus der Checksummen-Datei -> in /tmp bleiben
+          grep "gitleaks_${V}_linux_x64.tar.gz" "gitleaks_${V}_checksums.txt" | sha256sum -c -
+          tar -xzf "gitleaks_${V}_linux_x64.tar.gz" gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Secret-Scan (volle History, .gitleaksignore greift)
+        run: gitleaks detect --source . --log-opts="--all" --redact --exit-code 1

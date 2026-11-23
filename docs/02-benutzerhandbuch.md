@@ -8,7 +8,7 @@ fox_netmap ist eine interaktive, durchsuchbare Netzwerkkarte für das Heimnetz: 
 über mehrere Subnetze/VLANs, mit Topologie („Verbunden mit“), offenen Ports, Verlauf, Alarmen und
 Exporten (JSON/CSV/PDF-Druck). Daten liegen persistent in SQLite, Scans laufen zyklisch oder manuell.
 
-> Die Kartenbilder `docs/screenshots/01-karte-hell.png` und `01-karte-dunkel.png` sind echte Aufnahmen
+> Die Kartenbilder `docs/screenshots/01-karte.svg` und `01-karte-dunkel.png` sind schematische Darstellungen
 > von v1.6.1 mit Testdaten. Die übrigen Abbildungen (`*.svg`) sind schematische Darstellungen der
 > Oberfläche (Dark Theme); Aufbau und Elemente entsprechen der App.
 
@@ -46,8 +46,8 @@ git clone https://github.com/KaiDeWitzka/fox_netmap.git
 cd fox_netmap
 cp docker-compose.yml .   # liegt schon im Repo
 # optional: .env anlegen, z. B.
-#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+#   NETZ_FRITZ_URL=http://192.0.2.1:49000
 #   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
 docker compose up -d --build
 ```
@@ -67,9 +67,9 @@ docker compose up -d --build
 
 ## 2. Die Oberfläche
 
-![Karte v1.6.1, helles Theme: Subnetz-Gruppen Zuhause und Remote, Gateway mit Ring, offene Legende](screenshots/01-karte-hell.png)
+![Karte v1.6.1, helles Theme: Subnetz-Gruppen Zuhause und Remote, Gateway mit Ring, offene Legende](screenshots/01-karte.svg)
 
-![Karte v1.6.1, dunkles Theme: Baum mit Repeater, Switch und Endgeräten, Legende eingeklappt](screenshots/01-karte-dunkel.png)
+![Karte v1.6.1, dunkles Theme: Baum mit Repeater, Switch und Endgeräten, Legende eingeklappt](screenshots/01-karte.svg)
 
 Schematische Übersicht mit Detail-Panel: [01-karte.svg](screenshots/01-karte.svg)
 
@@ -186,15 +186,15 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 
 | Feld | Env-Äquivalent | Bedeutung |
 |---|---|---|
-| Subnetze | `NETZ_SUBNETS` | kommagetrennt, IPv4- und IPv6-CIDR (z. B. `192.168.178.0/24, 2003:db8::/64`) |
+| Subnetze | `NETZ_SUBNETS` | kommagetrennt, IPv4- und IPv6-CIDR (z. B. `192.0.2.0/24, 2003:db8::/64`) |
 | Scan-Intervall / Timeout | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | Sekunden; Intervall 30–86400 |
 | Port-Umfang / Eigene Ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | Top-N (0 = alle) oder eigene Liste `80,443,…` |
 | SNMP aktiv / Switches / Community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM-Tabelle + LLDP der Switches (161/udp). Community ohne Standardwert (seit v1.6.0), ohne Community kein SNMP |
 | TR-064 Hauptgerät / weitere Endpunkte / Benutzer / Passwort | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL oder `host:port`; Repeater als weitere Endpunkte; Passwort ist **write-only** (wird nie per GET ausgeliefert, leer = unverändert) |
 | Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
-| Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.168.178.0/24; Remote:192.168.179.0/24` |
-| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (keine Annahme). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.168.178.201-192.168.178.254`), kommagetrennt |
+| Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.0.2.0/24; Remote:198.51.100.0/24` |
+| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (keine Annahme). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.0.2.201-192.0.2.254`), kommagetrennt |
 | Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
 | Ereignis-Löschfrist | `NETZ_EVENT_RETENTION_DAYS` | Ereignisse nach N Tagen löschen, Standard 90 (0 = nie) |
 | Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
@@ -297,8 +297,8 @@ Switches am selben Port, bleibt die Zuordnung beim Router; dann hilft die manuel
 Beispiel (VPN-Standort wie im eigenen Netz):
 
 ```env
-NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-NETZ_SITES=Zuhause:192.168.178.0/24; Remote:192.168.179.0/24
+NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+NETZ_SITES=Zuhause:192.0.2.0/24; Remote:198.51.100.0/24
 ```
 
 → Standort-Filter im Header, Spalte „Standort“ in der Tabelle, Standort-Label in den

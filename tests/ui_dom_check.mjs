@@ -20,7 +20,7 @@ doc.head.appendChild(style);
 const calls = [];
 const DEVS = [
       {
-        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "fdf1:3afe:ed39::10", hostname: "nas", vendor: "Synology",
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "2001:db8::10", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064",
         ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 2, x: null, y: null, connection: "lan",
@@ -28,11 +28,11 @@ const DEVS = [
       {
         mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
         category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", site: "Remote", source: "tcp",
-        ports_str: "", connected_to: "d8:47:32:8e:ee:06", note: "", last_seen: "2026-01-01T10:00:00+00:00",
+        ports_str: "", connected_to: "02:00:00:8e:ee:06", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "",
       },
       {
-        mac: "d8:47:32:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
+        mac: "02:00:00:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
         category: "Switch", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "ping+arp",
         ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 1, x: null, y: null, connection: "lan",
@@ -60,7 +60,7 @@ w.fetch = async (url, opts = {}) => {
     }
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
-    if (String(url).includes("/api/meta")) return { version: "1.6.6", gateway: "192.168.178.1", wan_ip: "79.227.229.246", wan_status: "Connected" };
+    if (String(url).includes("/api/meta")) return { version: "1.6.6", gateway: "192.168.178.1", wan_ip: "203.0.113.10", wan_status: "Connected" };
     if (String(url).includes("/api/sites"))
       return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
@@ -74,7 +74,7 @@ w.fetch = async (url, opts = {}) => {
           connection: "lan", layout: { connected_to: "", connected_manual: 0 }, history: [],
           events: [{ ts: "2026-01-01", type: "new", detail: "<svg onload=window.__xss=5>" }],
         };
-      if (mac === "d8:47:32:8e:ee:06")
+      if (mac === "02:00:00:8e:ee:06")
         return {
           mac, ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
           category: "Switch", status: "online", subnet: "192.168.178.0/24", source: "ping+arp", note: "",
@@ -90,7 +90,7 @@ w.fetch = async (url, opts = {}) => {
           ports: [], vpn: 1, connection: "wlan", layout: { connected_to: "wlan:192.168.178.1", connected_manual: 0 }, history: [], events: [],
         };
       return {
-        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "fdf1:3afe:ed39::10", hostname: "nas", vendor: "Synology",
+        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "2001:db8::10", hostname: "nas", vendor: "Synology",
         category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", note: "",
         first_seen: "2026-01-01T09:00:00+00:00", last_seen: "2026-01-01T10:00:00+00:00",
         ports: [{ port: 80, proto: "tcp", service: "http" }, { port: 443, proto: "tcp", service: "https" }],
@@ -375,13 +375,13 @@ check(
 check("Quelle-Spalte: Header + Zelle vorhanden", !!doc.querySelector('#device-table th[data-key="source"]') && bodyRow.textContent.includes("ping+arp,tr064"));
 check("IPv6-Spalte: Header th[data-key=ip6] mit Label", !!doc.querySelector('#device-table th[data-key="ip6"]') && doc.querySelector('#device-table th[data-key="ip6"]').textContent.includes("IPv6"));
 check(
-  "IPv6-Spalte: nas-Zeile zeigt fdf1:3afe:ed39::10, andere Zeilen Strich",
+  "IPv6-Spalte: nas-Zeile zeigt 2001:db8::10, andere Zeilen Strich",
   (() => {
     const rows = [...doc.querySelectorAll("#device-table tbody tr")];
     const nas = rows.find((r) => r.textContent.includes("nas"));
     const idx = [...doc.querySelectorAll("#device-table thead th")].findIndex((t) => t.dataset.key === "ip6");
     const other = rows.find((r) => !r.textContent.includes("nas"));
-    return !!nas && nas.children[idx].textContent.trim() === "fdf1:3afe:ed39::10" && !!other && other.children[idx].textContent.trim() === "–";
+    return !!nas && nas.children[idx].textContent.trim() === "2001:db8::10" && !!other && other.children[idx].textContent.trim() === "–";
   })()
 );
 
@@ -427,7 +427,7 @@ check(
     doc.querySelectorAll("#detail-content a").length === 2
 );
 check("Web-Links: Sidebar oeffnet bei Zeilenklick", vis($("#detail")));
-check("Detail: IPv6-Zeile mit Adresse aus NDP-Match", $("#detail-content").textContent.includes("fdf1:3afe:ed39::10"));
+check("Detail: IPv6-Zeile mit Adresse aus NDP-Match", $("#detail-content").textContent.includes("2001:db8::10"));
 
 
 check("Header: Version aus /api/meta sichtbar (v1.6.6)", $("#hdr-version") && $("#hdr-version").textContent === "v1.6.6");
@@ -435,7 +435,7 @@ check("Karte: virtuelles WLAN-Node wird gerendert", !!cyInstance && cyInstance._
 check(
   "Karte: Internet-Knoten mit WAN-IP + Kante zum Gateway",
   !!cyInstance &&
-    cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label.includes("79.227.229.246")) &&
+    cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label.includes("203.0.113.10")) &&
     cyInstance._els.some((e) => e.data && e.data.source === "internet")
 );
 const devNodes = cyInstance._els.filter((e) => e.data && !e.data.virtual && e.position);
@@ -447,10 +447,10 @@ check(
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 check("Design: kein Emoji in Knoten-Labels", cyInstance._els.every((e) => !e.data || !e.data.label || !EMOJI.test(e.data.label)));
 check("Design: Geraete-Label zweizeilig (Name, IP · Kategorie)", devNodes.length > 0 && devNodes.every((e) => e.data.label.split("\n").length === 2) && devNodes.some((e) => e.data.label === "nas\n10.0.0.5 · Server/NAS"));
-check("Design: Internet-Label 'Internet' + 'WAN <IP>'", cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label === "Internet\nWAN 79.227.229.246"));
+check("Design: Internet-Label 'Internet' + 'WAN <IP>'", cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.label === "Internet\nWAN 203.0.113.10"));
 check("Design: jedes Geraet hat ein Symbol, Netzknoten 40 px, Endgeraete 34 px",
   devNodes.every((e) => !!e.data.icon) &&
-  cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.size === 40 && e.data.icon === "network") &&
+  cyInstance._els.some((e) => e.data && e.data.id === "02:00:00:8e:ee:06" && e.data.size === 40 && e.data.icon === "network") &&
   cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:dd:ee:ff" && e.data.size === 34 && e.data.icon === "server"));
 check("Design: jede Kategorie hat ein eigenes Symbol (nur Unbekannt = Fragezeichen)",
   ["Router", "Repeater/AP", "Switch", "Server/NAS", "Client", "Mobilgerät", "Multimedia", "Drucker", "Smart-Home/IoT", "Internet"].every((c) => w.eval(`iconKeyFor(${JSON.stringify(c)})`) !== "unknown") &&
@@ -492,7 +492,7 @@ cyInstance._zoom = 2;
 cyInstance._handlers["zoom"]();
 check("Karte: Zoom >= 0.85 -> alle Labels sichtbar", cyInstance._labelStyle === "data(label)");
 cyInstance._zoom = 1;
-check("Karte: Hub-Flags (Switch/Internet hub, Client nicht)", cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && !e.data.hub));
+check("Karte: Hub-Flags (Switch/Internet hub, Client nicht)", cyInstance._els.some((e) => e.data && e.data.id === "02:00:00:8e:ee:06" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "internet" && e.data.hub === true) && cyInstance._els.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && !e.data.hub));
 check("Karte: Auto-Gruppe aus bei <=25 Geraeten; shouldAutoGroup(4)=false, (30)=true", $("#chk-groups").checked === false && w.eval("shouldAutoGroup(4)") === false && w.eval("shouldAutoGroup(30)") === true);
 check(
   "Karte: Kanten gerendert + virtueller Gateway-Knoten (Gateway nicht in Geraeteliste)",
@@ -503,7 +503,7 @@ check(
 
 check(
   "Karte: Kanten zeigen Eltern -> Kind (Gateway -> Switch, Internet -> Gateway)",
-  cyInstance._els.some((e) => e.data && e.data.source === "192.168.178.1" && e.data.target === "d8:47:32:8e:ee:06") &&
+  cyInstance._els.some((e) => e.data && e.data.source === "192.168.178.1" && e.data.target === "02:00:00:8e:ee:06") &&
     cyInstance._els.some((e) => e.data && e.data.source === "internet" && e.data.target === "192.168.178.1")
 );
 check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInstance._lastLayout === "preset");
@@ -517,14 +517,14 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   check(
     "Bugfix v1.5.4: Gateway-IP wird auf das Router-Geraet abgebildet (kein doppelter Gateway-Knoten)",
     !els.some((e) => e.data && e.data.id === "192.168.178.1") &&
-      els.some((e) => e.data && e.data.source === "3c:a6:2f:00:00:01" && e.data.target === "d8:47:32:8e:ee:06") &&
+      els.some((e) => e.data && e.data.source === "3c:a6:2f:00:00:01" && e.data.target === "02:00:00:8e:ee:06") &&
       els.some((e) => e.data && e.data.source === "internet" && e.data.target === "3c:a6:2f:00:00:01")
   );
   const pos = w.eval("computeTreePositions")(els);
   const y = (id) => pos[id] && pos[id].y;
   check(
     "Baum: Internet oben, Router darunter, darunter Switch und WLAN, WLAN-Geraet unter WLAN",
-    y("internet") < y("3c:a6:2f:00:00:01") && y("3c:a6:2f:00:00:01") < y("d8:47:32:8e:ee:06") && y("3c:a6:2f:00:00:01") < y("wlan:192.168.178.1") && y("wlan:192.168.178.1") < y("aa:bb:cc:00:11:22")
+    y("internet") < y("3c:a6:2f:00:00:01") && y("3c:a6:2f:00:00:01") < y("02:00:00:8e:ee:06") && y("3c:a6:2f:00:00:01") < y("wlan:192.168.178.1") && y("wlan:192.168.178.1") < y("aa:bb:cc:00:11:22")
   );
   check("Baum: jeder Knoten hat eine Position", els.filter((e) => e.data && !e.data.source && !e.data.subnet).every((e) => pos[e.data.id]));
   await w.eval("loadDevices()");
@@ -564,17 +564,17 @@ check(
     w.eval(`connectionText({ connection: "wlan", link_port: "AP:5G:0" })`) === "WLAN · 5 GHz" &&
     w.eval(`connectionText({ connection: "", link_port: "" })`) === "–"
 );
-check("parentId: Hostname wird auf Geraet abgebildet", w.eval(`parentId({ connected_to: "TL-SG108E-GZ" })`) === "d8:47:32:8e:ee:06");
+check("parentId: Hostname wird auf Geraet abgebildet", w.eval(`parentId({ connected_to: "TL-SG108E-GZ" })`) === "02:00:00:8e:ee:06");
 check("parentId: unbekannte MAC ergibt keinen virtuellen Gateway-Knoten", w.eval(`parentId({ connected_to: "de:ad:be:ef:00:01" })`) === null);
 
 const parentSel = $("#ed-parent");
 check("Detail: Verbunden-mit-Select mit Switch-Option", !!parentSel && parentSel.innerHTML.includes("TL-SG108E-GZ"));
 if (parentSel) {
-  parentSel.value = "d8:47:32:8e:ee:06";
+  parentSel.value = "02:00:00:8e:ee:06";
   $("#ed-parent-save").click();
   await sleep(60);
   const lastPatch = [...calls].reverse().find((c) => c.url.includes("/api/device/") && c.method === "PATCH" && c.body && c.body.includes("connected_to"));
-  check("Detail: Parent speichern -> PATCH mit connected_to=Switch-MAC", !!lastPatch && lastPatch.body.includes("d8:47:32:8e:ee:06"));
+  check("Detail: Parent speichern -> PATCH mit connected_to=Switch-MAC", !!lastPatch && lastPatch.body.includes("02:00:00:8e:ee:06"));
 }
 
 $("#nav [data-view='log']").click();
@@ -784,7 +784,7 @@ check(
 );
 check(
   "Gruppen an: Kanten bleiben geraetebasiert, auch ueber Subnetze (Switch -> remote-plug)",
-  cyInstance._els.some((e) => e.data && e.data.source === "d8:47:32:8e:ee:06" && e.data.target === "ip:192.168.179.20") &&
+  cyInstance._els.some((e) => e.data && e.data.source === "02:00:00:8e:ee:06" && e.data.target === "ip:192.168.179.20") &&
     !cyInstance._els.some((e) => e.data && e.data.source && String(e.data.source).startsWith("subnet:"))
 );
 check(
@@ -811,7 +811,7 @@ check(
 );
 
 const switchFakeNode = {
-  data(k) { return k === "id" ? "d8:47:32:8e:ee:06" : undefined; },
+  data(k) { return k === "id" ? "02:00:00:8e:ee:06" : undefined; },
   closedNeighborhood() { return { addClass() {} }; },
 };
 cyInstance._handlers["tap:node"]({ target: switchFakeNode });
@@ -821,8 +821,8 @@ check("Collapse: Switch-Detail hat ed-collapse mit Kinder-Anzahl (1)", !!colBtn 
 colBtn.click();
 await sleep(120);
 check("Collapse: remote-plug-Knoten aus der Karte entfernt", !cyInstance._els.some((e) => e.data && e.data.id === "ip:192.168.179.20"));
-check("Collapse: Switch-Label enthaelt (+1)", cyInstance._els.some((e) => e.data && e.data.id === "d8:47:32:8e:ee:06" && e.data.label.includes("(+1)")));
-check("Collapse: localStorage fox_collapsed enthaelt Switch-MAC", JSON.parse(w.localStorage.getItem("fox_collapsed") || "[]").includes("d8:47:32:8e:ee:06"));
+check("Collapse: Switch-Label enthaelt (+1)", cyInstance._els.some((e) => e.data && e.data.id === "02:00:00:8e:ee:06" && e.data.label.includes("(+1)")));
+check("Collapse: localStorage fox_collapsed enthaelt Switch-MAC", JSON.parse(w.localStorage.getItem("fox_collapsed") || "[]").includes("02:00:00:8e:ee:06"));
 check("Collapse: Button wechselt zu 'einblenden'", !!$("#ed-collapse") && $("#ed-collapse").textContent.includes("einblenden"));
 $("#ed-collapse").click();
 await sleep(120);
@@ -881,19 +881,19 @@ cb0.click();
 await sleep(10);
 check("Mehrfach: Checkbox-Klick oeffnet keine Detailansicht und zaehlt", $("#bulk-count").textContent.startsWith("1") && !$("#bulk-apply").disabled);
 check("Mehrfach: Kopf-Checkbox teilweise (indeterminate)", $("#sel-all").indeterminate === true);
-check("Mehrfach: Ziel-Liste nur Netzknoten, ohne ausgewaehlte", [...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "d8:47:32:8e:ee:06") && ![...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "aa:bb:cc:dd:ee:ff"));
+check("Mehrfach: Ziel-Liste nur Netzknoten, ohne ausgewaehlte", [...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "02:00:00:8e:ee:06") && ![...doc.querySelectorAll("#bulk-parent option")].some((o) => o.value === "aa:bb:cc:dd:ee:ff"));
 $("#sel-all").click();
 await sleep(20);
 check("Mehrfach: 'alle' waehlt alle Zeilen", selBoxes().every((c) => c.checked) && $("#sel-all").checked);
 selBoxes().forEach((c) => { if (c.closest("tr").textContent.includes("TL-SG108E-GZ")) c.click(); });
 await sleep(10);
-$("#bulk-parent").value = "d8:47:32:8e:ee:06";
+$("#bulk-parent").value = "02:00:00:8e:ee:06";
 const nSel = selBoxes().filter((c) => c.checked).length;
 $("#bulk-apply").click();
 await sleep(60);
 const bulkCall = calls.filter((c) => c.url.includes("/api/devices/connect")).pop();
 const bulkBody = bulkCall ? JSON.parse(bulkCall.body) : null;
-check("Mehrfach: POST /api/devices/connect mit MACs und Ziel", !!bulkCall && bulkCall.method === "POST" && bulkBody.connected_to === "d8:47:32:8e:ee:06" && bulkBody.macs.length === nSel && !bulkBody.macs.includes("d8:47:32:8e:ee:06"));
+check("Mehrfach: POST /api/devices/connect mit MACs und Ziel", !!bulkCall && bulkCall.method === "POST" && bulkBody.connected_to === "02:00:00:8e:ee:06" && bulkBody.macs.length === nSel && !bulkBody.macs.includes("02:00:00:8e:ee:06"));
 check("Mehrfach: Ergebnis per role=status gemeldet, Auswahl geleert", $("#bulk-result").getAttribute("role") === "status" && $("#bulk-result").textContent.includes(String(nSel)) && $("#bulk-apply").disabled);
 check("Mehrfach: Leiste als Gruppe beschriftet", $("#bulk-bar").getAttribute("role") === "group" && !!$("#bulk-bar").getAttribute("aria-labelledby"));
 void rowsBefore;

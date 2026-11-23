@@ -9,7 +9,7 @@ jusqu'à ~200 appareils sur plusieurs sous-réseaux/VLAN, avec la topologie (« 
 les ports ouverts, l'historique, des alarmes et des exports (JSON/CSV/impression PDF).
 Les données sont persistantes en SQLite ; les scans sont cycliques ou manuels.
 
-> Les images de carte `docs/screenshots/01-karte-hell.png` et `01-karte-dunkel.png` sont de vraies captures
+> Les images de carte `docs/screenshots/01-karte.svg` et `01-karte-dunkel.png` sont de vraies captures
 > de la v1.6.1 avec des données de test. Les autres images (`*.svg`) sont des illustrations schématiques de
 > l'interface (thème sombre) ; la structure et les éléments correspondent à l'application.
 
@@ -46,8 +46,8 @@ pour que ARP/ping fonctionnent sur le vrai réseau).
 git clone https://github.com/KaiDeWitzka/fox_netmap.git
 cd fox_netmap
 # optionnel : créer un .env, p. ex.
-#   NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-#   NETZ_FRITZ_URL=http://192.168.178.1:49000
+#   NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+#   NETZ_FRITZ_URL=http://192.0.2.1:49000
 #   NETZ_FRITZ_USER=…   NETZ_FRITZ_PASS=…
 docker compose up -d --build
 ```
@@ -67,9 +67,9 @@ docker compose up -d --build
 
 ## 2. L'interface
 
-![Carte v1.6.1, thème clair : groupes de sous-réseaux Maison et Distant, passerelle avec anneau, légende ouverte](screenshots/01-karte-hell.png)
+![Carte v1.6.1, thème clair : groupes de sous-réseaux Maison et Distant, passerelle avec anneau, légende ouverte](screenshots/01-karte.svg)
 
-![Carte v1.6.1, thème sombre : arbre avec répéteur, switch et terminaux, légende repliée](screenshots/01-karte-dunkel.png)
+![Carte v1.6.1, thème sombre : arbre avec répéteur, switch et terminaux, légende repliée](screenshots/01-karte.svg)
 
 Vue schématique avec panneau de détails : [01-karte.svg](screenshots/01-karte.svg)
 
@@ -184,15 +184,15 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 
 | Champ | Équivalent env | Signification |
 |---|---|---|
-| Sous-réseaux | `NETZ_SUBNETS` | séparés par des virgules, CIDR IPv4 et IPv6 (p. ex. `192.168.178.0/24, 2003:db8::/64`) |
+| Sous-réseaux | `NETZ_SUBNETS` | séparés par des virgules, CIDR IPv4 et IPv6 (p. ex. `192.0.2.0/24, 2003:db8::/64`) |
 | Intervalle / timeout de scan | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | secondes ; intervalle 30–86400 |
 | Portée des ports / ports perso | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tous) ou liste perso `80,443,…` |
 | SNMP activé / switches / communauté | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | table CAM + LLDP des switches (161/udp). Pas de communauté par défaut (depuis v1.6.0) ; sans communauté, pas de SNMP |
 | TR-064 appareil principal / autres points / utilisateur / mot de passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `hôte:port` ; répéteurs comme points supplémentaires ; le mot de passe est **write-only** (jamais renvoyé par GET, vide = inchangé) |
 | URL d'alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…` ; les tokens restent env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Liste blanche | `NETZ_ALARM_WHITELIST` | MAC/IP qui ne déclenchent pas d'alarme « nouvel appareil » |
-| Sites | `NETZ_SITES` | `Nom:sous-réseau; …` p. ex. `Maison:192.168.178.0/24; Remote:192.168.179.0/24` |
-| Pool d'adresses VPN | `NETZ_VPN_POOL` | Par défaut `off` (aucune supposition). `auto` = convention FRITZ! : dernier octet ≥ 201 dans le /24 de la passerelle ; aussi CIDR (`10.8.0.0/24`) et plages (`192.168.178.201-192.168.178.254`), séparés par des virgules |
+| Sites | `NETZ_SITES` | `Nom:sous-réseau; …` p. ex. `Maison:192.0.2.0/24; Remote:198.51.100.0/24` |
+| Pool d'adresses VPN | `NETZ_VPN_POOL` | Par défaut `off` (aucune supposition). `auto` = convention FRITZ! : dernier octet ≥ 201 dans le /24 de la passerelle ; aussi CIDR (`10.8.0.0/24`) et plages (`192.0.2.201-192.0.2.254`), séparés par des virgules |
 | Historique / rétention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historique en heures ; supprimer les appareils hors ligne après N jours (0 = jamais) |
 | Rétention des événements | `NETZ_EVENT_RETENTION_DAYS` | supprimer les événements après N jours, 90 par défaut (0 = jamais) |
 | Auto-export / intervalle / dossier | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV auto ; intervalle en h (0 = après chaque scan) |
@@ -292,8 +292,8 @@ reste au routeur ; utilisez alors l'affectation manuelle.
 Exemple (site VPN comme dans votre propre réseau) :
 
 ```env
-NETZ_SUBNETS=192.168.178.0/24,192.168.179.0/24
-NETZ_SITES=Maison:192.168.178.0/24; Remote:192.168.179.0/24
+NETZ_SUBNETS=192.0.2.0/24,198.51.100.0/24
+NETZ_SITES=Maison:192.0.2.0/24; Remote:198.51.100.0/24
 ```
 
 → filtre de site dans l'en-tête, colonne « Site » dans le tableau, étiquette de site dans les

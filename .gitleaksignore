@@ -1,0 +1,5 @@
+# False-Positive-Fingerprints (gitleaks). Nur Test-Fixtures, keine echten Secrets.
+# Format ab gitleaks v8.24.x: <commit>:<file>:<ruleID>:<startLine>
+3a2c478e2e6559b7e6e0a1605c9ad509f42ef94c:tests/conftest.py:generic-api-key:20
+# Aelteres Format (ohne StartLine) fuer lokale Scans mit aelteren gitleaks-Versionen:
+3a2c478e2e6559b7e6e0a1605c9ad509f42ef94c:tests/conftest.py:generic-api-key
