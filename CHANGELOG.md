@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.7] – 2026-11-23
+
+Go-public (PR #81): Repository öffentlich (MIT), Anonymisierung von Tests/Doku/Screenshots, Secret-Scan-CI (gitleaks, volle History), Community-Dateien.
 
 ### Go-public-Vorbereitung
 - **Anonymisierung:** echte WAN-IP, v6-Präfix, Hostnamen (`mrrobot`) und MACs aus Tests, Doku
@@ -12,12 +14,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
   `2001:db8::/32`, Beispiel-MACs `02:00:00:…`); echte Screenshot-PNGs entfernt, Doku verweist auf
   die schematischen SVGs
 - **Secret-Scan in der CI:** `.gitleaksignore` (False Positive `auth_pass="secret"` in
-  `tests/conftest.py`) + Workflow `gitleaks.yml` (Action per SHA gepinnt, volle History via
+  `tests/conftest.py`) + Workflow `gitleaks.yml`: gitleaks-Binary aus gepinntem Release v8.24.3 mit SHA-256-Checksummen-Prüfung (gitleaks-action v3 ignoriert `--log-opts`), volle History via
   `--log-opts="--all"`)
 - **Community-Dateien:** `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, Issue-Templates (Bug/Feature),
   PR-Template
 - **SECURITY.md:** Supported Versions aktualisiert (1.6.x), Meldung via Private Vulnerability Reporting
 - **READMEs:** GHCR-Paket öffentlich — `docker pull` ohne Login
+- **Repository public:** MIT-Lizenz, GitHub Secret Protection + Push Protection + Private Vulnerability Reporting + Dependabot in den Settings aktiviert, GHCR-Paket `fox_netmap` public (Pull ohne Login)
 
 ## [1.6.6] – 2026-11-22
 
