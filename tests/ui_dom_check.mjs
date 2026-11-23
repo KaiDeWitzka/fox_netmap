@@ -926,7 +926,7 @@ check("VPN: ungueltiger Pool -> kein PATCH (clientseitige Validierung)", patchCo
 
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));
-check("Sicherheit: login.html ohne Inline-Skript (CSP script-src 'self')", !/<script>/.test(loginHtml) && loginHtml.includes('src="/static/login.js"'));
+check("Sicherheit: login.html ohne Inline-Skript (CSP script-src 'self')", !/<script>/i.test(loginHtml) && loginHtml.includes('src="/static/login.js"'));
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

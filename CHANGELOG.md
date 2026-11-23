@@ -4,6 +4,11 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Behoben
+- **CodeQL `js/bad-tag-filter` (Security-Alert #1):** Test-Regex in `tests/ui_dom_check.mjs` jetzt case-insensitive (`/<script>/i`) — erkennt auch `<SCRIPT>`-Tags; UI-Checks weiterhin grün.
+
 ## [1.6.7] – 2026-11-23
 
 Go-public (PR #81): Repository öffentlich (MIT), Anonymisierung von Tests/Doku/Screenshots, Secret-Scan-CI (gitleaks, volle History), Community-Dateien.
