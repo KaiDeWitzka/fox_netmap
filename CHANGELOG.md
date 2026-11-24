@@ -6,6 +6,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+## [1.6.12] – 2026-11-24
+
+SQLite-Thread-Fix (PR #94): `check_same_thread=False` gegen `ProgrammingError` im Web-Container; Doku zu `NETZ_SQLITE_JOURNAL` in den READMEs (PR #93).
+
 ### Behoben
 - **SQLite `ProgrammingError: ... can only be used in that same thread` im Web-Container (`/api/scan/status` -> 500):** FastAPI/anyio fuehrt synchrone Generator-Depends (`get_conn`) mit Enter und Exit in unterschiedlichen Worker-Threads aus. `db.connect()` setzt jetzt `check_same_thread=False` (pro Request eine Connection, sequentiell genutzt; Locking ueber Datei + busy timeout). 1 Test.
 
