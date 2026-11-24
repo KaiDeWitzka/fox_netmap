@@ -348,6 +348,7 @@ docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
 - Beim ersten Start nach dem Update übernimmt der Container vorhandene Dateien in `./data` automatisch für UID 10001. Auf dem Host danach `sudo` zum Lesen nutzen oder den eigenen Benutzer in eine Gruppe mit GID 10001 aufnehmen.
 - Docker-Healthcheck: `docker compose ps` zeigt `healthy`/`unhealthy` (Web: `/api/health`, Scanner: Scan-Schleife läuft).
 - Volumes: `./data:/data` (SQLite-WAL, `netmap.log` rotierend, `exports/`)
+    Journal-Modus: WAL mit automatischem Fallback auf `delete` bei `disk I/O error` (z. B. Bind-Mount ueber Docker Desktop/NAS); erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
 - Ports: `NETMAP_PORT` (Host) → 8399 (Container)
 - Zeitzone: `TZ=Europe/Berlin`
 - Releases: SemVer-Tags `vX.Y.Z` laufen durch `release.yml` (ruff + pytest + UI-Tests) und

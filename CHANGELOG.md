@@ -12,6 +12,7 @@ Karte: Internet-Knoten wird bei TR-064-WAN mit dem Router verbunden (PR #86); CI
 - **Internet ↔ Router auf der Karte:** Liest TR-064 den WAN-Status (z. B. FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“, auch wenn das Gateway nicht in der Geräteliste steht; neues Feld `wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.
 
 ### Behoben
+- **SQLite `disk I/O error` (z. B. RunTipi auf Docker Desktop/NAS):** WAL wird jetzt per Schreibprobe geprüft und faellt bei Fehler automatisch auf `journal_mode=DELETE` zurück; erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto` (Default `auto`). 4 neue Tests.
 - **CI `image-scan.yml`:** `docker pull`/Trivy gegen leere `IMAGE`-Env gehärtet (Fallback auf `ghcr.io/kaidewitzka/fox_netmap` hartkodiert, Pulls einzeln mit `set -x`) — der Scheduled-Run 2026-11-23 schlug sonst mit „docker pull requires 1 argument“ fehl.
 
 ## [1.6.8] – 2026-11-23

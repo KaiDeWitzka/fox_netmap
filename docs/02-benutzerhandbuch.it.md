@@ -343,6 +343,7 @@ docker compose down -v                 # ATTENZIONE: elimina ./data (DB, log, es
 - Al primo avvio dopo l'aggiornamento il container assegna automaticamente i file esistenti in `./data` all'UID 10001. Sull'host usare `sudo` per leggerli o aggiungere il proprio utente a un gruppo con GID 10001.
 - Healthcheck Docker: `docker compose ps` mostra `healthy`/`unhealthy` (web: `/api/health`, scanner: ciclo di scansione attivo).
 - Volumi: `./data:/data` (SQLite WAL, `netmap.log` rotante, `exports/`)
+    Modalita journal: WAL con fallback automatico su `delete` in caso di `disk I/O error` (p. es. bind mount via Docker Desktop/NAS); fuerza con `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
 - Porte: `NETMAP_PORT` (host) → 8399 (contenitore)
 - Fuso orario: `TZ=Europe/Berlin`
 - Release: i tag SemVer `vX.Y.Z` passano da `release.yml` (ruff + pytest + test UI) e creano

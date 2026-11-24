@@ -341,6 +341,7 @@ docker compose down -v                 # ATENÇÃO: apaga ./data (BD, log, expor
 - No primeiro arranque após a atualização, o contentor atribui automaticamente os ficheiros existentes em `./data` ao UID 10001. No host, use `sudo` para os ler ou adicione o seu utilizador a um grupo com GID 10001.
 - Healthcheck do Docker: `docker compose ps` mostra `healthy`/`unhealthy` (web: `/api/health`, scanner: ciclo de scan ativo).
 - Volumes: `./data:/data` (SQLite WAL, `netmap.log` rotativo, `exports/`)
+    Modo de journal: WAL com fallback automatico para `delete` em caso de `disk I/O error` (p. ex. bind mount via Docker Desktop/NAS); forcar com `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
 - Portas: `NETMAP_PORT` (host) → 8399 (contentor)
 - Fuso horário: `TZ=Europe/Berlin`
 - Releases: as tags SemVer `vX.Y.Z` passam por `release.yml` (ruff + pytest + testes UI) e criam

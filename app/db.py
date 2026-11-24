@@ -90,13 +90,43 @@ def db_path(data_dir: str) -> str:
     return os.path.join(data_dir, "netmap.db")
 
 
+def _set_journal_mode(conn: sqlite3.Connection, path: str) -> None:
+    """Journal-Modus waehlen: WAL bevorzugt (Web + Scanner schreiben nebenlaeufig).
+
+    Auf manchen Bind-Mounts (Docker Desktop/virtiofs, NAS, manche Overlay-FS) schlaegt WAL
+    mit sqlite3.OperationalError: disk I/O error fehl (-wal/-shm nicht nutzbar). Dann Fallback
+    auf Rollback-Journal (DELETE). Erzwingen via NETZ_SQLITE_JOURNAL=wal|delete|auto (Default auto).
+    """
+    forced = os.getenv("NETZ_SQLITE_JOURNAL", "auto").strip().lower()
+    if forced == "delete":
+        conn.execute("PRAGMA journal_mode=DELETE")
+        return
+    try:
+        if forced != "wal":
+            mode = conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+            if str(mode).lower() != "wal":
+                raise sqlite3.OperationalError(f"journal_mode nicht wal (ist: {mode})")
+            # Schreibprobe: -wal/-shm neben der DB muessen anlegbar/mmap-faehig sein
+            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
+            for suffix in ("-wal", "-shm"):
+                with open(path + suffix, "ab"):
+                    pass
+        else:
+            conn.execute("PRAGMA journal_mode=WAL")
+    except (sqlite3.OperationalError, OSError) as exc:
+        if forced == "wal":
+            raise
+        log.warning("WAL nicht nutzbar fuer %s (%s) - Fallback journal_mode=DELETE", path, exc)
+        conn.execute("PRAGMA journal_mode=DELETE")
+
+
 def connect(path: str) -> sqlite3.Connection:
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
     conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    _set_journal_mode(conn, path)
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
