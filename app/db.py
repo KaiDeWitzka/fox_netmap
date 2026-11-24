@@ -90,34 +90,54 @@ def db_path(data_dir: str) -> str:
     return os.path.join(data_dir, "netmap.db")
 
 
+def _write_probe(conn: sqlite3.Connection) -> None:
+    """Echte Schreibprobe: BEGIN IMMEDIATE erzwingt Journal-Datei + Lock und schlaegt auf
+    ungeeigneten Dateisystemen (virtiofs, NAS, read-only Mount) sofort mit I/O-Fehler fehl."""
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS fox_probe (x INTEGER)")
+        conn.execute("INSERT INTO fox_probe (x) VALUES (1)")
+    finally:
+        conn.execute("ROLLBACK")
+
+
 def _set_journal_mode(conn: sqlite3.Connection, path: str) -> None:
     """Journal-Modus waehlen: WAL bevorzugt (Web + Scanner schreiben nebenlaeufig).
 
     Auf manchen Bind-Mounts (Docker Desktop/virtiofs, NAS, manche Overlay-FS) schlaegt WAL
-    mit sqlite3.OperationalError: disk I/O error fehl (-wal/-shm nicht nutzbar). Dann Fallback
-    auf Rollback-Journal (DELETE). Erzwingen via NETZ_SQLITE_JOURNAL=wal|delete|auto (Default auto).
+    mit sqlite3.OperationalError: disk I/O error fehl. Dann Fallback auf Rollback-Journal
+    (DELETE). Erzwingen via NETZ_SQLITE_JOURNAL=wal|delete|auto (Default auto).
     """
     forced = os.getenv("NETZ_SQLITE_JOURNAL", "auto").strip().lower()
     if forced == "delete":
         conn.execute("PRAGMA journal_mode=DELETE")
+        _write_probe(conn)
+        return
+    if forced == "wal":
+        conn.execute("PRAGMA journal_mode=WAL")
+        _write_probe(conn)
         return
     try:
-        if forced != "wal":
-            mode = conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
-            if str(mode).lower() != "wal":
-                raise sqlite3.OperationalError(f"journal_mode nicht wal (ist: {mode})")
-            # Schreibprobe: -wal/-shm neben der DB muessen anlegbar/mmap-faehig sein
-            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
-            for suffix in ("-wal", "-shm"):
-                with open(path + suffix, "ab"):
-                    pass
-        else:
-            conn.execute("PRAGMA journal_mode=WAL")
+        mode = conn.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+        if str(mode).lower() != "wal":
+            raise sqlite3.OperationalError(f"journal_mode nicht wal (ist: {mode})")
+        _write_probe(conn)
+        return
     except (sqlite3.OperationalError, OSError) as exc:
-        if forced == "wal":
-            raise
         log.warning("WAL nicht nutzbar fuer %s (%s) - Fallback journal_mode=DELETE", path, exc)
+        try:
+            conn.execute("ROLLBACK")
+        except sqlite3.Error:
+            pass
+    try:
         conn.execute("PRAGMA journal_mode=DELETE")
+        _write_probe(conn)
+    except (sqlite3.OperationalError, OSError) as exc:
+        directory = os.path.dirname(path) or "."
+        raise RuntimeError(
+            f"Datenbank-Verzeichnis nicht beschreibbar: {directory} ({exc}). "
+            "Bitte Volume-Mount von /data pruefen (read-write, nicht ro) und freien Speicherplatz (df -h)."
+        ) from exc
 
 
 def connect(path: str) -> sqlite3.Connection:
@@ -184,7 +204,12 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)"
     )
-    removed = dedupe_devices_by_ip(conn)
+    try:
+        removed = dedupe_devices_by_ip(conn)
+    except sqlite3.OperationalError as exc:
+        # Cleanup darf den Start nicht toeten (z. B. I/O-Fehler auf ungeeignetem Mount)
+        log.error("Dedupe fehlgeschlagen (%s) - wird uebersprungen", exc)
+        removed = 0
     conn.commit()
     if removed:
         log.info("Identitaet: %s doppelte Geraete (gleiche IP) zusammengefuehrt", removed)
