@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.9] – 2026-11-24
+
+Karte: Internet-Knoten wird bei TR-064-WAN mit dem Router verbunden (PR #86); CI image-scan gegen leere IMAGE-Env gehärtet (PR #87).
 
 ### Neu
 - **Internet ↔ Router auf der Karte:** Liest TR-064 den WAN-Status (z. B. FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“, auch wenn das Gateway nicht in der Geräteliste steht; neues Feld `wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.

@@ -32,7 +32,7 @@ def test_health(client):
     body = r.json()
     assert body["status"] == "ok"
     assert body["devices"] == 0
-    assert body["version"] == "1.6.8"
+    assert body["version"] == "1.6.9"
 
 
 def test_meta_public(client, app):
