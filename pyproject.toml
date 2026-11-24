@@ -1,6 +1,6 @@
 [project]
 name = "fox-netmap"
-version = "1.6.9"
+version = "1.6.10"
 license = "MIT"
 description = "Interaktive Netzwerkkarte des Heimnetzes: scannen, anzeigen, bearbeiten, einbetten, exportieren"
 requires-python = ">=3.12"
