@@ -26,15 +26,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: docker pull "$IMAGE:latest" "$IMAGE:main"
+      - run: |
+          set -x
+          # Fallback, falls die workflow-env IMAGE einmal nicht durchgereicht wird (2026-11-23: pull ohne Argumente)
+          IMG="${IMAGE:-ghcr.io/kaidewitzka/fox_netmap}"
+          docker pull "${IMG}:latest"
+          docker pull "${IMG}:main"
       - name: Trivy-Scan (latest + main)
         run: |
+          IMG="${IMAGE:-ghcr.io/kaidewitzka/fox_netmap}"
           mkdir -p reports ~/.cache/trivy
           for tag in latest main; do
-            echo "== Scan $IMAGE:$tag"
-            scripts/trivy.sh image --scanners vuln --format table --output "reports/trivy-$tag.txt" "$IMAGE:$tag"
+            echo "== Scan $IMG:$tag"
+            scripts/trivy.sh image --scanners vuln --format table --output "reports/trivy-$tag.txt" "${IMG}:${tag}"
             scripts/trivy.sh image --scanners vuln --ignore-unfixed --severity CRITICAL,HIGH \
-              --ignorefile .trivyignore --exit-code 1 "$IMAGE:$tag"
+              --ignorefile .trivyignore --exit-code 1 "${IMG}:${tag}"
           done
       - name: Bericht sichern
         if: always()

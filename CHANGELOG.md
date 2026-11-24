@@ -9,6 +9,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 ### Neu
 - **Internet ↔ Router auf der Karte:** Liest TR-064 den WAN-Status (z. B. FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“, auch wenn das Gateway nicht in der Geräteliste steht; neues Feld `wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.
 
+### Behoben
+- **CI `image-scan.yml`:** `docker pull`/Trivy gegen leere `IMAGE`-Env gehärtet (Fallback auf `ghcr.io/kaidewitzka/fox_netmap` hartkodiert, Pulls einzeln mit `set -x`) — der Scheduled-Run 2026-11-23 schlug sonst mit „docker pull requires 1 argument“ fehl.
+
 ## [1.6.8] – 2026-11-23
 
 CI-Security nach dem Go-public: CodeQL-Workflow im Repo (SHA-gepinnt) + CodeQL-Alert #1 gefixt (PRs #83, #84).
