@@ -125,6 +125,7 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
   il testo molto piccolo non viene disegnato; oltre 25 dispositivi i gruppi di sottorete si attivano da soli;
   «Solo online» è attivo per impostazione predefinita.
 - Nodi virtuali: **Internet** (con IP WAN), **Gateway** (se il gateway non è nell'elenco) e **wlan:…** per
+- **Internet ↔ router:** se TR-064 legge lo stato WAN (p. es. dalla FRITZ!Box), la mappa collega il nodo Internet al router — tramite l'IP del gateway o l'endpoint TR-064 (hostname/IP come "fritz.box"), anche se il gateway non è nell'elenco (`wan_endpoint` in `/api/meta`). Stato WAN ≠ "Connected" → nodo Internet offline.
   dispositivi WLAN senza nodo proprio.
 - **Tabella e stampa:** la cella categoria mostra lo stesso simbolo della mappa più il testo. I filtri e la
   selezione della categoria sono elenchi nativi e mostrano solo testo.

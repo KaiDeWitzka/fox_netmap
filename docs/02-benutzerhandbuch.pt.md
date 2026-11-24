@@ -123,6 +123,7 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
   router/switch/gateway/Internet), texto muito pequeno não é desenhado; acima de 25 dispositivos os grupos
   de sub-rede ativam-se sozinhos; «Só online» está ativo por omissão.
 - Nós virtuais: **Internet** (com IP WAN), **Gateway** (se o gateway não estiver na lista) e **wlan:…** para
+- **Internet ↔ roteador:** se o TR-064 lê o estado WAN (p. ex. da FRITZ!Box), o mapa liga o nó Internet ao roteador — pelo IP do gateway ou pelo endpoint TR-064 (hostname/IP como "fritz.box"), mesmo que o gateway não esteja na lista (`wan_endpoint` em `/api/meta`). Estado WAN ≠ "Connected" → nó Internet offline.
   dispositivos WLAN sem nó próprio.
 - **Tabela e impressão:** a célula de categoria mostra o mesmo símbolo do mapa mais o texto. Os filtros e a
   seleção de categoria são listas nativas e mostram só texto.

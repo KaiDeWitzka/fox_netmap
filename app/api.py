@@ -538,6 +538,7 @@ def meta(request: Request, conn=Depends(get_conn)):
         "gateway6": db.get_setting(conn, "gateway6") or "",
         "wan_ip": db.get_setting(conn, "wan_ip") or "",
         "wan_status": db.get_setting(conn, "wan_status") or "",
+        "wan_endpoint": db.get_setting(conn, "wan_endpoint") or "",
     }
 
 

@@ -40,12 +40,14 @@ def test_meta_public(client, app):
     db.set_setting(conn, "gateway", "192.168.178.1")
     db.set_setting(conn, "wan_ip", "203.0.113.10")
     db.set_setting(conn, "wan_status", "Connected")
+    db.set_setting(conn, "wan_endpoint", "fritz.box")
     conn.commit()
     conn.close()
     r = client.get("/api/meta")
     assert r.status_code == 200
     body = r.json()
     assert body["gateway"] == "192.168.178.1" and body["wan_ip"] == "203.0.113.10"
+    assert body["wan_endpoint"] == "fritz.box"  # TR-064-Router-Endpunkt wird mitgeliefert
     assert body["version"]  # Version wird mitgeliefert
 
 
