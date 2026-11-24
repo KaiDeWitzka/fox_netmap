@@ -144,7 +144,13 @@ def connect(path: str) -> sqlite3.Connection:
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=30)
+    # check_same_thread=False: FastAPI/anyio fuehrt synchrone Generator-Depends
+    # (z. B. get_conn in api.py) mit Enter und Exit in unterschiedlichen Worker-Threads
+    # aus - die Connection wird also in einem anderen Thread erzeugt als benutzt/
+    # geschlossen. Pro Request gibt es genau eine Connection, die nur sequentiell
+    # genutzt wird; konkurrierende Zugriffe (Web-Requests + Scanner-Prozess) regelt
+    # SQLite ueber Datei-Locking + busy timeout (timeout=30). Daher ist das sicher.
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     _set_journal_mode(conn, path)
     conn.execute("PRAGMA foreign_keys=ON")

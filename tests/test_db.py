@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 
 from app import db
 
@@ -262,3 +263,28 @@ def test_init_db_survives_dedupe_io_error(monkeypatch, tmp_path):
     db.init_db(conn)  # darf nicht crashen
     assert db.get_scan_state(conn)["id"] == 1
     conn.close()
+
+
+def test_connect_usable_across_threads(tmp_path):
+    # FastAPI/anyio fuehrt synchrone Generator-Depends (get_conn in api.py) mit
+    # Enter und Exit in unterschiedlichen Worker-Threads aus. Ohne
+    # check_same_thread=False wirft sqlite3 hier ProgrammingError.
+    conn = db.connect(str(tmp_path / "netmap.db"))
+    db.init_db(conn)
+    errors = []
+
+    def worker():
+        try:
+            db.set_scan_state(conn, scanning=1)
+            conn.commit()
+            assert db.get_scan_state(conn)["scanning"] == 1
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+        finally:
+            conn.close()
+
+    t = threading.Thread(target=worker)
+    t.start()
+    t.join(timeout=10)
+    assert not t.is_alive()
+    assert errors == []

@@ -6,6 +6,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Behoben
+- **SQLite `ProgrammingError: ... can only be used in that same thread` im Web-Container (`/api/scan/status` -> 500):** FastAPI/anyio fuehrt synchrone Generator-Depends (`get_conn`) mit Enter und Exit in unterschiedlichen Worker-Threads aus. `db.connect()` setzt jetzt `check_same_thread=False` (pro Request eine Connection, sequentiell genutzt; Locking ueber Datei + busy timeout). 1 Test.
+
 ### Doku
 - README (de/en): `NETZ_SQLITE_JOURNAL` in die Env-Liste aufgenommen + Troubleshooting-Hinweis (`disk I/O error` auf Docker-Desktop-/NAS-Mounts -> `delete`).
 
