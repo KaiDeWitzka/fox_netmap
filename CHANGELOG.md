@@ -4,6 +4,11 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Doku
+- README (de/en): `NETZ_SQLITE_JOURNAL` in die Env-Liste aufgenommen + Troubleshooting-Hinweis (`disk I/O error` auf Docker-Desktop-/NAS-Mounts -> `delete`).
+
 ## [1.6.11] – 2026-11-24
 
 SQLite-Fix v2 (PR #91): echte Schreibprobe beim Connect, WAL->DELETE-Fallback, klare Fehlermeldung bei nicht beschreibbarem Datenverzeichnis; Dedupe nicht mehr fatal.
