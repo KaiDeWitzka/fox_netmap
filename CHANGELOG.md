@@ -9,7 +9,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 SQLite-Stabilität im Container (PR #89): WAL-Fallback auf `journal_mode=DELETE` bei `disk I/O error`.
 
 ### Behoben
-- **SQLite `disk I/O error` (z. B. RunTipi auf Docker Desktop/NAS):** WAL wird jetzt per Schreibprobe geprüft und faellt bei Fehler automatisch auf `journal_mode=DELETE` zurück; erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto` (Default `auto`). 4 neue Tests.
+- **SQLite `disk I/O error` (RunTipi: beide Container crashen beim ersten DB-Schreibzugriff):** Journal-Modus wird per echter Schreibprobe (`BEGIN IMMEDIATE`) geprueft, bei Fehler Fallback WAL -> `journal_mode=DELETE`; schlaegt auch das fehl, klare Fehlermeldung im Log (Datenverzeichnis nicht beschreibbar -> Volume-Mount /data rw pruefen). Ausserdem ist das Dedupe beim Start nicht mehr fatal. Erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto`. 6 Tests.
 
 ## [1.6.9] – 2026-11-24
 
