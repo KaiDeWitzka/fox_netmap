@@ -31,7 +31,7 @@ function shortName(v) {
   return s.length > NAME_MAX ? s.slice(0, NAME_MAX - 1) + "…" : s;
 }
 
-let META = { gateway: "", wan_ip: "", wan_status: "" };
+let META = { gateway: "", wan_ip: "", wan_status: "", wan_endpoint: "" };
 let SITES = [];
 let SITE_MAP = {};
 
@@ -443,6 +443,27 @@ function parentId(d) {
   return isIpLike(ct) ? ct : null;
 }
 
+// Ziel der Internet-Kante: zuerst das Geraet mit der Gateway-IP, sonst den TR-064-Endpunkt
+// (z. B. "fritz.box", kann auch mehrere kommasepariert sein) per IP / Hostname auf ein Geraet
+// abbilden, sonst virtueller Gateway-Knoten ueber die Gateway-IP (bzw. Endpunkt-IP).
+function routerTargetId() {
+  if (META.gateway) {
+    const g = devices.find((x) => x.ip === META.gateway);
+    if (g) return g.mac;
+  }
+  for (const epRaw of (META.wan_endpoint || "").split(",")) {
+    const ep = epRaw.split(":")[0].trim().toLowerCase();
+    if (!ep) continue;
+    const byIp = devices.find((x) => x.ip && x.ip.toLowerCase() === ep);
+    if (byIp) return byIp.mac;
+    const byHost = devices.find((x) => (x.hostname || "").toLowerCase() === ep);
+    if (byHost) return byHost.mac;
+  }
+  if (META.gateway) return META.gateway;
+  const epIp = (META.wan_endpoint || "").split(",").map((s) => s.split(":")[0].trim()).find((s) => s && isIpLike(s));
+  return epIp || null;
+}
+
 function buildElements() {
   // Ohne IP nur in der Tabelle, nicht auf der Karte (bis "Ohne IP ausblenden" deaktiviert wird)
   const list = hideNoIp === "1" ? devices.filter((d) => d.ip) : devices;
@@ -530,14 +551,14 @@ function buildElements() {
     addNode(nd);
   });
 
-  if (META.gateway || META.wan_ip) {
+  if (META.gateway || META.wan_ip || META.wan_endpoint) {
     addNode({
       data: {
         id: "internet",
         label: t("internet.node") + (META.wan_ip ? "\nWAN " + META.wan_ip : ""),
         fullName: t("internet.node"),
         category: "Internet",
-        status: "online",
+        status: META.wan_status && META.wan_status.toLowerCase() !== "connected" ? "offline" : "online",
         icon: "globe",
         size: NODE_SIZE,
         virtual: true,
@@ -567,9 +588,9 @@ function buildElements() {
     const gw = list.find((x) => x.ip === w.slice(5));
     edges.push({ data: { id: "e:" + w, source: gw ? gw.mac : w.slice(5), target: w, conn: "wlan" } });
   }
-  if (META.gateway) {
-    const gw = devices.find((x) => x.ip === META.gateway);
-    edges.push({ data: { id: "e:internet", source: "internet", target: gw ? gw.mac : META.gateway, wan: true } });
+  const rt = routerTargetId();
+  if (rt) {
+    edges.push({ data: { id: "e:internet", source: "internet", target: rt, wan: true } });
   }
   for (const e of edges) {
     for (const end of [e.data.source, e.data.target]) {

@@ -204,6 +204,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         endpoints.append(f"http://{gateway}:49000")
     endpoints += [u.strip() for u in settings.fritz_urls.split(",") if u.strip()]
     all_tr064: list[dict] = []
+    wan_endpoints: set[str] = set()
     if endpoints and settings.fritz_user and settings.fritz_pass:
         for ep in endpoints:
             try:
@@ -218,9 +219,14 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                     log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
                     db.set_setting(conn, "wan_ip", wan["wan_ip"])
                     db.set_setting(conn, "wan_status", wan["status"])
+                    # Router-Endpunkt merken: darueber wird der Internet-Knoten mit dem Router verbunden
+                    wan_endpoints.add(host_part)
                     conn.commit()
             except tr064.TR064Error as exc:
                 log.warning("TR-064 nicht erreichbar (%s): %s", ep, exc)
+    if wan_endpoints:
+        db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
+        conn.commit()
     mesh_info = fetch_mesh_info(settings, endpoints)
     tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}
     tr064_parent: dict[str, str] = {}

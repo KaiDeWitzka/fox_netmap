@@ -50,6 +50,7 @@ const DEVS = [
         port_count: 0, x: null, y: null, connection: "",
       },
 ];
+let metaExtra = {}; // Tests duerfen /api/meta-Felder ueberschreiben
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
   const json = async () => {
@@ -60,7 +61,7 @@ w.fetch = async (url, opts = {}) => {
     }
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
-    if (String(url).includes("/api/meta")) return { version: "1.6.8", gateway: "192.168.178.1", wan_ip: "203.0.113.10", wan_status: "Connected" };
+    if (String(url).includes("/api/meta")) return { version: "1.6.8", gateway: "192.168.178.1", wan_ip: "203.0.113.10", wan_status: "Connected", wan_endpoint: "fritz.box", ...metaExtra };
     if (String(url).includes("/api/sites"))
       return { names: ["Remote", "Zuhause"], map: { "10.0.0.0/24": "Zuhause", "192.168.178.0/24": "Zuhause", "192.168.179.0/24": "Remote" } };
     if (String(url).includes("/api/device/")) {
@@ -527,6 +528,29 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
     y("internet") < y("3c:a6:2f:00:00:01") && y("3c:a6:2f:00:00:01") < y("02:00:00:8e:ee:06") && y("3c:a6:2f:00:00:01") < y("wlan:192.168.178.1") && y("wlan:192.168.178.1") < y("aa:bb:cc:00:11:22")
   );
   check("Baum: jeder Knoten hat eine Position", els.filter((e) => e.data && !e.data.source && !e.data.subnet).every((e) => pos[e.data.id]));
+  await w.eval("loadDevices()");
+}
+{
+  // TR-064-WAN ohne Gateway in Meta: Internet-Knoten verbindet sich ueber den Endpunkt (fritz.box) mit dem Router
+  metaExtra = { gateway: "", wan_endpoint: "fritz.box" };
+  const fritz = { mac: "3c:a6:2f:00:00:01", ip: "192.168.178.1", hostname: "fritz.box", category: "Router", status: "online", subnet: "192.168.178.0/24", connected_to: "" };
+  DEVS.push(fritz);
+  await w.eval("loadMeta()");
+  await w.eval("loadDevices()");
+  let els = cyInstance._els;
+  check(
+    "TR-064: Internet-Kante zielt auf Router-Endpunkt (Hostname fritz.box), auch ohne Gateway in Meta; kein virtueller Gateway-Knoten",
+    els.some((e) => e.data && e.data.source === "internet" && e.data.target === "3c:a6:2f:00:00:01") &&
+      !els.some((e) => e.data && e.data.id === "192.168.178.1" && e.data.virtual)
+  );
+  metaExtra = { wan_status: "Disconnected" };
+  await w.eval("loadMeta()");
+  await w.eval("loadDevices()");
+  els = cyInstance._els;
+  check("WAN-Status != Connected -> Internet-Knoten offline", els.some((e) => e.data && e.data.id === "internet" && e.data.status === "offline"));
+  metaExtra = {};
+  DEVS.pop();
+  await w.eval("loadMeta()");
   await w.eval("loadDevices()");
 }
 {

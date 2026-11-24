@@ -4,6 +4,11 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
+## [Unreleased]
+
+### Neu
+- **Internet ↔ Router auf der Karte:** Liest TR-064 den WAN-Status (z. B. FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“, auch wenn das Gateway nicht in der Geräteliste steht; neues Feld `wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.
+
 ## [1.6.8] – 2026-11-23
 
 CI-Security nach dem Go-public: CodeQL-Workflow im Repo (SHA-gepinnt) + CodeQL-Alert #1 gefixt (PRs #83, #84).

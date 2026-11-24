@@ -125,6 +125,7 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
   s'activent automatiquement au-delà de 25 appareils ; « En ligne uniquement » est actif par défaut.
 - Nœuds virtuels : **Internet** (avec IP WAN), **Passerelle** (si la passerelle n'est pas dans la liste) et
   **wlan:…** pour les appareils WLAN sans nœud propre.
+- **Internet ↔ routeur :** si TR-064 lit l'état WAN (p. ex. de la FRITZ!Box), la carte relie le nœud Internet au routeur — via l'IP de la passerelle ou le point de terminaison TR-064 (nom d'hôte/IP comme « fritz.box »), même si la passerelle n'est pas dans la liste (`wan_endpoint` dans `/api/meta`). État WAN ≠ « Connected » → nœud Internet hors ligne.
 - **Tableau et impression :** la cellule de catégorie montre le même symbole que la carte, plus le texte.
   Les filtres et la liste de catégories sont des listes natives et n'affichent que du texte.
 

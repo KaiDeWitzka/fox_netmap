@@ -127,6 +127,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar).
 - Virtuelle Knoten: **Internet** (mit WAN-IP), **Gateway** (falls das Gateway selbst nicht in der
   Geräteliste ist) und **wlan:…** für WLAN-Geräte ohne eigenen Knoten.
+- **Internet ↔ Router:** Liest TR-064 den WAN-Status aus (z. B. von der FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“), auch wenn das Gateway nicht in der Geräteliste steht (`wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.
 - **Tabelle und Druck:** Die Kategoriezelle zeigt dasselbe Symbol wie die Karte plus Text. Die Filter und
   das Kategorie-Auswahlfeld sind native Auswahllisten und zeigen nur Text.
 

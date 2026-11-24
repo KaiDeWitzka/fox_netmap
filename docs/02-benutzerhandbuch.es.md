@@ -126,6 +126,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto.
 - Nodos virtuales: **Internet** (con IP WAN), **Pasarela** (si la pasarela no está en la lista) y
   **wlan:…** para dispositivos WLAN sin nodo propio.
+- **Internet ↔ router:** si TR-064 lee el estado WAN (p. ej. de la FRITZ!Box), el mapa conecta el nodo Internet con el router — por la IP de pasarela o el endpoint TR-064 (nombre/IP como «fritz.box»), aunque la pasarela no esté en la lista (`wan_endpoint` en `/api/meta`). Estado WAN ≠ «Connected» → nodo Internet sin conexión.
 - **Tabla e impresión:** la celda de categoría muestra el mismo símbolo que el mapa más el texto. Los filtros
   y el selector de categoría son listas nativas y solo muestran texto.
 
