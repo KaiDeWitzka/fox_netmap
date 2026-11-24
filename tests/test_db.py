@@ -1,3 +1,5 @@
+import sqlite3
+
 from app import db
 
 
@@ -171,3 +173,63 @@ def test_upsert_vpn_flag(tmp_path):
     db.upsert_device(conn, {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": False, "status": "offline"}, now)
     conn.commit()
     assert db.get_device(conn, "00:7a:a4:9b:d9:68")["vpn"] == 0
+
+
+class _Row:
+    def __init__(self, v):
+        self.v = v
+
+    def fetchone(self):
+        return (self.v,)
+
+
+class _FakeConn:
+    """Duck-typing fuer _set_journal_mode: zeichnet Aufrufe auf, kann WAL simuliert fehlschlagen lassen."""
+
+    def __init__(self, wal_ok=True):
+        self.wal_ok = wal_ok
+        self.calls: list[str] = []
+
+    def execute(self, sql, *args):
+        self.calls.append(sql)
+        if "journal_mode=WAL" in sql:
+            if not self.wal_ok:
+                raise sqlite3.OperationalError("disk I/O error")
+            return _Row("wal")
+        if "wal_checkpoint" in sql:
+            if not self.wal_ok:
+                raise sqlite3.OperationalError("disk I/O error")
+            return _Row(None)
+        if "journal_mode=DELETE" in sql:
+            return _Row("delete")
+        return _Row(None)
+
+
+def test_journal_mode_default_wal(tmp_path):
+    conn = db.connect(str(tmp_path / "netmap.db"))
+    mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+    assert str(mode).lower() == "wal"
+    conn.close()
+
+
+def test_journal_mode_fallback_delete_on_io_error(monkeypatch, tmp_path):
+    monkeypatch.delenv("NETZ_SQLITE_JOURNAL", raising=False)
+    fake = _FakeConn(wal_ok=False)
+    db._set_journal_mode(fake, str(tmp_path / "netmap.db"))
+    assert any("journal_mode=DELETE" in c for c in fake.calls)
+
+
+def test_journal_mode_forced_delete(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETZ_SQLITE_JOURNAL", "delete")
+    fake = _FakeConn(wal_ok=True)
+    db._set_journal_mode(fake, str(tmp_path / "netmap.db"))
+    assert not any("journal_mode=WAL" in c for c in fake.calls)
+    assert any("journal_mode=DELETE" in c for c in fake.calls)
+
+
+def test_journal_mode_forced_wal_keeps_wal(monkeypatch, tmp_path):
+    monkeypatch.setenv("NETZ_SQLITE_JOURNAL", "wal")
+    fake = _FakeConn(wal_ok=True)
+    db._set_journal_mode(fake, str(tmp_path / "netmap.db"))
+    assert any("journal_mode=WAL" in c for c in fake.calls)
+    assert not any("journal_mode=DELETE" in c for c in fake.calls)

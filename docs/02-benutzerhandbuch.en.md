@@ -338,6 +338,7 @@ docker compose down -v                 # WARNING: deletes ./data (DB, log, expor
 - On the first start after the update, the container automatically hands over existing files in `./data` to UID 10001. On the host, use `sudo` to read them or add your user to a group with GID 10001.
 - Docker healthcheck: `docker compose ps` shows `healthy`/`unhealthy` (web: `/api/health`, scanner: scan loop running).
 - Volumes: `./data:/data` (SQLite WAL, rotating `netmap.log`, `exports/`)
+    Journal mode: WAL with automatic fallback to `delete` on `disk I/O error` (e.g. bind mount via Docker Desktop/NAS); force with `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
 - Ports: `NETMAP_PORT` (host) → 8399 (container)
 - Timezone: `TZ=Europe/Berlin`
 - Releases: SemVer tags `vX.Y.Z` run through `release.yml` (ruff + pytest + UI tests) and
