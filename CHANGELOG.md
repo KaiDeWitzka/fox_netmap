@@ -11,7 +11,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 Räume/Ebenen pro Gerät + Karten-Performance (PR #98 Clutter-Skalierung, PR #99 room-Feature + Performance >200 Geräte).
 
 ### Neu
-- **Räume/Ebenen pro Gerät:** neues Feld `room` (DB-Migration, max. 64 Zeichen) — setzbar im Geräte-Detail (`ed-room`) und per `PATCH /api/device/{mac}`; Liste via `GET /api/rooms`. Sichtbar als Tabellen-Spalte („Raum“), im JSON/CSV-Export (`room`), als Filter in der Filterleiste (`room`-Parameter in `/api/devices` + Exports) und als Karten-Gruppierung „Nach Raum gruppieren“ (exklusiv zu Subnetz-Gruppierung; Geräte ohne Raum → „Ohne Raum“). Scanner überschreibt `room` nicht. i18n in 6 Sprachen.
+- **Räume/Ebenen pro Gerät:** neues Feld `room` (DB-Migration, max. 64 Zeichen) — setzbar im Geräte-Detail (`ed-room`) und per `PATCH /api/device/{mac}`; Liste via `GET /api/rooms`. Sichtbar als Tabellen-Spalte („Raum“), im JSON/CSV-Export (`room`), als Filter in der Filterleiste (`room`-Parameter in `/api/devices` + Exports) reine Zusatzinformation für die Tabelle (Karte unberührt). Dazu **Bearbeiten-Modus der Tabelle** (Button „Bearbeiten“: Kategorie/Notiz/Raum direkt in der Tabelle editieren, sofort per PATCH gespeichert). Scanner überschreibt `room` nicht. i18n in 6 Sprachen.
 
 ### Verbessert
 - **Performance ab ~200 Geräten:** Tabelle rendert per DocumentFragment, gespeicherte Positionen laden ohne Animation (`preset animate:false`); combined mit der Clutter-Skalierung (Label-Schwelle/Knotengröße/Abstände) bleibt die Karte auch bei 200+ Geräten bedienbar.

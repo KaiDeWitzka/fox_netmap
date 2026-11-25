@@ -6,7 +6,7 @@ Scan and visualize a network as a map
 ![Karte v1.6.1: Subnetz-Gruppen Zuhause und Remote, Knoten mit Kategorie-Symbolen, Gateway mit Ring, Legende](docs/screenshots/01-karte.svg)
 
 - [Anforderungen & Zielarchitektur](docs/01-anforderungen.md)
-- **Räume/Ebenen pro Gerät** (Details-Panel, Karten-Gruppierung „Nach Raum gruppieren“, Raum-Filter, Spalte in Tabelle + JSON/CSV-Export, `GET /api/rooms`, `room` in `PATCH /api/device/{mac}`); Karte skaliert bis 200+ Geräte (Label-Schwelle, Knotengröße, Abstände) — Details im [Benutzerhandbuch](docs/02-benutzerhandbuch.md)§6
+- **Räume/Ebenen pro Gerät** als reine Tabellen-Information (Spalte „Raum“, Raum-Filter, JSON/CSV-Export, `GET /api/rooms`, `room` in `PATCH /api/device/{mac}`; Karte unberührt) plus **Bearbeiten-Modus der Tabelle** (Kategorie/Notiz/Raum direkt editieren); Karte skaliert bis 200+ Geräte (Label-Schwelle, Knotengröße, Abstände) — Details im [Benutzerhandbuch](docs/02-benutzerhandbuch.md)§6
 
 ## Lizenz
 

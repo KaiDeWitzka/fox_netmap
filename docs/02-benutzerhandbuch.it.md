@@ -161,14 +161,9 @@ filtro per livello e download del file completo. Lo stesso è offerto da `/api/l
 
 ### Stanze/Piani
 
-Ogni dispositivo può ricevere una **stanza** nel pannello dettagli (es. “soggiorno piano terra”, max 64 caratteri; API: `PATCH /api/device/{mac}` con `room`, elenco: `GET /api/rooms`). La stanza appare come colonna della tabella, negli export JSON/CSV (campo `room`), come filtro nella barra dei filtri (parametro `room` in `/api/devices` e negli export) e come raggruppamento proprio della mappa: «Raggruppa per stanza» nell'intestazione (esclusivo rispetto a «Raggruppa per sottorete»); i dispositivi senza stanza finiscono nel gruppo «Senza stanza». Lo scanner non sovrascrive la stanza durante le scansioni.
+Ogni dispositivo può avere una **stanza** (es. “soggiorno piano terra”, max 64 caratteri) — nel pannello dettagli o direttamente nella tabella in **modalità modifica** (API: `PATCH /api/device/{mac}` con `room`, elenco: `GET /api/rooms`). La stanza è un'informazione extra solo per la **tabella**: colonna «Stanza», export JSON/CSV (campo `room`) e filtro nella barra dei filtri (parametro `room` in `/api/devices` e negli export). **La mappa non viene modificata.** Lo scanner non sovrascrive la stanza durante le scansioni.
 
-A destra, scheda **Dettagli**: categoria (modificabile), IP/**IPv6** (v6 via match MAC NDP da `ip -6 neigh`, colonna `ip6` in DB/JSON/CSV), MAC/hostname/produttore (OUI), stato,
-sottorete, sito, fonte/i della scansione (p. es. `arp,tr064`), «collegato a» (selezionabile
-manualmente, vuoto = automatico), porte aperte con nomi di servizio, nota, cronologia
-(online/offline/porte) ed eventi. **Salva** persiste categoria/nota/collegamento manuale.
-
----
+**Modalità modifica della tabella:** pulsante «Modifica» in alto nella vista tabella (lo stato viene salvato nel browser). Poi le celle **categoria** (menu a discesa), **nota** e **stanza** sono modificabili direttamente; ogni modifica viene salvata subito via `PATCH` e la vista si aggiorna. Senza modalità modifica la tabella è di sola lettura (tranne la casella per «Connetti a»).
 
 ## 7. Ricerca e filtri
 

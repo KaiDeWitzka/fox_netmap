@@ -156,14 +156,9 @@ filter, and download of the full file. The same is provided by `/api/logs` and
 
 ### Rooms/Floors
 
-Each device can get a **room** in the detail panel (e.g. "ground floor living room", max 64 chars; API: `PATCH /api/device/{mac}` with `room`, list: `GET /api/rooms`). The room shows up as a table column, in JSON/CSV exports (`room` field), as a filter in the filter bar (`room` parameter in `/api/devices` and the exports) and as its own map grouping: "Group by room" in the header (exclusive with "Group by subnet"); devices without a room land in the "No room" group. The scanner does not overwrite the room during scans.
+Each device can get a **room** (e.g. "ground floor living room", max 64 chars) — in the detail panel or directly in the table via **edit mode** (API: `PATCH /api/device/{mac}` with `room`, list: `GET /api/rooms`). The room is extra information for the **table only**: "Room" column, JSON/CSV export (`room` field) and a filter in the filter bar (`room` parameter in `/api/devices` and the exports). **The map is not affected.** The scanner does not overwrite the room during scans.
 
-Right, in the **Details** tab: category (editable), IP/**IPv6** (v6 via NDP-MAC match from `ip -6 neigh`, `ip6` column in DB/JSON/CSV), MAC/hostname/vendor (OUI), status,
-subnet, site, scan source(s) (e.g. `arp,tr064`), "connected to" (manually selectable, empty =
-automatic), open ports with service names, note, history (online/offline/ports) and events.
-**Save** persists category/note/manual connection.
-
----
+**Table edit mode:** the "Edit" button at the top of the table view (state is stored in the browser). Afterwards the **category** (select), **note** and **room** cells are editable directly; every change is saved immediately via `PATCH` and the view refreshes. Without edit mode the table is read-only (except the checkbox for "Connected to").
 
 ## 7. Search & filter
 
