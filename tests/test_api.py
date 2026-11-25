@@ -113,6 +113,30 @@ def test_devices_list_filter_patch(auth_client, app):
     assert detail["ports"][0]["port"] == 443
 
 
+def test_patch_room_and_rooms_api(auth_client, app):
+    insert_device(app)
+    r = auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"room": "  EG Wohnzimmer  "})
+    assert r.status_code == 200
+    assert r.json()["room"] == "EG Wohnzimmer"  # getrimmt
+    assert len(r.json()["room"]) <= 64
+    assert auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"room": "x" * 65}).status_code == 422
+    rooms = auth_client.get("/api/rooms").json()
+    assert rooms == ["EG Wohnzimmer"]
+    # Listen-API liefert room mit und filtert danach
+    lst = auth_client.get("/api/devices").json()
+    assert lst[0]["room"] == "EG Wohnzimmer"
+    assert auth_client.get("/api/devices?room=EG%20Wohnzimmer").json()[0]["mac"] == "aa:bb:cc:dd:ee:ff"
+    assert auth_client.get("/api/devices?room=OG").json() == []
+    # Exporte enthalten room (JSON + CSV-Header)
+    assert auth_client.get("/api/export/json").json()["devices"][0]["room"] == "EG Wohnzimmer"
+    header = auth_client.get("/api/export/csv").text.splitlines()[0]
+    assert "room" in header
+    # Leerer Raum loeschen
+    r = auth_client.patch("/api/device/aa:bb:cc:dd:ee:ff", json={"room": ""})
+    assert r.json()["room"] == ""
+    assert auth_client.get("/api/rooms").json() == []
+
+
 def test_patch_connected_to_set_and_clear(auth_client, app):
     insert_device(app)
     insert_parent(app)

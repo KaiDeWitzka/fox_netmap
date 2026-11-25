@@ -92,7 +92,7 @@ def _site_of(subnet: str, settings) -> str:
     return settings.site_map.get(subnet, "")
 
 
-def _filtered_devices(request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, token: str | None):
+def _filtered_devices(request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, room: str, token: str | None):
     subnet, category = _token_filters(conn, token, subnet, category)
     rows = db.list_devices(conn, q=q, category=category, status=status, subnet=subnet)
     settings = request.app.state.settings
@@ -100,6 +100,8 @@ def _filtered_devices(request: Request, conn, q: str, category: str, status: str
         r["site"] = _site_of(r.get("subnet", ""), settings)
     if site:
         rows = [r for r in rows if r["site"] == site]
+    if room:
+        rows = [r for r in rows if (r.get("room") or "") == room]
     return rows
 
 
@@ -131,10 +133,17 @@ def devices(
     status: str = "",
     subnet: str = "",
     site: str = "",
+    room: str = "",
     token: str = "",
     conn=Depends(get_conn),
 ):
-    return _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
+    return _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
+
+
+@router.get("/api/rooms")
+def list_rooms(conn=Depends(get_conn), _=Depends(require_auth)):
+    rows = conn.execute("SELECT DISTINCT room FROM devices WHERE room != '' ORDER BY room").fetchall()
+    return [r["room"] for r in rows]
 
 
 @router.get("/api/device/{mac}")
@@ -151,6 +160,7 @@ def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_
 class DevicePatch(BaseModel):
     category: str | None = None
     note: str | None = Field(default=None, max_length=2000)
+    room: str | None = Field(default=None, max_length=64)
     connected_to: str | None = Field(default=None, max_length=64)
     x: float | None = None
     y: float | None = None
@@ -213,6 +223,8 @@ def patch_device(mac: str, body: DevicePatch, request: Request, conn=Depends(get
         )
     if body.note is not None:
         conn.execute("UPDATE devices SET note = ? WHERE mac = ?", (body.note, mac))
+    if body.room is not None:
+        conn.execute("UPDATE devices SET room = ? WHERE mac = ?", (body.room.strip(), mac))
     if body.connected_to is not None:
         _check_parent(conn, {mac}, body.connected_to)
         if body.connected_to == "":
@@ -256,8 +268,8 @@ def scan_status(conn=Depends(get_conn)):
 
 
 @router.get("/api/export/json")
-def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", token: str = "", conn=Depends(get_conn)):
-    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
+def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", room: str = "", token: str = "", conn=Depends(get_conn)):
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
     return exporters.devices_payload(request.app.state.settings, rows, conn)
 
 
@@ -276,10 +288,11 @@ def export_pdf(
     status: str = "",
     subnet: str = "",
     site: str = "",
+    room: str = "",
     token: str = "",
     conn=Depends(get_conn),
 ):
-    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
     image_bytes = None
     if payload.image:
         data = payload.image
@@ -315,9 +328,9 @@ def export_pdf(
 
 
 @router.get("/api/export/csv")
-def export_csv(request: Request, sep: str = "semicolon", q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", token: str = "", conn=Depends(get_conn)):
+def export_csv(request: Request, sep: str = "semicolon", q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", room: str = "", token: str = "", conn=Depends(get_conn)):
     delimiter = ";" if sep == "semicolon" else ","
-    rows = _filtered_devices(request, conn, q, category, status, subnet, site, token or None)
+    rows = _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
     return PlainTextResponse(
         exporters.to_csv(rows, delimiter),
         media_type="text/csv",

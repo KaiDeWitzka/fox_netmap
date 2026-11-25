@@ -122,7 +122,7 @@ let sortDir = 1;
 
 const TABLE_COLS = [
   ["hostname", "cols.hostname"], ["ip", "cols.ip"], ["ip6", "cols.ip6"], ["mac", "cols.mac"], ["vendor", "cols.vendor"], ["source", "cols.source"],
-  ["category", "cols.category"], ["status", "cols.status"], ["subnet", "cols.subnet"], ["site", "cols.site"],
+  ["category", "cols.category"], ["status", "cols.status"], ["subnet", "cols.subnet"], ["site", "cols.site"], ["room", "cols.room"],
   ["ports_str", "cols.ports"], ["connected_to", "cols.connected"], ["note", "cols.note"], ["last_seen", "cols.lastSeen"],
 ];
 
@@ -165,7 +165,7 @@ function applyLayout() {
   const hasPos = devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
   let opts;
   if (choice === "auto" && hasPos) {
-    opts = { name: "preset" };
+    opts = { name: "preset", animate: false };
   } else if (choice === "auto" || choice === "tree") {
     // Baum nach Topologie: Internet -> Router -> Switch -> Endgeraete (Anforderung "Layout", 01-anforderungen.md)
     const pos = computeTreePositions(lastElements);
@@ -314,10 +314,12 @@ function currentFilters() {
   const c = document.getElementById("filter-category").value;
   const s = document.getElementById("filter-status").value;
   const site = document.getElementById("filter-site").value;
+  const room = document.getElementById("filter-room").value;
   if (q) p.set("q", q);
   if (c) p.set("category", c);
   if (s) p.set("status", s);
   if (site) p.set("site", site);
+  if (room) p.set("room", room);
   return p.toString();
 }
 
@@ -374,6 +376,8 @@ function maybeAutoGroup() {
     localStorage.setItem("fox_groups", "subnet");
     const chk = document.getElementById("chk-groups");
     if (chk) chk.checked = true;
+    const chkR = document.getElementById("chk-rooms");
+    if (chkR) chkR.checked = false;
   }
 }
 
@@ -405,6 +409,23 @@ async function loadSites() {
     o.textContent = name;
     sel.appendChild(o);
   }
+}
+
+async function loadRooms() {
+  const r = await api("/api/rooms");
+  if (!r.ok) return;
+  const names = await r.json();
+  const sel = document.getElementById("filter-room");
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${esc(t("filter.allRooms"))}</option>`;
+  for (const name of names) {
+    const o = document.createElement("option");
+    o.value = name;
+    o.textContent = name;
+    sel.appendChild(o);
+  }
+  sel.value = cur;
 }
 
 function isIpLike(s) {
@@ -493,7 +514,9 @@ function buildElements() {
   const n = Math.max(1, list.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
   const sizes = nodeSizes(list.length);
-  const grouping = groupMode === "subnet";
+  const grouping = groupMode === "subnet" || groupMode === "room";
+  const groupKeyOf = (d) => (groupMode === "room" ? d.room || "" : d.subnet || "");
+  const groupIdOf = (k) => (groupMode === "room" ? "room:" : "subnet:") + k;
   const nodes = [];
   const edges = [];
   const nodeIds = new Set();
@@ -505,21 +528,21 @@ function buildElements() {
   // Subnetz-Gruppen zu Beginn auf einem Raster positionieren, damit sie nicht übereinander liegen
   const groupPos = {};
   if (grouping) {
-    const subnets = [...new Set(list.map((d) => d.subnet).filter(Boolean))];
-    const cols = Math.max(1, Math.ceil(Math.sqrt(subnets.length)));
-    // Rahmen waechst mit der groessten Gruppe, damit dichte Subnetze nicht ueberlappen
-    const maxCnt = Math.max(1, ...subnets.map((sn) => list.filter((d) => d.subnet === sn).length));
+    const keys = groupMode === "room" ? [...new Set(list.map(groupKeyOf))] : [...new Set(list.map(groupKeyOf).filter(Boolean))];
+    const cols = Math.max(1, Math.ceil(Math.sqrt(keys.length)));
+    const maxCnt = Math.max(1, ...keys.map((k) => list.filter((d) => groupKeyOf(d) === k).length));
     const G = 430 + 26 * Math.sqrt(maxCnt);
-    subnets.forEach((sn, gi) => {
+    const labelOf = (k) => (groupMode === "room" ? k || t("room.unassigned") : k + (SITE_MAP[k] ? " · " + SITE_MAP[k] : ""));
+    keys.forEach((k, gi) => {
       const gx = (gi % cols) * G;
       const gy = Math.floor(gi / cols) * G;
-      groupPos["subnet:" + sn] = { x: gx, y: gy };
-      const siteName = SITE_MAP[sn] || "";
+      const gid = groupIdOf(k);
+      groupPos[gid] = { x: gx, y: gy };
       addNode({
         data: {
-          id: "subnet:" + sn,
-          label: sn + (siteName ? " · " + siteName : "") + "  (" + list.filter((d) => d.subnet === sn).length + ")",
-          subnet: true,
+          id: gid,
+          label: labelOf(k) + "  (" + list.filter((d) => groupKeyOf(d) === k).length + ")",
+          subnet: true, // Markierung "Gruppenrahmen" (Raum-Gruppen eingeschlossen)
           virtual: true,
           status: "online",
         },
@@ -534,11 +557,12 @@ function buildElements() {
     let x = d.x;
     let y = d.y;
     if (typeof x !== "number" || typeof y !== "number") {
-      const gp = grouping && d.subnet ? groupPos["subnet:" + d.subnet] : null;
+      const gk = grouping ? groupKeyOf(d) : null;
+      const gp = gk !== null ? groupPos[groupIdOf(gk)] : null;
       if (gp) {
         // Kinder ohne gespeicherte Position ringförmig um das Gruppenzentrum (überlappt nicht mit anderen Gruppen)
-        const cnt = list.filter((x) => x.subnet === d.subnet).length;
-        const k = (groupIdx[d.subnet] = (groupIdx[d.subnet] || 0) + 1);
+        const cnt = list.filter((x) => groupKeyOf(x) === gk).length;
+        const k = (groupIdx[gk] = (groupIdx[gk] || 0) + 1);
         const rr = 80 + 13 * Math.sqrt(Math.max(1, cnt));
         const a2 = (k / Math.max(1, cnt)) * Math.PI * 2;
         x = gp.x + Math.cos(a2) * rr;
@@ -573,7 +597,10 @@ function buildElements() {
       },
       position: { x, y },
     };
-    if (grouping && d.subnet) nd.data.parent = "subnet:" + d.subnet;
+    if (grouping) {
+      const gid = groupIdOf(groupKeyOf(d));
+      if (groupPos[gid]) nd.data.parent = gid;
+    }
     addNode(nd);
   });
 
@@ -797,7 +824,7 @@ async function showDetail(mac) {
   const hostLinks = webLinks(d).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer" class="ext-link">${esc(l.label)}</a>`).join(", ");
   const rows = [
     [t("d.hostname"), esc(d.hostname || d.ip || "") + (hostLinks ? ` (${hostLinks})` : "")], ["IP", esc(d.ip)], ["IPv6", esc(d.ip6 || "\u2013")], [t("d.mac"), (d.mac || "").startsWith("ip:") ? esc(t("d.macUnknown")) : esc(d.mac)], [t("d.vendor"), esc(d.vendor)],
-    [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.source"), esc(d.source)],
+    [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.room"), esc(d.room || "–")], [t("d.source"), esc(d.source)],
     [t("d.vpn"), d.vpn ? t("d.yes") : "–"],
     [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
     [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
@@ -808,7 +835,7 @@ async function showDetail(mac) {
     html += `<h3>${t("d.children", { n: children.length })}</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${esc(c.mac)}">${esc(c.hostname || c.ip)}</button> (${esc(t("cat." + c.category))})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
-    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}"><button id="ed-save">${t("btn.save")}</button></div>`;
+    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}"><input id="ed-room" type="text" maxlength="64" placeholder="${esc(t("det.roomPh"))}" value="${esc(d.room || "")}" aria-label="${esc(t("d.room"))}"><button id="ed-save">${t("btn.save")}</button></div>`;
     const parents = devices.filter((x) => isNetCategory(x.category));
     const cur = d.layout.connected_to || "";
     html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${esc(x.mac)}"${cur === x.mac ? " selected" : ""}>${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
@@ -828,7 +855,7 @@ async function showDetail(mac) {
   const save = document.getElementById("ed-save");
   if (save) {
     save.addEventListener("click", async () => {
-      await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ category: document.getElementById("ed-cat").value, note: document.getElementById("ed-note").value }) });
+      await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ category: document.getElementById("ed-cat").value, note: document.getElementById("ed-note").value, room: document.getElementById("ed-room").value }) });
       await loadDevices();
       showDetail(mac);
     });
@@ -901,6 +928,7 @@ function renderTable() {
     return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir;
   });
   tbody.innerHTML = "";
+  const frag = document.createDocumentFragment(); // ab ~200 Zeilen spuerbar schneller
   for (const d of rows) {
     const tr = document.createElement("tr");
     if (!EMBED) {
@@ -931,8 +959,9 @@ function renderTable() {
         showDetail(d.mac);
       }
     });
-    tbody.appendChild(tr);
+    frag.appendChild(tr);
   }
+  tbody.appendChild(frag);
   const all = document.getElementById("sel-all");
   if (all) {
     all.addEventListener("change", () => {
@@ -1225,6 +1254,7 @@ function bindFilters() {
   document.getElementById("search").addEventListener("input", () => { clearTimeout(t); t = setTimeout(loadDevices, 300); });
   document.getElementById("filter-category").addEventListener("change", loadDevices);
   document.getElementById("filter-site").addEventListener("change", loadDevices);
+  document.getElementById("filter-room").addEventListener("change", loadDevices);
   const statusSel = document.getElementById("filter-status");
   const btnOnline = document.getElementById("btn-online");
   const syncOnline = () => {
@@ -1462,10 +1492,21 @@ function bindLayout() {
 
 function bindGroups() {
   const chk = document.getElementById("chk-groups");
+  const chkR = document.getElementById("chk-rooms");
   if (chk) {
     chk.checked = groupMode === "subnet";
     chk.addEventListener("change", () => {
       groupMode = chk.checked ? "subnet" : "none";
+      if (chk.checked && chkR) chkR.checked = false;
+      localStorage.setItem("fox_groups", groupMode);
+      renderMap();
+    });
+  }
+  if (chkR) {
+    chkR.checked = groupMode === "room";
+    chkR.addEventListener("change", () => {
+      groupMode = chkR.checked ? "room" : "none";
+      if (chkR.checked && chk) chk.checked = false;
       localStorage.setItem("fox_groups", groupMode);
       renderMap();
     });
@@ -1619,6 +1660,7 @@ async function init() {
   await loadCategories();
   await loadMeta();
   await loadSites();
+  await loadRooms();
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") clearSpotlight(); });
   bindNav();
   bindFilters();

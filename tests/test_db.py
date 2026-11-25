@@ -126,6 +126,30 @@ def test_dedupe_devices_by_ip(tmp_path):
     assert rows[0]["x"] == 5
 
 
+def test_migration_adds_room_column(tmp_path):
+    conn = db.connect(str(tmp_path / "old.db"))
+    conn.execute(
+        "CREATE TABLE devices (mac TEXT PRIMARY KEY, ip TEXT NOT NULL DEFAULT '', hostname TEXT NOT NULL DEFAULT '',"
+        " vendor TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'Unbekannt', category_override TEXT,"
+        " status TEXT NOT NULL DEFAULT 'offline', subnet TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT '',"
+        " note TEXT NOT NULL DEFAULT '', first_seen TEXT NOT NULL DEFAULT '', last_seen TEXT NOT NULL DEFAULT '')"
+    )
+    conn.commit()
+    db.init_db(conn)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
+    assert "room" in cols
+    # Scanner-Upsert ueberschreibt room nicht
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "hostname": "nas", "subnet": "192.168.1.0/24", "source": "ping"}, db.utcnow())
+    conn.execute("UPDATE devices SET room = 'EG' WHERE mac = 'aa:bb:cc:dd:ee:ff'")
+    conn.commit()
+    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "hostname": "nas2", "subnet": "192.168.1.0/24", "source": "ping"}, db.utcnow())
+    conn.commit()
+    row = db.get_device(conn, "aa:bb:cc:dd:ee:ff")
+    assert row["room"] == "EG"
+    assert row["hostname"] == "nas2"
+    conn.close()
+
+
 def test_migration_adds_connection_column(tmp_path):
     conn = db.connect(str(tmp_path / "old.db"))
     conn.execute(

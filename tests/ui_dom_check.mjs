@@ -21,7 +21,7 @@ const calls = [];
 const DEVS = [
       {
         mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "2001:db8::10", hostname: "nas", vendor: "Synology",
-        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064",
+        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", room: "Keller",
         ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 2, x: null, y: null, connection: "lan",
       },
@@ -39,7 +39,7 @@ const DEVS = [
       },
       {
         mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
-        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "tr064",
+        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "tr064", room: "EG-Wohnzimmer",
         ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
         port_count: 0, x: null, y: null, connection: "wlan", vpn: 1,
       },
@@ -57,8 +57,13 @@ w.fetch = async (url, opts = {}) => {
     if (String(url).includes("/api/devices/connect")) return { ok: true, count: JSON.parse(opts.body).macs.length };
     if (String(url).includes("/api/devices")) {
       const m = String(url).match(/status=([^&]+)/);
-      return m && m[1] === "online" ? DEVS.filter((d) => d.status === "online") : DEVS;
+      const rm = String(url).match(/room=([^&]+)/);
+      let out = DEVS;
+      if (m && m[1] === "online") out = out.filter((d) => d.status === "online");
+      if (rm) out = out.filter((d) => (d.room || "") === decodeURIComponent(rm[1]));
+      return out;
     }
+    if (String(url).includes("/api/rooms")) return [...new Set(DEVS.map((d) => d.room).filter(Boolean))].sort();
 
     if (String(url).includes("/api/categories")) return ["Router", "Switch", "Client"];
     if (String(url).includes("/api/meta")) return { version: "1.6.13", gateway: "192.168.178.1", wan_ip: "203.0.113.10", wan_status: "Connected", wan_endpoint: "fritz.box", ...metaExtra };
@@ -572,6 +577,46 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   await w.eval("loadDevices()");
 }
 {
+  // Raeume: Gruppierung nach Raum (groupMode "room")
+  const chkR = $("#chk-rooms");
+  check("Karte: Checkbox 'Nach Raum gruppieren' (chk-rooms) vorhanden", !!chkR);
+  chkR.checked = true;
+  chkR.dispatchEvent(new w.Event("change"));
+  await sleep(60);
+  const elsR = cyInstance._els;
+  check(
+    "Raum-Gruppierung: Gruppenknoten room:EG-Wohnzimmer / room:Keller / room: (Ohne Raum) vorhanden",
+    elsR.some((e) => e.data && e.data.id === "room:EG-Wohnzimmer") &&
+      elsR.some((e) => e.data && e.data.id === "room:Keller") &&
+      elsR.some((e) => e.data && e.data.id === "room:")
+  );
+  check(
+    "Raum-Gruppierung: wlan-tv -> parent room:EG-Wohnzimmer, nas -> room:Keller, Switch -> room:",
+    elsR.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && e.data.parent === "room:EG-Wohnzimmer") &&
+      elsR.some((e) => e.data && e.data.id === "aa:bb:cc:dd:ee:ff" && e.data.parent === "room:Keller") &&
+      elsR.some((e) => e.data && e.data.id === "02:00:00:8e:ee:06" && e.data.parent === "room:")
+  );
+  chkR.checked = false;
+  chkR.dispatchEvent(new w.Event("change"));
+  await sleep(60);
+  check("Raum-Gruppierung aus: keine room:-Knoten mehr", !cyInstance._els.some((e) => e.data && String(e.data.id || "").startsWith("room:")));
+}
+{
+  // Raum-Filter schickt room= an /api/devices
+  $("#filter-room").value = "EG-Wohnzimmer";
+  $("#filter-room").dispatchEvent(new w.Event("change"));
+  await sleep(80);
+  check(
+    "Raum-Filter: GET /api/devices mit room=EG-Wohnzimmer, Tabelle zeigt nur 1 Zeile (wlan-tv)",
+    [...calls].reverse().some((c) => c.url.includes("/api/devices?") && c.url.includes("room=EG-Wohnzimmer")) &&
+      doc.querySelectorAll("#device-table tbody tr").length === 1
+  );
+  $("#filter-room").value = "";
+  $("#filter-room").dispatchEvent(new w.Event("change"));
+  await sleep(80);
+  check("Raum-Filter zurueckgesetzt: alle Online-Geraete in der Tabelle (4 Zeilen)", doc.querySelectorAll("#device-table tbody tr").length === 4);
+}
+{
   // 40 Endgeraete an einem Router: Raster statt einer Zeile, keine zwei Knoten auf derselben Position
   const els = [{ data: { id: "r", hub: true } }];
   for (let i = 0; i < 40; i++) {
@@ -643,6 +688,16 @@ if (parentSel) {
   await sleep(60);
   const lastPatch = [...calls].reverse().find((c) => c.url.includes("/api/device/") && c.method === "PATCH" && c.body && c.body.includes("connected_to"));
   check("Detail: Parent speichern -> PATCH mit connected_to=Switch-MAC", !!lastPatch && lastPatch.body.includes("02:00:00:8e:ee:06"));
+}
+
+const edRoom = $("#ed-room");
+check("Detail: Raum-Eingabefeld vorhanden (ed-room)", !!edRoom);
+if (edRoom) {
+  edRoom.value = "1. OG Buero";
+  $("#ed-save").click();
+  await sleep(60);
+  const rp = [...calls].reverse().find((c) => c.url.includes("/api/device/") && c.method === "PATCH" && c.body && c.body.includes('"room"'));
+  check("Detail: Speichern sendet PATCH mit room=1. OG Buero", !!rp && rp.body.includes("1. OG Buero"));
 }
 
 $("#nav [data-view='log']").click();
