@@ -6,6 +6,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Verbessert
+- **VPN-Erkennung ohne manuelle Konfiguration:** Bei konfiguriertem TR-064 (FRITZ!Box mit User/Pass) und `NETZ_VPN_POOL=off` wird automatisch `auto` angenommen (FRITZ!-Konvention: letzte Oktett ≥ 201 im Gateway-/24). WireGuard-Peers (.201+), die nicht in TR-064 auftauchen, bekommen so ohne extra Einstellung das VPN-Badge, den gestrichelten Rand, keinen „neues Gerät“-Alarm und werden nicht als Ziel der Internet-Kante verwendet (Kategorie „Router“ bei Hostname fritz.box @ .201). Explizit konfigurierter Pool gewinnt weiterhin. Log-Hinweis im Scanner. 1 Test + Doku (Handbuch 6 Sprachen, READMEs).
+
 ## [1.6.14] – 2026-11-25
 
 Räume/Ebenen pro Gerät + Karten-Performance (PR #98 Clutter-Skalierung, PR #99 room-Feature + Performance >200 Geräte).

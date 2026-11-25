@@ -183,6 +183,16 @@ def mesh_parent_map(mesh_info: dict, devices: list[dict], gateway: str) -> dict[
     return out
 
 
+def effective_vpn_pool(settings, endpoints: list[str]) -> str:
+    """Effektiver VPN-Pool: explizit konfigurierter Wert gewinnt. Bei 'off' und konfiguriertem
+    TR-064 (FRITZ!Box mit User/Pass) greift die FRITZ!-Konvention 'auto' (letzte Oktett >= 201
+    im Gateway-/24) — WireGuard-Peers tauchen naemlich nicht in TR-064 auf."""
+    pool = (getattr(settings, "vpn_pool", "off") or "off").strip().lower()
+    if pool == "off" and endpoints and getattr(settings, "fritz_user", "") and getattr(settings, "fritz_pass", ""):
+        return "auto"
+    return pool
+
+
 def collect_devices(settings: Settings, conn) -> list[dict]:
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
@@ -227,6 +237,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     if wan_endpoints:
         db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
         conn.commit()
+    vpn_pool_eff = effective_vpn_pool(settings, endpoints)
+    if vpn_pool_eff != (getattr(settings, "vpn_pool", "off") or "off"):
+        log.info("VPN-Pool: NETZ_VPN_POOL=off, aber TR-064 konfiguriert -> 'auto' (FRITZ!-Konvention: letzte Oktett >= 201 im Gateway-/24)")
     mesh_info = fetch_mesh_info(settings, endpoints)
     tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}
     tr064_parent: dict[str, str] = {}
@@ -298,7 +311,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         # (Default "off" = keine Annahme; "auto" = FRITZ!-Konvention letzte Oktett >= 201 im Gateway-/24;
         # WireGuard-Peers erscheinen nicht in TR-064, daher ggf. Pool explizit setzen)
         if not d.get("vpn"):
-            d["vpn"] = topology.is_vpn_ip(d.get("ip", ""), getattr(settings, "vpn_pool", "off"), gateway)
+            d["vpn"] = topology.is_vpn_ip(d.get("ip", ""), vpn_pool_eff, gateway)
         # TR-064 liefert "Ethernet", "802.11" oder "HomePlug" (vor v1.6.0 wurde nur "wlan"/"lan" erkannt)
         d["connection"] = topology.conn_type(d.get("tr064_type", ""))
         link = mesh_info["parents"].get(d["mac"]) if mesh_info else None

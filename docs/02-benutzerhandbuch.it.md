@@ -193,7 +193,7 @@ predefinito env).
 | URL allarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; i token restano solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP che non attivano l'allarme «nuovo dispositivo» |
 | Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |
-| Pool indirizzi VPN | `NETZ_VPN_POOL` | Default `off` (nessuna presupposizione). `auto` = convenzione FRITZ!: ultimo ottetto ≥ 201 nella /24 del gateway; anche CIDR (`10.8.0.0/24`) e intervalli (`192.0.2.201-192.0.2.254`), separati da virgola |
+| Pool indirizzi VPN | `NETZ_VPN_POOL` | Default `off` (con TR-064 configurato: `auto` automatico). `auto` = convenzione FRITZ!: ultimo ottetto ≥ 201 nella /24 del gateway; anche CIDR (`10.8.0.0/24`) e intervalli (`192.0.2.201-192.0.2.254`), separati da virgola |
 | Cronologia / retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | cronologia in ore; elimina i dispositivi offline dopo N giorni (0 = mai) |
 | Retention eventi | `NETZ_EVENT_RETENTION_DAYS` | elimina gli eventi dopo N giorni, predefinito 90 (0 = mai) |
 | Auto-export / intervallo / cartella | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatici; intervallo in h (0 = dopo ogni scansione) |
@@ -309,7 +309,7 @@ tabella e mappa, riga «Connessione VPN» nel pannello dettagli, campo `vpn` in 
 WireGuard non compaiono in TR-064; per quelli c'è il **pool indirizzi VPN** configurabile (es. `auto`).
 I client VPN non attivano l'allarme «nuovo dispositivo», perché vanno e vengono con il tunnel.
 
-**Consiglio:** su una FRITZ!Box con client VPN (IPSec/WireGuard) imposta `NETZ_VPN_POOL=auto` per contrassegnare come VPN gli indirizzi .201+ nella /24 del gateway; se la VPN è in una sottorete propria (es. `192.168.179.0/24`), inserisci quel CIDR. Così i nodi VPN non compaiono come un «router» extra sull'edge Internet, bensì con il badge VPN e il bordo tratteggiato.
+**Consiglio:** su una FRITZ!Box con client VPN (IPSec/WireGuard) imposta `NETZ_VPN_POOL=auto` per contrassegnare come VPN gli indirizzi .201+ nella /24 del gateway; se la VPN è in una sottorete propria (es. `192.168.179.0/24`), inserisci quel CIDR. Così i nodi VPN non compaiono come un «router» extra sull'edge Internet, bensì con il badge VPN e il bordo tratteggiato. Con TR-064 configurato (FRITZ!Box) e `off` predefinito, viene applicato `auto` automaticamente — nessuna impostazione manuale.
 
 ---
 
