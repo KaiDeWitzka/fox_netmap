@@ -6,6 +6,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Verbessert
+- **Karte bei vielen Geraeten (Clutter):** Label-Schwelle skaliert mit Knotenzahl (ab 41 Knoten Zoom ≥ 1,05, ab 81 ≥ 1,3 statt 0,85); ab 61 Knoten kleinere Knoten (28/34 statt 34/40), groessere Abstaende im Baum-Layout (row 92→116, col 170→150, level 140→150) und Subnetz-Gruppenrahmen wachsen mit der groessten Gruppe. 4 UI-Tests.
+
 ## [1.6.13] – 2026-11-25
 
 Karten-Fix (PR #96): Internet-Kante landet nicht mehr am VPN-Knoten; Doku-Empfehlung zu `NETZ_VPN_POOL` in Handbuch (6 Sprachen) + READMEs.

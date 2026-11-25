@@ -122,7 +122,7 @@ Un clic sur un appareil (ou ⚙) ouvre le panneau latéral à droite avec les on
   montre tous les symboles avec le nom de catégorie, l'anneau de passerelle, hors ligne et les types de lignes.
 - **Allègement automatique :** libellés complets à partir d'un zoom ≥ 0,85 (en dessous seulement les hubs :
   routeur/switch/passerelle/Internet), un texte très petit n'est pas dessiné ; les groupes de sous-réseaux
-  s'activent automatiquement au-delà de 25 appareils ; « En ligne uniquement » est actif par défaut.
+  s'activent automatiquement au-delà de 25 appareils ; « En ligne uniquement » est actif par défaut. De plus avec beaucoup d'appareils : à partir de 41 nœuds, libellés visibles seulement à partir d'un zoom ≥ 1,05 (à partir de 81 : ≥ 1,3) ; à partir de 61 nœuds, nœuds plus petits et espacement d'arbre plus large — lisible même avec plus de 100 appareils.
 - Nœuds virtuels : **Internet** (avec IP WAN), **Passerelle** (si la passerelle n'est pas dans la liste) et
   **wlan:…** pour les appareils WLAN sans nœud propre.
 - **Internet ↔ routeur :** si TR-064 lit l'état WAN (p. ex. de la FRITZ!Box), la carte relie le nœud Internet au routeur — via l'IP de la passerelle ou le point de terminaison TR-064 (nom d'hôte/IP comme « fritz.box »), même si la passerelle n'est pas dans la liste (`wan_endpoint` dans `/api/meta`). État WAN ≠ « Connected » → nœud Internet hors ligne.

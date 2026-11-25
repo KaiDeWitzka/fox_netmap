@@ -118,7 +118,7 @@ Clicking a device (or ⚙) opens the right sidebar with the tabs **Details** and
   icons with category names plus gateway ring, offline and line styles.
 - **Auto declutter:** labels fully visible from zoom ≥ 0.85 (below only hubs: router/switch/gateway/internet),
   very small text is not drawn; subnet groups switch on automatically above 25 devices; "Online only" is on
-  by default (toggle).
+  by default (toggle). Also with many devices: from 41 nodes labels only from zoom ≥ 1.05 (from 81: ≥ 1.3); from 61 nodes smaller nodes and wider tree-layout spacing — stays readable even with 100+ devices.
 - Virtual nodes: **Internet** (with WAN IP), **Gateway** (if the gateway itself is not in the device list)
   and **wlan:…** for WLAN devices without their own node.
 - **Internet ↔ router:** if TR-064 reads the WAN status (e.g. from the FRITZ!Box), the map connects the internet node to the router — via the gateway IP or the TR-064 endpoint (hostname/IP such as "fritz.box"), even if the gateway is not in the device list (`wan_endpoint` in `/api/meta`). WAN status ≠ "Connected" → internet node shows offline.

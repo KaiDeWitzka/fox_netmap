@@ -123,7 +123,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   Muestra todos los símbolos con su categoría, el anillo de pasarela, offline y los tipos de línea.
 - **Despeje automático:** etiquetas completas a partir de zoom ≥ 0,85 (por debajo solo hubs:
   router/switch/pasarela/Internet), el texto muy pequeño no se dibuja; los grupos de subred se activan
-  automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto.
+  automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto. Además con muchos dispositivos: desde 41 nodos, etiquetas solo desde zoom ≥ 1,05 (desde 81: ≥ 1,3); desde 61 nodos, nodos más pequeños y mayor espacio en el árbol — legible incluso con más de 100 dispositivos.
 - Nodos virtuales: **Internet** (con IP WAN), **Pasarela** (si la pasarela no está en la lista) y
   **wlan:…** para dispositivos WLAN sin nodo propio.
 - **Internet ↔ router:** si TR-064 lee el estado WAN (p. ej. de la FRITZ!Box), el mapa conecta el nodo Internet con el router — por la IP de pasarela o el endpoint TR-064 (nombre/IP como «fritz.box»), aunque la pasarela no esté en la lista (`wan_endpoint` en `/api/meta`). Estado WAN ≠ «Connected» → nodo Internet sin conexión.
