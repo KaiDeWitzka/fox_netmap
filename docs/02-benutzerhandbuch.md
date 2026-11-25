@@ -124,7 +124,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   Sie zeigt alle Symbole mit Kategorienamen sowie Gateway-Ring, offline und die Linienarten.
 - **Automatisch aufgeräumt:** Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs:
   Router/Switch/Gateway/Internet), sehr kleine Schrift wird gar nicht gezeichnet; ab > 25 Geräten werden
-  Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar).
+  Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar). Zusätzlich bei vielen Geräten: ab 41 Knoten Labels erst ab Zoom ≥ 1,05 (ab 81: ≥ 1,3), ab 61 Knoten kleinere Knoten und größere Abstände im Baum-Layout — übersichtlich auch bei 100+ Geräten.
 - Virtuelle Knoten: **Internet** (mit WAN-IP), **Gateway** (falls das Gateway selbst nicht in der
   Geräteliste ist) und **wlan:…** für WLAN-Geräte ohne eigenen Knoten.
 - **Internet ↔ Router:** Liest TR-064 den WAN-Status aus (z. B. von der FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“), auch wenn das Gateway nicht in der Geräteliste steht (`wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.

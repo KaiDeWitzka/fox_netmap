@@ -24,6 +24,23 @@ function mapPalette(theme) {
 // Netzknoten werden größer gezeichnet, damit die Hierarchie in der Übersicht erkennbar ist.
 const HUB_SIZE = 40;
 const NODE_SIZE = 34;
+
+// Ab wie vielen Knoten die Karte als "gross" gilt (dichtere Darstellung noetig)
+function bigMap(n) {
+  return n > 60;
+}
+// Label erst ab staerkerem Zoom zeigen, wenn viele Knoten sichtbar sind
+function labelZoomThreshold(n) {
+  return n > 80 ? 1.3 : n > 40 ? 1.05 : 0.85;
+}
+// Knotengroessen schrumpfen bei grossen Karten leicht
+function nodeSizes(n) {
+  return bigMap(n) ? { node: 28, hub: 34 } : { node: NODE_SIZE, hub: HUB_SIZE };
+}
+// Baum-Abstaende wachsen bei grossen Karten (TREE bleibt Default fuer kleine Karten)
+function treeScale(n) {
+  return bigMap(n) ? { col: 150, level: 150, row: 116 } : TREE;
+}
 const NAME_MAX = 20;
 
 function shortName(v) {
@@ -178,6 +195,7 @@ const TREE = { col: 170, level: 140, row: 92 };
 // Verbindung landen in einem Raster unter dem Baum. Reine Funktion, damit sie testbar ist.
 function computeTreePositions(els) {
   const nodes = els.filter((e) => e.data && !e.data.source && !e.data.subnet).map((e) => e.data);
+  const T = treeScale(nodes.length);
   const ids = new Set(nodes.map((n) => n.id));
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   const kids = {};
@@ -228,27 +246,27 @@ function computeTreePositions(els) {
   const width = (id) => {
     if (wMemo[id] !== undefined) return wMemo[id];
     const { branches, leaves } = split(id);
-    const leafW = leaves.length ? leafCols(leaves.length) * TREE.col : 0;
+    const leafW = leaves.length ? leafCols(leaves.length) * T.col : 0;
     const sum = branches.reduce((a, b) => a + width(b), 0) + leafW;
-    return (wMemo[id] = Math.max(TREE.col, sum));
+    return (wMemo[id] = Math.max(T.col, sum));
   };
   const pos = {};
   let maxY = 0;
   const place = (id, left, depth) => {
     const w = width(id);
-    const y = depth * TREE.level;
+    const y = depth * T.level;
     pos[id] = { x: left + w / 2, y };
     maxY = Math.max(maxY, y);
     const { branches, leaves } = split(id);
-    const leafW = leaves.length ? leafCols(leaves.length) * TREE.col : 0;
+    const leafW = leaves.length ? leafCols(leaves.length) * T.col : 0;
     let cur = left + (w - (branches.reduce((a, b) => a + width(b), 0) + leafW)) / 2;
     const half = Math.ceil(branches.length / 2);
     // Verzweigungen links und rechts, Endgeraete-Raster in der Mitte direkt unter dem Knoten
     for (const b of branches.slice(0, half)) { place(b, cur, depth + 1); cur += width(b); }
     const cols = leafCols(leaves.length);
     leaves.forEach((l, i) => {
-      const ly = (depth + 1) * TREE.level + Math.floor(i / cols) * TREE.row;
-      pos[l] = { x: cur + (i % cols) * TREE.col + TREE.col / 2, y: ly };
+      const ly = (depth + 1) * T.level + Math.floor(i / cols) * T.row;
+      pos[l] = { x: cur + (i % cols) * T.col + T.col / 2, y: ly };
       maxY = Math.max(maxY, ly);
     });
     cur += leafW;
@@ -258,15 +276,15 @@ function computeTreePositions(els) {
   for (const r of roots) {
     if (pos[r]) continue;
     place(r, left, 0);
-    left += width(r) + TREE.col;
+    left += width(r) + T.col;
   }
   // Nicht zugeordnete Knoten als Raster unter dem Baum
   const orphans = nodes.map((n) => n.id).filter((id) => !pos[id]).sort(cmp);
   if (orphans.length) {
-    const cols = Math.max(4, Math.floor(Math.max(left, TREE.col * 4) / TREE.col));
-    const top = (roots.length ? maxY + TREE.level : 0);
+    const cols = Math.max(4, Math.floor(Math.max(left, T.col * 4) / T.col));
+    const top = (roots.length ? maxY + T.level : 0);
     orphans.forEach((id, i) => {
-      pos[id] = { x: (i % cols) * TREE.col + TREE.col / 2, y: top + Math.floor(i / cols) * TREE.row };
+      pos[id] = { x: (i % cols) * T.col + T.col / 2, y: top + Math.floor(i / cols) * T.row };
     });
   }
   return pos;
@@ -474,6 +492,7 @@ function buildElements() {
   const list = hideNoIp === "1" ? devices.filter((d) => d.ip) : devices;
   const n = Math.max(1, list.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
+  const sizes = nodeSizes(list.length);
   const grouping = groupMode === "subnet";
   const nodes = [];
   const edges = [];
@@ -488,7 +507,9 @@ function buildElements() {
   if (grouping) {
     const subnets = [...new Set(list.map((d) => d.subnet).filter(Boolean))];
     const cols = Math.max(1, Math.ceil(Math.sqrt(subnets.length)));
-    const G = 460;
+    // Rahmen waechst mit der groessten Gruppe, damit dichte Subnetze nicht ueberlappen
+    const maxCnt = Math.max(1, ...subnets.map((sn) => list.filter((d) => d.subnet === sn).length));
+    const G = 430 + 26 * Math.sqrt(maxCnt);
     subnets.forEach((sn, gi) => {
       const gx = (gi % cols) * G;
       const gy = Math.floor(gi / cols) * G;
@@ -542,7 +563,7 @@ function buildElements() {
         category: d.category,
         status: d.status,
         icon: iconKeyFor(d.category, d.category_reason, d.hostname),
-        size: hub ? HUB_SIZE : NODE_SIZE,
+        size: hub ? sizes.hub : sizes.node,
         root: !!META.gateway && d.ip === META.gateway,
         ports: d.port_count || 0,
         hub,
@@ -565,7 +586,7 @@ function buildElements() {
         category: "Internet",
         status: META.wan_status && META.wan_status.toLowerCase() !== "connected" ? "offline" : "online",
         icon: "globe",
-        size: NODE_SIZE,
+        size: sizes.node,
         virtual: true,
         hub: true,
       },
@@ -640,7 +661,7 @@ function clearSpotlight() {
 
 function updateZoomLabels() {
   if (!cy) return;
-  const showAll = cy.zoom() >= 0.85;
+  const showAll = cy.zoom() >= labelZoomThreshold(devices.length);
   const label = showAll ? "data(label)" : (ele) => (ele.data("hub") ? ele.data("label") : "");
   cy.style().selector("node").style("label", label).update();
 }

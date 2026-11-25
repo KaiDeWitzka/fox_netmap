@@ -590,6 +590,32 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   const pc = w.eval("computeTreePositions")(cyc);
   check("Baum: Zyklus ohne Endlosschleife, beide Knoten positioniert", !!pc.a && !!pc.b);
 }
+{
+  // Clutter-Skalierung (Punkt 3): Label-Schwelle und Knotengroesse abhaengig von Knotenzahl
+  check(
+    "Clutter: Label-Schwelle 0.85 / 1.05 / 1.3 ab 41 / 81 Knoten",
+    w.eval("labelZoomThreshold(10)") === 0.85 && w.eval("labelZoomThreshold(41)") === 1.05 && w.eval("labelZoomThreshold(81)") === 1.3
+  );
+  check(
+    "Clutter: Knotengroesse 34/40 bis 60 Knoten, 28/34 ab 61",
+    w.eval("nodeSizes(10).node") === 34 && w.eval("nodeSizes(60).hub") === 40 && w.eval("nodeSizes(61).node") === 28 && w.eval("nodeSizes(200).hub") === 34
+  );
+  check("Clutter: Baum-Abstaende wachsen ab 61 Knoten (row 92 -> 116)", w.eval("treeScale(40).row") === 92 && w.eval("treeScale(61).row") === 116 && w.eval("treeScale(200).col") === 150);
+  // 90 Endgeraete an einem Hub: Zeilenabstand im Blatt-Raster = 116 (skaliert), keine Ueberlagerung
+  const els = [{ data: { id: "r", hub: true } }];
+  for (let i = 0; i < 90; i++) {
+    els.push({ data: { id: "c" + i } });
+    els.push({ data: { source: "r", target: "c" + i } });
+  }
+  const pos = w.eval("computeTreePositions")(els);
+  const ys = [...new Set(Object.values(pos).filter((v) => v && typeof v.y === "number").map((v) => v.y))].sort((a, b) => a - b).filter((y) => y > 0); // Hub-Zeile (y=0) auslassen
+  const gaps = ys.slice(1).map((y, i) => y - ys[i]);
+  const keys = new Set(Object.values(pos).map((v) => v.x + ":" + v.y));
+  check(
+    "Clutter: 90 Endgeraete im Raster mit Zeilenabstand 116, keine zwei Knoten auf derselben Position",
+    gaps.every((g) => g === 116) && keys.size === Object.keys(pos).length
+  );
+}
 check(
   "Kategorien v1.6.0: Begruendung lesbar, Repeater ist Netzknoten",
   w.eval(`reasonText({ category_reason: "host:iphone" })`) === "Hostname „iphone“" &&
