@@ -21,6 +21,7 @@ CSV_FIELDS = [
     "link_port",
     "ports",
     "note",
+    "room",
     "first_seen",
     "last_seen",
 ]
@@ -50,6 +51,7 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
                 "link_port": r.get("link_port", ""),
                 "ports": [p["port"] for p in port_rows],
                 "note": r["note"],
+                "room": r.get("room", ""),
                 "first_seen": r["first_seen"],
                 "last_seen": r["last_seen"],
             }
@@ -84,6 +86,7 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
                 r.get("link_port") or "",
                 r.get("ports_str") or "",
                 r["note"],
+                r.get("room", ""),
                 r["first_seen"],
                 r["last_seen"],
             ]

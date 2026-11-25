@@ -157,6 +157,10 @@ A vista **Registo** mostraOs níveis são coloridos (INFO azul, WARN âmbar, ERR
 
 ## 6. Detalhes do dispositivo
 
+### Divisões/Pisos
+
+Cada dispositivo pode receber uma **divisão** no painel de detalhes (ex.: “sala rés-do-chão”, máx. 64 caracteres; API: `PATCH /api/device/{mac}` com `room`, lista: `GET /api/rooms`). A divisão aparece como coluna da tabela, nas exportações JSON/CSV (campo `room`), como filtro na barra de filtros (parâmetro `room` em `/api/devices` e nas exportações) e como agrupamento próprio do mapa: «Agrupar por divisão» no cabeçalho (exclusivo com «Agrupar por sub-rede»); dispositivos sem divisão vão para o grupo «Sem divisão». O scanner não sobrescreve a divisão durante as verificações.
+
 À direita, separador **Detalhes**: categoria (editável), IP/**IPv6** (v6 via correspondência MAC NDP de `ip -6 neigh`, coluna `ip6` na BD/JSON/CSV), MAC/hostname/fabricante (OUI), estado,
 sub-rede, local, fonte(s) da scan (p. ex. `arp,tr064`), «ligado a» (selecionável manualmente, vazio =
 automático), portas abertas com nomes de serviço, nota, histórico (online/offline/portas) e eventos.

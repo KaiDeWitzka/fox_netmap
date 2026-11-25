@@ -159,6 +159,10 @@ filtro per livello e download del file completo. Lo stesso è offerto da `/api/l
 
 ## 6. Dettagli del dispositivo
 
+### Stanze/Piani
+
+Ogni dispositivo può ricevere una **stanza** nel pannello dettagli (es. “soggiorno piano terra”, max 64 caratteri; API: `PATCH /api/device/{mac}` con `room`, elenco: `GET /api/rooms`). La stanza appare come colonna della tabella, negli export JSON/CSV (campo `room`), come filtro nella barra dei filtri (parametro `room` in `/api/devices` e negli export) e come raggruppamento proprio della mappa: «Raggruppa per stanza» nell'intestazione (esclusivo rispetto a «Raggruppa per sottorete»); i dispositivi senza stanza finiscono nel gruppo «Senza stanza». Lo scanner non sovrascrive la stanza durante le scansioni.
+
 A destra, scheda **Dettagli**: categoria (modificabile), IP/**IPv6** (v6 via match MAC NDP da `ip -6 neigh`, colonna `ip6` in DB/JSON/CSV), MAC/hostname/produttore (OUI), stato,
 sottorete, sito, fonte/i della scansione (p. es. `arp,tr064`), «collegato a» (selezionabile
 manualmente, vuoto = automatico), porte aperte con nomi di servizio, nota, cronologia

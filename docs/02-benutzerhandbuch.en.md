@@ -154,6 +154,10 @@ filter, and download of the full file. The same is provided by `/api/logs` and
 
 ## 6. Device details
 
+### Rooms/Floors
+
+Each device can get a **room** in the detail panel (e.g. "ground floor living room", max 64 chars; API: `PATCH /api/device/{mac}` with `room`, list: `GET /api/rooms`). The room shows up as a table column, in JSON/CSV exports (`room` field), as a filter in the filter bar (`room` parameter in `/api/devices` and the exports) and as its own map grouping: "Group by room" in the header (exclusive with "Group by subnet"); devices without a room land in the "No room" group. The scanner does not overwrite the room during scans.
+
 Right, in the **Details** tab: category (editable), IP/**IPv6** (v6 via NDP-MAC match from `ip -6 neigh`, `ip6` column in DB/JSON/CSV), MAC/hostname/vendor (OUI), status,
 subnet, site, scan source(s) (e.g. `arp,tr064`), "connected to" (manually selectable, empty =
 automatic), open ports with service names, note, history (online/offline/ports) and events.

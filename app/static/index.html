@@ -27,6 +27,7 @@
         <option value="offline">offline</option>
       </select>
       <select id="filter-site" data-i18n-aria="filter.siteAria" aria-label="Standort filtern"><option value="" data-i18n="filter.allSites">Alle Standorte</option></select>
+      <select id="filter-room" data-i18n-aria="filter.roomAria" aria-label="Raum filtern"><option value="" data-i18n="filter.allRooms">Alle Räume</option></select>
       <button id="btn-online" aria-pressed="false" data-i18n="btn.onlyOnline" data-i18n-title="btn.onlyOnlineTitle" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
       <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
     </div>
@@ -35,6 +36,7 @@
     <div class="hdr-group" role="group" data-i18n-aria="hdr.g.mapAria">
       <span class="hdr-label" data-i18n="hdr.g.map">Karte</span>
       <label class="hdr-chk"><input type="checkbox" id="chk-groups" data-i18n-title="chk.groupsTitle" title="Geräte pro Subnetz als Gruppe zusammenfassen"> <span data-i18n="chk.groups">Subnetze gruppieren</span></label>
+      <label class="hdr-chk"><input type="checkbox" id="chk-rooms" data-i18n-title="chk.roomsTitle" title="Geräte nach Raum/Ebene gruppieren (Raum im Geräte-Detail setzen)"> <span data-i18n="chk.rooms">Nach Raum gruppieren</span></label>
       <label class="hdr-chk"><input type="checkbox" id="chk-noip" data-i18n-title="chk.noipTitle" title="Geräte ohne IP-Adresse erst auf der Karte zeigen, wenn angehakt (Default: ausblenden)"> <span data-i18n="chk.noip">Ohne IP ausblenden</span></label>
       <select id="layout-select" data-i18n-aria="layout.aria" aria-label="Karten-Layout" title="Karten-Layout">
         <option value="auto" selected data-i18n="layout.auto">Layout: auto</option>

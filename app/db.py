@@ -178,6 +178,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # VPN-Client (z. B. FRITZ!Box IPSec/WireGuard .201+): Kennzeichen, kein "neues Geraet"-Alarm
         conn.execute("ALTER TABLE devices ADD COLUMN vpn INTEGER NOT NULL DEFAULT 0")
         log.info("Migration: Spalte devices.vpn ergaenzt")
+    if "room" not in cols:
+        # v1.6.14: Raum/Ebene (frei vergebbar, z. B. "EG Wohnzimmer") fuer Karten-Gruppierung, Filter, Exporte
+        conn.execute("ALTER TABLE devices ADD COLUMN room TEXT NOT NULL DEFAULT ''")
+        log.info("Migration: Spalte devices.room ergaenzt")
 
 
 TOKEN_PREFIX = "sha256:"

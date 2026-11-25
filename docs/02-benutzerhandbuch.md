@@ -160,6 +160,10 @@ Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-E
 
 ## 6. Gerätedetails
 
+### Räume/Ebenen
+
+Jedes Gerät kann im Detail-Panel einen **Raum** erhalten (z. B. „EG Wohnzimmer“, max. 64 Zeichen; API: `PATCH /api/device/{mac}` mit `room`, Liste: `GET /api/rooms`). Der Raum erscheint als Spalte in der Tabelle, in JSON/CSV-Exporten (`room`-Feld), als Filter in der Filterleiste (`room`-Parameter in `/api/devices` und den Exports) und als eigene Karten-Gruppierung: „Nach Raum gruppieren“ in der Kopfzeile (exklusiv zu „Subnetze gruppieren“); Geräte ohne Raum landen in der Gruppe „Ohne Raum“. Der Scanner überschreibt den Raum beim Scan nicht.
+
 Rechts im Tab **Details**: Kategorie (änderbar), IP/**IPv6** (v6 per NDP-MAC-Match aus `ip -6 neigh`, Spalte `ip6` in DB/JSON/CSV), MAC/Hostname/Hersteller (OUI), Status,
 Subnetz, Standort, Quelle(n) des Scans (z. B. `arp,tr064`), „Verbunden mit“ (manuell wählbar,
 leer = automatisch), offene Ports mit Dienstnamen, Notiz, Verlauf (online/offline/Ports) und

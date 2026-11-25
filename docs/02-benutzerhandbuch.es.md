@@ -159,6 +159,10 @@ filtro por nivel y descarga del archivo completo. Lo mismo ofrecen `/api/logs` y
 
 ## 6. Detalles del dispositivo
 
+### Habitaciones/Plantas
+
+Cada dispositivo puede recibir una **habitación** en el panel de detalles (p. ej. «salón planta baja», máx. 64 caracteres; API: `PATCH /api/device/{mac}` con `room`, lista: `GET /api/rooms`). La habitación aparece como columna de la tabla, en las exportaciones JSON/CSV (campo `room`), como filtro en la barra de filtros (parámetro `room` en `/api/devices` y las exportaciones) y como agrupación propia del mapa: «Agrupar por habitación» en la cabecera (exclusivo con «Agrupar por subred»); los dispositivos sin habitación van al grupo «Sin habitación». El escáner no sobrescribe la habitación durante los escaneos.
+
 A la derecha, pestaña **Detalles**: categoría (editable), IP/**IPv6** (v6 vía coincidencia MAC NDP de `ip -6 neigh`, columna `ip6` en BD/JSON/CSV), MAC/hostname/fabricante (OUI),
 estado, subred, sitio, fuente(s) del escaneo (p. ej. `arp,tr064`), «conectado a» (selección
 manual, vacío = automático), puertos abiertos con nombres de servicio, nota, historial

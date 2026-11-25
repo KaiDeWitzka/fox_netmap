@@ -1564,3 +1564,67 @@ const I18N_EXTRA11 = {
   "pt": { "chk.noip": "Ocultar sem IP", "chk.noipTitle": "Mostrar no mapa os dispositivos sem endereço IP (ex.: conhecidos só via TR-064) apenas se marcados — continuam visíveis na tabela" }
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA11[lang] || {});
+
+const I18N_EXTRA12 = {
+  de: {
+    "cols.room": "Raum",
+    "chk.rooms": "Nach Raum gruppieren",
+    "chk.roomsTitle": "Ger\u00e4te nach Raum/Ebene gruppieren (Raum im Ger\u00e4te-Detail setzen); exklusiv zu Subnetz-Gruppierung",
+    "room.unassigned": "Ohne Raum",
+    "d.room": "Raum/Ebene",
+    "det.roomPh": "z. B. EG Wohnzimmer",
+    "filter.roomAria": "Raum filtern",
+    "filter.allRooms": "Alle R\u00e4ume",
+  },
+  en: {
+    "cols.room": "Room",
+    "chk.rooms": "Group by room",
+    "chk.roomsTitle": "Group devices by room/floor (set room in device details); exclusive with subnet grouping",
+    "room.unassigned": "No room",
+    "d.room": "Room/Floor",
+    "det.roomPh": "e.g. ground floor living room",
+    "filter.roomAria": "Filter by room",
+    "filter.allRooms": "All rooms",
+  },
+  fr: {
+    "cols.room": "Pi\u00e8ce",
+    "chk.rooms": "Grouper par pi\u00e8ce",
+    "chk.roomsTitle": "Grouper les appareils par pi\u00e8ce/niveau (d\u00e9finir la pi\u00e8ce dans les d\u00e9tails) ; exclusif avec le groupement par sous-r\u00e9seau",
+    "room.unassigned": "Sans pi\u00e8ce",
+    "d.room": "Pi\u00e8ce/Niveau",
+    "det.roomPh": "p. ex. salon RDC",
+    "filter.roomAria": "Filtrer par pi\u00e8ce",
+    "filter.allRooms": "Toutes les pi\u00e8ces",
+  },
+  es: {
+    "cols.room": "Habitaci\u00f3n",
+    "chk.rooms": "Agrupar por habitaci\u00f3n",
+    "chk.roomsTitle": "Agrupar dispositivos por habitaci\u00f3n/planta (definir en los detalles); excluyente con la agrupaci\u00f3n por subred",
+    "room.unassigned": "Sin habitaci\u00f3n",
+    "d.room": "Habitaci\u00f3n/Planta",
+    "det.roomPh": "p. ej. sal\u00f3n planta baja",
+    "filter.roomAria": "Filtrar por habitaci\u00f3n",
+    "filter.allRooms": "Todas las habitaciones",
+  },
+  it: {
+    "cols.room": "Stanza",
+    "chk.rooms": "Raggruppa per stanza",
+    "chk.roomsTitle": "Raggruppa i dispositivi per stanza/piano (imposta la stanza nei dettagli); esclusivo rispetto al raggruppamento per sottorete",
+    "room.unassigned": "Senza stanza",
+    "d.room": "Stanza/Piano",
+    "det.roomPh": "es. soggiorno piano terra",
+    "filter.roomAria": "Filtra per stanza",
+    "filter.allRooms": "Tutte le stanze",
+  },
+  pt: {
+    "cols.room": "Divis\u00e3o",
+    "chk.rooms": "Agrupar por divis\u00e3o",
+    "chk.roomsTitle": "Agrupar dispositivos por divis\u00e3o/piso (definir nos detalhes); exclusivo com o agrupamento por sub-rede",
+    "room.unassigned": "Sem divis\u00e3o",
+    "d.room": "Divis\u00e3o/Piso",
+    "det.roomPh": "ex.: sala r\u00e9s-do-ch\u00e3o",
+    "filter.roomAria": "Filtrar por divis\u00e3o",
+    "filter.allRooms": "Todas as divis\u00f5es",
+  },
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA12[lang] || {});
