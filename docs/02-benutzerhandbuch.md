@@ -194,7 +194,7 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 | Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
 | Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.0.2.0/24; Remote:198.51.100.0/24` |
-| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (keine Annahme). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.0.2.201-192.0.2.254`), kommagetrennt |
+| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (bei konfiguriertem TR-064 automatisch `auto`). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.0.2.201-192.0.2.254`), kommagetrennt |
 | Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
 | Ereignis-Löschfrist | `NETZ_EVENT_RETENTION_DAYS` | Ereignisse nach N Tagen löschen, Standard 90 (0 = nie) |
 | Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
@@ -314,7 +314,7 @@ und Karte, Zeile „VPN-Verbindung“ im Detail-Panel, `vpn`-Feld in JSON/CSV/AP
 erscheinen nicht in TR-064; dafür greift der konfigurierbare **VPN-Adresspool** (z. B. `auto`).
 VPN-Geräte lösen keinen „neues Gerät“-Alarm aus, weil sie mit dem Tunnel kommen und gehen.
 
-**Empfehlung:** Bei FRITZ!Box mit VPN-Clients (IPSec/WireGuard) `NETZ_VPN_POOL=auto` setzen, damit VPN-Adressen (.201+) im Gateway-/24 als VPN markiert werden; liegt das VPN in einem eigenen Subnetz (z. B. `192.168.179.0/24`), dieses als CIDR eintragen. So erscheinen VPN-Knoten nicht als zusätzlicher „Router“ an der Internet-Kante, sondern mit VPN-Badge und gestricheltem Rand.
+**Empfehlung:** Bei FRITZ!Box mit VPN-Clients (IPSec/WireGuard) `NETZ_VPN_POOL=auto` setzen, damit VPN-Adressen (.201+) im Gateway-/24 als VPN markiert werden; liegt das VPN in einem eigenen Subnetz (z. B. `192.168.179.0/24`), dieses als CIDR eintragen. So erscheinen VPN-Knoten nicht als zusätzlicher „Router“ an der Internet-Kante, sondern mit VPN-Badge und gestricheltem Rand. Bei konfiguriertem TR-064 (FRITZ!Box) und Default `off` wird automatisch `auto` angenommen — kein manuelles Setzen nötig.
 
 ---
 

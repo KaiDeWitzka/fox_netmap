@@ -707,3 +707,25 @@ def test_resolve_aaaa(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", _fail)
     assert names.resolve_aaaa("unbekannt.local") == ""
     assert names.resolve_aaaa("") == ""
+
+
+def test_effective_vpn_pool_fallback_auto_bei_tr064():
+    from types import SimpleNamespace
+
+    from app.scanner import run
+
+    base = dict(vpn_pool="off", fritz_user="u", fritz_pass="p")
+    ep = ["http://192.168.178.1:49000"]
+    # TR-064 konfiguriert + off -> auto (FRITZ!-Konvention)
+    assert run.effective_vpn_pool(SimpleNamespace(**base), ep) == "auto"
+    # ohne Creds -> off bleibt
+    assert run.effective_vpn_pool(SimpleNamespace(**{**base, "fritz_user": "", "fritz_pass": ""}), ep) == "off"
+    # ohne Endpunkte -> off bleibt
+    assert run.effective_vpn_pool(SimpleNamespace(**base), []) == "off"
+    # expliziter Pool gewinnt
+    assert run.effective_vpn_pool(SimpleNamespace(**{**base, "vpn_pool": "10.8.0.0/24"}), ep) == "10.8.0.0/24"
+    assert run.effective_vpn_pool(SimpleNamespace(**{**base, "vpn_pool": "auto"}), ep) == "auto"
+    # is_vpn_ip mit auto: .201 im Gateway-/24 ist VPN, .10 nicht
+    from app.scanner import topology
+    assert topology.is_vpn_ip("192.168.178.201", "auto", "192.168.178.1") is True
+    assert topology.is_vpn_ip("192.168.178.10", "auto", "192.168.178.1") is False

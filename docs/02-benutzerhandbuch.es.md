@@ -194,7 +194,7 @@ vacío = valor por defecto del entorno).
 | URL de alarma (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; los tokens siguen siendo solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Lista blanca | `NETZ_ALARM_WHITELIST` | MAC/IP que no disparan la alarma «nuevo dispositivo» |
 | Sitios | `NETZ_SITES` | `Nombre:subred; …` p. ej. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |
-| Pool de direcciones VPN | `NETZ_VPN_POOL` | Por defecto `off` (sin suposición). `auto` = convención FRITZ!: último octeto ≥ 201 en la /24 de la pasarela; también CIDR (`10.8.0.0/24`) y rangos (`192.0.2.201-192.0.2.254`), separados por comas |
+| Pool de direcciones VPN | `NETZ_VPN_POOL` | Por defecto `off` (con TR-064 configurado: `auto` automático). `auto` = convención FRITZ!: último octeto ≥ 201 en la /24 de la pasarela; también CIDR (`10.8.0.0/24`) y rangos (`192.0.2.201-192.0.2.254`), separados por comas |
 | Historial / retención | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | historial en horas; borrar dispositivos sin conexión tras N días (0 = nunca) |
 | Retención de eventos | `NETZ_EVENT_RETENTION_DAYS` | borrar eventos tras N días, 90 por defecto (0 = nunca) |
 | Auto-exportación / intervalo / carpeta | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automático; intervalo en h (0 = tras cada escaneo) |
@@ -312,7 +312,7 @@ tabla y mapa, fila «Conexión VPN» en el panel de detalles, campo `vpn` en JSO
 WireGuard no aparecen en TR-064; para ellos está el **pool de direcciones VPN** configurable (p. ej.
 `auto`). Los clientes VPN no generan alarma de «nuevo dispositivo», porque llegan y se van con el túnel.
 
-**Recomendación:** en una FRITZ!Box con clientes VPN (IPSec/WireGuard), define `NETZ_VPN_POOL=auto` para marcar como VPN las direcciones .201+ de la /24 de la pasarela; si la VPN está en su propia subred (p. ej. `192.168.179.0/24`), indica ese CIDR. Así los nodos VPN no aparecen como un «router» adicional en el extremo de Internet, sino con la insignia VPN y el borde punteado.
+**Recomendación:** en una FRITZ!Box con clientes VPN (IPSec/WireGuard), define `NETZ_VPN_POOL=auto` para marcar como VPN las direcciones .201+ de la /24 de la pasarela; si la VPN está en su propia subred (p. ej. `192.168.179.0/24`), indica ese CIDR. Así los nodos VPN no aparecen como un «router» adicional en el extremo de Internet, sino con la insignia VPN y el borde punteado. Con TR-064 configurado (FRITZ!Box) y `off` por defecto, se aplica `auto` automáticamente — sin configuración manual.
 
 ---
 
