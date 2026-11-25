@@ -447,16 +447,21 @@ function parentId(d) {
 // (z. B. "fritz.box", kann auch mehrere kommasepariert sein) per IP / Hostname auf ein Geraet
 // abbilden, sonst virtueller Gateway-Knoten ueber die Gateway-IP (bzw. Endpunkt-IP).
 function routerTargetId() {
+  // VPN-Knoten (vpn=1) duerfen nie das Ziel der Internet-Kante sein: Ein VPN-Client
+  // kann zufaellig denselben Hostnamen wie der TR-064-Endpunkt tragen (z. B. fritz.box
+  // auf einer VPN-Adresse wie .201+). Der echte Router haengt am Gateway bzw. an der
+  // Endpunkt-IP; ohne Geraetetreffer landet die Kante am virtuellen Gateway-Knoten.
+  const notVpn = (x) => !x.vpn;
   if (META.gateway) {
-    const g = devices.find((x) => x.ip === META.gateway);
+    const g = devices.find((x) => notVpn(x) && x.ip === META.gateway);
     if (g) return g.mac;
   }
   for (const epRaw of (META.wan_endpoint || "").split(",")) {
     const ep = epRaw.split(":")[0].trim().toLowerCase();
     if (!ep) continue;
-    const byIp = devices.find((x) => x.ip && x.ip.toLowerCase() === ep);
+    const byIp = devices.find((x) => notVpn(x) && x.ip && x.ip.toLowerCase() === ep);
     if (byIp) return byIp.mac;
-    const byHost = devices.find((x) => (x.hostname || "").toLowerCase() === ep);
+    const byHost = devices.find((x) => notVpn(x) && (x.hostname || "").toLowerCase() === ep);
     if (byHost) return byHost.mac;
   }
   if (META.gateway) return META.gateway;

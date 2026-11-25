@@ -308,6 +308,8 @@ no mapa, linha «Ligação VPN» no painel de detalhes, campo `vpn` em JSON/CSV/
 não aparecem no TR-064; para eles existe o **pool de endereços VPN** configurável (ex.: `auto`).
 Clientes VPN não disparam alarme de «novo dispositivo», porque entram e saem com o túnel.
 
+**Recomendação:** numa FRITZ!Box com clientes VPN (IPSec/WireGuard), define `NETZ_VPN_POOL=auto` para marcar como VPN os endereços .201+ na /24 do gateway; se a VPN estiver numa sub-rede própria (ex.: `192.168.179.0/24`), indica esse CIDR. Assim os nós VPN não aparecem como um «router» extra na aresta da Internet, e sim com o selo VPN e a borda tracejada.
+
 ---
 
 ## 14. Segurança

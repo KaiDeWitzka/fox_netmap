@@ -310,6 +310,8 @@ tabella e mappa, riga «Connessione VPN» nel pannello dettagli, campo `vpn` in 
 WireGuard non compaiono in TR-064; per quelli c'è il **pool indirizzi VPN** configurabile (es. `auto`).
 I client VPN non attivano l'allarme «nuovo dispositivo», perché vanno e vengono con il tunnel.
 
+**Consiglio:** su una FRITZ!Box con client VPN (IPSec/WireGuard) imposta `NETZ_VPN_POOL=auto` per contrassegnare come VPN gli indirizzi .201+ nella /24 del gateway; se la VPN è in una sottorete propria (es. `192.168.179.0/24`), inserisci quel CIDR. Così i nodi VPN non compaiono come un «router» extra sull'edge Internet, bensì con il badge VPN e il bordo tratteggiato.
+
 ---
 
 ## 14. Sicurezza

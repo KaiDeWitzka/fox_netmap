@@ -305,6 +305,8 @@ map, a "VPN connection" row in the detail panel, `vpn` field in JSON/CSV/API). W
 not appear in TR-064; the configurable **VPN address pool** (e.g. `auto`) covers those. VPN devices
 do not trigger a "new device" alarm, because they come and go with the tunnel.
 
+**Recommendation:** on a FRITZ!Box with VPN clients (IPsec/WireGuard) set `NETZ_VPN_POOL=auto` so VPN addresses (.201+) in the gateway /24 are flagged as VPN; if the VPN lives in its own subnet (e.g. `192.168.179.0/24`), enter that CIDR. This keeps VPN nodes from showing up as an extra "router" on the internet edge - they get the VPN badge and the dashed border instead.
+
 ---
 
 ## 14. Security

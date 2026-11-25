@@ -554,6 +554,24 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   await w.eval("loadDevices()");
 }
 {
+  // VPN-Knoten mit Router-Hostname (fritz.box auf VPN-Adresse .201) darf NICHT Ziel der
+  // Internet-Kante sein - sonst landet die Kante am VPN-Client statt am Gateway/Router.
+  metaExtra = { gateway: "192.168.178.254", wan_endpoint: "fritz.box" };
+  DEVS.push({ mac: "02:00:00:00:20:01", ip: "192.168.178.201", hostname: "fritz.box", category: "Router", status: "online", subnet: "192.168.178.0/24", connected_to: "192.168.178.254", vpn: 1 });
+  await w.eval("loadMeta()");
+  await w.eval("loadDevices()");
+  const els2 = cyInstance._els;
+  check(
+    "VPN-Knoten (fritz.box @ .201, vpn=1) ist nicht Ziel der Internet-Kante; virtuelles Gateway (192.168.178.254) bekommt sie",
+    els2.some((e) => e.data && e.data.source === "internet" && e.data.target === "192.168.178.254") &&
+      !els2.some((e) => e.data && e.data.source === "internet" && e.data.target === "02:00:00:00:20:01")
+  );
+  metaExtra = {};
+  DEVS.pop();
+  await w.eval("loadMeta()");
+  await w.eval("loadDevices()");
+}
+{
   // 40 Endgeraete an einem Router: Raster statt einer Zeile, keine zwei Knoten auf derselben Position
   const els = [{ data: { id: "r", hub: true } }];
   for (let i = 0; i < 40; i++) {
