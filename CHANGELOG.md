@@ -6,6 +6,10 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+## [1.6.14] – 2026-11-25
+
+Räume/Ebenen pro Gerät + Karten-Performance (PR #98 Clutter-Skalierung, PR #99 room-Feature + Performance >200 Geräte).
+
 ### Neu
 - **Räume/Ebenen pro Gerät:** neues Feld `room` (DB-Migration, max. 64 Zeichen) — setzbar im Geräte-Detail (`ed-room`) und per `PATCH /api/device/{mac}`; Liste via `GET /api/rooms`. Sichtbar als Tabellen-Spalte („Raum“), im JSON/CSV-Export (`room`), als Filter in der Filterleiste (`room`-Parameter in `/api/devices` + Exports) und als Karten-Gruppierung „Nach Raum gruppieren“ (exklusiv zu Subnetz-Gruppierung; Geräte ohne Raum → „Ohne Raum“). Scanner überschreibt `room` nicht. i18n in 6 Sprachen.
 
