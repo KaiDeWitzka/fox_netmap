@@ -6,11 +6,15 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+## [1.6.13] – 2026-11-25
+
+Karten-Fix (PR #96): Internet-Kante landet nicht mehr am VPN-Knoten; Doku-Empfehlung zu `NETZ_VPN_POOL` in Handbuch (6 Sprachen) + READMEs.
+
 ### Behoben
-- **Karte: Internet-Kante landet am VPN-Knoten statt am Router:** `routerTargetId()` hat per TR-064-Endpunkt-Hostname (z. B. `fritz.box`) auch VPN-Clients (`.201+`, `vpn=1`) als Router-Ziel akzeptiert. VPN-Knoten werden jetzt in allen Fallbacks ausgeschlossen; ohne Geraetetreffer landet die Kante am Gateway (Gerät mit Gateway-IP bzw. virtueller Gateway-Knoten). 1 UI-Test.
+- **Karte: Internet-Kante landet am VPN-Knoten statt am Router:** `routerTargetId()` hat per TR-064-Endpunkt-Hostname (z. B. `fritz.box`) auch VPN-Clients (`.201+`, `vpn=1`) als Router-Ziel akzeptiert. VPN-Knoten werden jetzt in allen Fallbacks ausgeschlossen; ohne Gerätetrefffer landet die Kante am Gateway (Gerät mit Gateway-IP bzw. virtueller Gateway-Knoten). 1 UI-Test.
 
 ### Doku
-- Handbuch (alle 6 Sprachen) + README (de/en): Empfehlung zu `NETZ_VPN_POOL` ergaenzt — `auto` bei FRITZ!Box-VPN-Clients (.201+ im Gateway-/24), eigenes VPN-Subnetz als CIDR (z. B. `192.168.179.0/24`).
+- Handbuch (alle 6 Sprachen) + README (de/en): Empfehlung zu `NETZ_VPN_POOL` ergänzt — `auto` bei FRITZ!Box-VPN-Clients (.201+ im Gateway-/24), eigenes VPN-Subnetz als CIDR (z. B. `192.168.179.0/24`).
 
 ## [1.6.12] – 2026-11-24
 
