@@ -313,6 +313,8 @@ tabla y mapa, fila «Conexión VPN» en el panel de detalles, campo `vpn` en JSO
 WireGuard no aparecen en TR-064; para ellos está el **pool de direcciones VPN** configurable (p. ej.
 `auto`). Los clientes VPN no generan alarma de «nuevo dispositivo», porque llegan y se van con el túnel.
 
+**Recomendación:** en una FRITZ!Box con clientes VPN (IPSec/WireGuard), define `NETZ_VPN_POOL=auto` para marcar como VPN las direcciones .201+ de la /24 de la pasarela; si la VPN está en su propia subred (p. ej. `192.168.179.0/24`), indica ese CIDR. Así los nodos VPN no aparecen como un «router» adicional en el extremo de Internet, sino con la insignia VPN y el borde punteado.
+
 ---
 
 ## 14. Seguridad

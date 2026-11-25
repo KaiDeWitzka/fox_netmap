@@ -312,6 +312,8 @@ JSON/CSV/API). Les pairs WireGuard n'apparaissent pas dans TR-064 ; le **pool d'
 configurable (p. ex. `auto`) les couvre. Les clients VPN ne déclenchent pas d'alarme « nouvel
 appareil », car ils vont et viennent avec le tunnel.
 
+**Recommandation :** sur une FRITZ!Box avec clients VPN (IPSec/WireGuard), définir `NETZ_VPN_POOL=auto` pour marquer comme VPN les adresses .201+ du /24 de la passerelle ; si le VPN a son propre sous-réseau (p. ex. `192.168.179.0/24`), saisir ce CIDR. Ainsi, les nœuds VPN n'apparaissent pas comme un « routeur » supplémentaire sur l'arête Internet, mais avec le badge VPN et la bordure en pointillés.
+
 ---
 
 ## 14. Sécurité

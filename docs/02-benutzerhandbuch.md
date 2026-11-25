@@ -315,6 +315,8 @@ und Karte, Zeile „VPN-Verbindung“ im Detail-Panel, `vpn`-Feld in JSON/CSV/AP
 erscheinen nicht in TR-064; dafür greift der konfigurierbare **VPN-Adresspool** (z. B. `auto`).
 VPN-Geräte lösen keinen „neues Gerät“-Alarm aus, weil sie mit dem Tunnel kommen und gehen.
 
+**Empfehlung:** Bei FRITZ!Box mit VPN-Clients (IPSec/WireGuard) `NETZ_VPN_POOL=auto` setzen, damit VPN-Adressen (.201+) im Gateway-/24 als VPN markiert werden; liegt das VPN in einem eigenen Subnetz (z. B. `192.168.179.0/24`), dieses als CIDR eintragen. So erscheinen VPN-Knoten nicht als zusätzlicher „Router“ an der Internet-Kante, sondern mit VPN-Badge und gestricheltem Rand.
+
 ---
 
 ## 14. Sicherheit

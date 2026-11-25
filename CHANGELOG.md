@@ -6,6 +6,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Behoben
+- **Karte: Internet-Kante landet am VPN-Knoten statt am Router:** `routerTargetId()` hat per TR-064-Endpunkt-Hostname (z. B. `fritz.box`) auch VPN-Clients (`.201+`, `vpn=1`) als Router-Ziel akzeptiert. VPN-Knoten werden jetzt in allen Fallbacks ausgeschlossen; ohne Geraetetreffer landet die Kante am Gateway (Gerät mit Gateway-IP bzw. virtueller Gateway-Knoten). 1 UI-Test.
+
+### Doku
+- Handbuch (alle 6 Sprachen) + README (de/en): Empfehlung zu `NETZ_VPN_POOL` ergaenzt — `auto` bei FRITZ!Box-VPN-Clients (.201+ im Gateway-/24), eigenes VPN-Subnetz als CIDR (z. B. `192.168.179.0/24`).
+
 ## [1.6.12] – 2026-11-24
 
 SQLite-Thread-Fix (PR #94): `check_same_thread=False` gegen `ProgrammingError` im Web-Container; Doku zu `NETZ_SQLITE_JOURNAL` in den READMEs (PR #93).
