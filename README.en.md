@@ -7,7 +7,7 @@ Scan and visualize a network as a map
 ![Map v1.6.1: subnet groups Home and Remote, nodes with category icons, gateway with ring, legend](docs/screenshots/01-karte.svg)
 
 - [Requirements & target architecture](docs/01-anforderungen.md) (German)
-- **Rooms/floors per device** as table-only extra info ("Room" column, room filter, JSON/CSV export, `GET /api/rooms`, `room` in `PATCH /api/device/{mac}`; map unaffected) plus a **table edit mode** (edit category/note/room inline); map scales to 200+ devices (label threshold, node size, spacing) — see [user manual](docs/02-benutzerhandbuch.en.md)§6
+- **Rooms/floors per device** as table-only extra info ("Room" column, JSON/CSV export, `GET /api/rooms`, `room` in `PATCH /api/device/{mac}`; map unaffected) plus a **table edit mode** (edit category/note/room inline); map scales to 200+ devices (label threshold, node size, spacing) — see [user manual](docs/02-benutzerhandbuch.en.md)§6
 
 ## License
 

@@ -24,23 +24,6 @@ function mapPalette(theme) {
 // Netzknoten werden größer gezeichnet, damit die Hierarchie in der Übersicht erkennbar ist.
 const HUB_SIZE = 40;
 const NODE_SIZE = 34;
-
-// Ab wie vielen Knoten die Karte als "gross" gilt (dichtere Darstellung noetig)
-function bigMap(n) {
-  return n > 60;
-}
-// Label erst ab staerkerem Zoom zeigen, wenn viele Knoten sichtbar sind
-function labelZoomThreshold(n) {
-  return n > 80 ? 1.3 : n > 40 ? 1.05 : 0.85;
-}
-// Knotengroessen schrumpfen bei grossen Karten leicht
-function nodeSizes(n) {
-  return bigMap(n) ? { node: 28, hub: 34 } : { node: NODE_SIZE, hub: HUB_SIZE };
-}
-// Baum-Abstaende wachsen bei grossen Karten (TREE bleibt Default fuer kleine Karten)
-function treeScale(n) {
-  return bigMap(n) ? { col: 150, level: 150, row: 116 } : TREE;
-}
 const NAME_MAX = 20;
 
 function shortName(v) {
@@ -196,7 +179,7 @@ const TREE = { col: 170, level: 140, row: 92 };
 // Verbindung landen in einem Raster unter dem Baum. Reine Funktion, damit sie testbar ist.
 function computeTreePositions(els) {
   const nodes = els.filter((e) => e.data && !e.data.source && !e.data.subnet).map((e) => e.data);
-  const T = treeScale(nodes.length);
+  const T = TREE;
   const ids = new Set(nodes.map((n) => n.id));
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   const kids = {};
@@ -315,12 +298,10 @@ function currentFilters() {
   const c = document.getElementById("filter-category").value;
   const s = document.getElementById("filter-status").value;
   const site = document.getElementById("filter-site").value;
-  const room = document.getElementById("filter-room").value;
   if (q) p.set("q", q);
   if (c) p.set("category", c);
   if (s) p.set("status", s);
   if (site) p.set("site", site);
-  if (room) p.set("room", room);
   return p.toString();
 }
 
@@ -410,22 +391,6 @@ async function loadSites() {
   }
 }
 
-async function loadRooms() {
-  const r = await api("/api/rooms");
-  if (!r.ok) return;
-  const names = await r.json();
-  const sel = document.getElementById("filter-room");
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">${esc(t("filter.allRooms"))}</option>`;
-  for (const name of names) {
-    const o = document.createElement("option");
-    o.value = name;
-    o.textContent = name;
-    sel.appendChild(o);
-  }
-  sel.value = cur;
-}
 
 function isIpLike(s) {
   return /^\d+\.\d+\.\d+\.\d+$/.test(s) || (s.includes(":") && !/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(s) && !s.startsWith("ip:"));
@@ -512,7 +477,6 @@ function buildElements() {
   const list = hideNoIp === "1" ? devices.filter((d) => d.ip) : devices;
   const n = Math.max(1, list.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
-  const sizes = nodeSizes(list.length);
   const grouping = groupMode === "subnet";
   const groupKeyOf = (d) => d.subnet || "";
   const groupIdOf = (k) => "subnet:" + k;
@@ -529,8 +493,7 @@ function buildElements() {
   if (grouping) {
     const keys = [...new Set(list.map(groupKeyOf).filter(Boolean))];
     const cols = Math.max(1, Math.ceil(Math.sqrt(keys.length)));
-    const maxCnt = Math.max(1, ...keys.map((k) => list.filter((d) => groupKeyOf(d) === k).length));
-    const G = 430 + 26 * Math.sqrt(maxCnt);
+    const G = 460;
     const labelOf = (k) => k + (SITE_MAP[k] ? " · " + SITE_MAP[k] : "");
     keys.forEach((k, gi) => {
       const gx = (gi % cols) * G;
@@ -586,7 +549,7 @@ function buildElements() {
         category: d.category,
         status: d.status,
         icon: iconKeyFor(d.category, d.category_reason, d.hostname),
-        size: hub ? sizes.hub : sizes.node,
+        size: hub ? HUB_SIZE : NODE_SIZE,
         root: !!META.gateway && d.ip === META.gateway,
         ports: d.port_count || 0,
         hub,
@@ -612,7 +575,7 @@ function buildElements() {
         category: "Internet",
         status: META.wan_status && META.wan_status.toLowerCase() !== "connected" ? "offline" : "online",
         icon: "globe",
-        size: sizes.node,
+        size: NODE_SIZE,
         virtual: true,
         hub: true,
       },
@@ -687,7 +650,7 @@ function clearSpotlight() {
 
 function updateZoomLabels() {
   if (!cy) return;
-  const showAll = cy.zoom() >= labelZoomThreshold(devices.length);
+  const showAll = cy.zoom() >= 0.85;
   const label = showAll ? "data(label)" : (ele) => (ele.data("hub") ? ele.data("label") : "");
   cy.style().selector("node").style("label", label).update();
 }
@@ -1261,7 +1224,6 @@ function bindFilters() {
   document.getElementById("search").addEventListener("input", () => { clearTimeout(t); t = setTimeout(loadDevices, 300); });
   document.getElementById("filter-category").addEventListener("change", loadDevices);
   document.getElementById("filter-site").addEventListener("change", loadDevices);
-  document.getElementById("filter-room").addEventListener("change", loadDevices);
   const editBtn = document.getElementById("btn-edit-mode");
   const syncEdit = () => {
     editBtn.setAttribute("aria-pressed", String(editMode));
@@ -1665,7 +1627,6 @@ async function init() {
   await loadCategories();
   await loadMeta();
   await loadSites();
-  await loadRooms();
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") clearSpotlight(); });
   bindNav();
   bindFilters();
