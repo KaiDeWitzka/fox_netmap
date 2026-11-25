@@ -161,14 +161,9 @@ filtro por nivel y descarga del archivo completo. Lo mismo ofrecen `/api/logs` y
 
 ### Habitaciones/Plantas
 
-Cada dispositivo puede recibir una **habitación** en el panel de detalles (p. ej. «salón planta baja», máx. 64 caracteres; API: `PATCH /api/device/{mac}` con `room`, lista: `GET /api/rooms`). La habitación aparece como columna de la tabla, en las exportaciones JSON/CSV (campo `room`), como filtro en la barra de filtros (parámetro `room` en `/api/devices` y las exportaciones) y como agrupación propia del mapa: «Agrupar por habitación» en la cabecera (exclusivo con «Agrupar por subred»); los dispositivos sin habitación van al grupo «Sin habitación». El escáner no sobrescribe la habitación durante los escaneos.
+Cada dispositivo puede tener una **habitación** (p. ej. «salón planta baja», máx. 64 caracteres) — en el panel de detalles o directamente en la tabla con el **modo edición** (API: `PATCH /api/device/{mac}` con `room`, lista: `GET /api/rooms`). La habitación es información adicional solo para la **tabla**: columna «Habitación», exportación JSON/CSV (campo `room`) y filtro en la barra de filtros (parámetro `room` en `/api/devices` y las exportaciones). **El mapa no se ve afectado.** El escáner no sobrescribe la habitación durante los escaneos.
 
-A la derecha, pestaña **Detalles**: categoría (editable), IP/**IPv6** (v6 vía coincidencia MAC NDP de `ip -6 neigh`, columna `ip6` en BD/JSON/CSV), MAC/hostname/fabricante (OUI),
-estado, subred, sitio, fuente(s) del escaneo (p. ej. `arp,tr064`), «conectado a» (selección
-manual, vacío = automático), puertos abiertos con nombres de servicio, nota, historial
-(en línea/sin conexión/puertos) y eventos. **Guardar** persiste categoría/nota/conexión manual.
-
----
+**Modo edición de la tabla:** botón «Editar» arriba en la vista de tabla (el estado se guarda en el navegador). Después, las celdas **categoría** (lista desplegable), **nota** y **habitación** se pueden editar directamente; cada cambio se guarda de inmediato vía `PATCH` y la vista se actualiza. Sin modo edición, la tabla es de solo lectura (salvo la casilla de «Conectar a»).
 
 ## 7. Búsqueda y filtros
 

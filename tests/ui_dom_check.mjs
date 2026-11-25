@@ -577,29 +577,30 @@ check("Karte: Auto-Layout ohne gespeicherte Positionen = Baum (preset)", cyInsta
   await w.eval("loadDevices()");
 }
 {
-  // Raeume: Gruppierung nach Raum (groupMode "room")
-  const chkR = $("#chk-rooms");
-  check("Karte: Checkbox 'Nach Raum gruppieren' (chk-rooms) vorhanden", !!chkR);
-  chkR.checked = true;
-  chkR.dispatchEvent(new w.Event("change"));
+  // Raeume haben KEINEN Einfluss auf die Karte: keine chk-rooms-Gruppierung, keine room:-Knoten
+  check("Karte: keine Raum-Gruppierung (keine chk-rooms, keine room:-Knoten)",
+    !$("#chk-rooms") && !cyInstance._els.some((e) => e.data && String(e.data.id || "").startsWith("room:")));
+}
+{
+  // Bearbeiten-Modus: Raum-Zelle wird zum Input, change -> PATCH room
+  check("Tabelle: Edit-Mode-Button vorhanden", !!$("#btn-edit-mode"));
+  const textInputsBefore = doc.querySelectorAll('#device-table tbody tr td input:not([type="checkbox"])').length;
+  $("#btn-edit-mode").click();
   await sleep(60);
-  const elsR = cyInstance._els;
-  check(
-    "Raum-Gruppierung: Gruppenknoten room:EG-Wohnzimmer / room:Keller / room: (Ohne Raum) vorhanden",
-    elsR.some((e) => e.data && e.data.id === "room:EG-Wohnzimmer") &&
-      elsR.some((e) => e.data && e.data.id === "room:Keller") &&
-      elsR.some((e) => e.data && e.data.id === "room:")
-  );
-  check(
-    "Raum-Gruppierung: wlan-tv -> parent room:EG-Wohnzimmer, nas -> room:Keller, Switch -> room:",
-    elsR.some((e) => e.data && e.data.id === "aa:bb:cc:00:11:22" && e.data.parent === "room:EG-Wohnzimmer") &&
-      elsR.some((e) => e.data && e.data.id === "aa:bb:cc:dd:ee:ff" && e.data.parent === "room:Keller") &&
-      elsR.some((e) => e.data && e.data.id === "02:00:00:8e:ee:06" && e.data.parent === "room:")
-  );
-  chkR.checked = false;
-  chkR.dispatchEvent(new w.Event("change"));
+  const roomInputs = [...doc.querySelectorAll("#device-table tbody tr")].map((tr) => {
+    const td = [...tr.querySelectorAll("td")].find((x) => x.querySelector("input") && x.querySelector("input").getAttribute("aria-label") === "Raum/Ebene");
+    return td ? td.querySelector("input") : null;
+  });
+  check("Bearbeiten-Modus an: Raum-Zellen sind Eingabefelder (statt reiner Text)", textInputsBefore === 0 && roomInputs.filter(Boolean).length === doc.querySelectorAll("#device-table tbody tr").length);
+  const firstRoom = roomInputs.find(Boolean);
+  firstRoom.value = "OG Arbeitszimmer";
+  firstRoom.dispatchEvent(new w.Event("change"));
+  await sleep(80);
+  const rp2 = [...calls].reverse().find((c) => c.url.includes("/api/device/") && c.method === "PATCH" && c.body && c.body.includes('"room"'));
+  check("Bearbeiten-Modus: Raum-Aenderung in Tabelle -> PATCH mit room=OG Arbeitszimmer", !!rp2 && rp2.body.includes("OG Arbeitszimmer"));
+  $("#btn-edit-mode").click();
   await sleep(60);
-  check("Raum-Gruppierung aus: keine room:-Knoten mehr", !cyInstance._els.some((e) => e.data && String(e.data.id || "").startsWith("room:")));
+  check("Bearbeiten-Modus aus: Raum-Zellen wieder reiner Text", ![...doc.querySelectorAll('#device-table tbody tr td input:not([type="checkbox"])')].some((i) => i.getAttribute("aria-label") === "Raum/Ebene"));
 }
 {
   // Raum-Filter schickt room= an /api/devices

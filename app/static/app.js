@@ -85,6 +85,7 @@ function applyI18n() {
 
 let collapsed = new Set(JSON.parse(localStorage.getItem("fox_collapsed") || "[]"));
 let groupMode = localStorage.getItem("fox_groups") || "none";
+let editMode = localStorage.getItem("fox_editmode") === "1";
 // Geräte ohne IP (z. B. TR-064-Host nur mit MAC/Name) erst auf der Karte zeigen, wenn angehakt (Default: ausblenden)
 let hideNoIp = localStorage.getItem("fox_noip") ?? "1";
 
@@ -376,8 +377,6 @@ function maybeAutoGroup() {
     localStorage.setItem("fox_groups", "subnet");
     const chk = document.getElementById("chk-groups");
     if (chk) chk.checked = true;
-    const chkR = document.getElementById("chk-rooms");
-    if (chkR) chkR.checked = false;
   }
 }
 
@@ -514,9 +513,9 @@ function buildElements() {
   const n = Math.max(1, list.length);
   const R = Math.max(220, 32 * Math.sqrt(n));
   const sizes = nodeSizes(list.length);
-  const grouping = groupMode === "subnet" || groupMode === "room";
-  const groupKeyOf = (d) => (groupMode === "room" ? d.room || "" : d.subnet || "");
-  const groupIdOf = (k) => (groupMode === "room" ? "room:" : "subnet:") + k;
+  const grouping = groupMode === "subnet";
+  const groupKeyOf = (d) => d.subnet || "";
+  const groupIdOf = (k) => "subnet:" + k;
   const nodes = [];
   const edges = [];
   const nodeIds = new Set();
@@ -528,11 +527,11 @@ function buildElements() {
   // Subnetz-Gruppen zu Beginn auf einem Raster positionieren, damit sie nicht übereinander liegen
   const groupPos = {};
   if (grouping) {
-    const keys = groupMode === "room" ? [...new Set(list.map(groupKeyOf))] : [...new Set(list.map(groupKeyOf).filter(Boolean))];
+    const keys = [...new Set(list.map(groupKeyOf).filter(Boolean))];
     const cols = Math.max(1, Math.ceil(Math.sqrt(keys.length)));
     const maxCnt = Math.max(1, ...keys.map((k) => list.filter((d) => groupKeyOf(d) === k).length));
     const G = 430 + 26 * Math.sqrt(maxCnt);
-    const labelOf = (k) => (groupMode === "room" ? k || t("room.unassigned") : k + (SITE_MAP[k] ? " · " + SITE_MAP[k] : ""));
+    const labelOf = (k) => k + (SITE_MAP[k] ? " · " + SITE_MAP[k] : "");
     keys.forEach((k, gi) => {
       const gx = (gi % cols) * G;
       const gy = Math.floor(gi / cols) * G;
@@ -1100,7 +1099,7 @@ function buildCell(d, key) {
     img.height = 16;
     img.src = iconUri(iconKeyFor(d.category, d.category_reason, d.hostname), mapPalette().icon);
     td.appendChild(img);
-    if (EMBED) {
+    if (EMBED || !editMode) {
       td.appendChild(document.createTextNode(t("cat." + d.category)));
       td.title = t("cat." + d.category);
       return td;
@@ -1109,11 +1108,19 @@ function buildCell(d, key) {
     for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = t("cat." + c); if (c === d.category) o.selected = true; sel.appendChild(o); }
     sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
     td.appendChild(sel);
-  } else if (key === "note" && !EMBED) {
+  } else if (key === "note" && editMode && !EMBED) {
     const inp = document.createElement("input");
     inp.value = d.note || "";
     inp.placeholder = t("cols.note");
     inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) }).then(loadDevices));
+    td.appendChild(inp);
+  } else if (key === "room" && editMode && !EMBED) {
+    const inp = document.createElement("input");
+    inp.value = d.room || "";
+    inp.maxLength = 64;
+    inp.placeholder = t("det.roomPh");
+    inp.setAttribute("aria-label", t("d.room"));
+    inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ room: inp.value }) }).then(loadDevices));
     td.appendChild(inp);
   } else {
     td.textContent = d[key] ?? "";
@@ -1255,6 +1262,15 @@ function bindFilters() {
   document.getElementById("filter-category").addEventListener("change", loadDevices);
   document.getElementById("filter-site").addEventListener("change", loadDevices);
   document.getElementById("filter-room").addEventListener("change", loadDevices);
+  const editBtn = document.getElementById("btn-edit-mode");
+  const syncEdit = () => {
+    editBtn.setAttribute("aria-pressed", String(editMode));
+    editBtn.classList.toggle("toggled", editMode);
+    document.getElementById("view-table").classList.toggle("edit-mode", editMode);
+    localStorage.setItem("fox_editmode", editMode ? "1" : "0");
+  };
+  syncEdit();
+  editBtn.addEventListener("click", () => { editMode = !editMode; syncEdit(); renderTable(); });
   const statusSel = document.getElementById("filter-status");
   const btnOnline = document.getElementById("btn-online");
   const syncOnline = () => {
@@ -1492,21 +1508,10 @@ function bindLayout() {
 
 function bindGroups() {
   const chk = document.getElementById("chk-groups");
-  const chkR = document.getElementById("chk-rooms");
   if (chk) {
     chk.checked = groupMode === "subnet";
     chk.addEventListener("change", () => {
       groupMode = chk.checked ? "subnet" : "none";
-      if (chk.checked && chkR) chkR.checked = false;
-      localStorage.setItem("fox_groups", groupMode);
-      renderMap();
-    });
-  }
-  if (chkR) {
-    chkR.checked = groupMode === "room";
-    chkR.addEventListener("change", () => {
-      groupMode = chkR.checked ? "room" : "none";
-      if (chkR.checked && chk) chk.checked = false;
       localStorage.setItem("fox_groups", groupMode);
       renderMap();
     });

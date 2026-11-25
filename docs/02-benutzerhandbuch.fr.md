@@ -160,14 +160,9 @@ les 5 s, filtre par niveau, et téléchargement du fichier complet. Idem via `/a
 
 ### Pièces/Niveaux
 
-Chaque appareil peut recevoir une **pièce** dans le panneau de détails (p. ex. « salon RDC », 64 caractères max ; API : `PATCH /api/device/{mac}` avec `room`, liste : `GET /api/rooms`). La pièce apparaît comme colonne du tableau, dans les exports JSON/CSV (champ `room`), comme filtre dans la barre de filtres (paramètre `room` dans `/api/devices` et les exports) et comme groupement de carte propre : « Grouper par pièce » dans l'en-tête (exclusif avec « Grouper par sous-réseau ») ; les appareils sans pièce vont dans le groupe « Sans pièce ». Le scanner n'écrase pas la pièce lors des scans.
+Chaque appareil peut recevoir une **pièce** (p. ex. « salon RDC », 64 caractères max) — dans le panneau de détails ou directement dans le tableau via le **mode édition** (API : `PATCH /api/device/{mac}` avec `room`, liste : `GET /api/rooms`). La pièce est une information supplémentaire pour le **tableau uniquement** : colonne « Pièce », export JSON/CSV (champ `room`) et filtre dans la barre de filtres (paramètre `room` dans `/api/devices` et les exports). **La carte n'est pas concernée.** Le scanner n'écrase pas la pièce lors des scans.
 
-À droite, onglet **Détails** : catégorie (modifiable), IP/**IPv6** (v6 via correspondance MAC NDP depuis `ip -6 neigh`, colonne `ip6` en BDD/JSON/CSV), MAC/nom d'hôte/fabricant (OUI), état,
-sous-réseau, site, source(s) du scan (p. ex. `arp,tr064`), « connecté à » (choix manuel, vide =
-auto), ports ouverts avec noms de service, note, historique (en ligne/hors ligne/ports) et
-événements. **Enregistrer** persiste catégorie/note/connexion manuelle.
-
----
+**Mode édition du tableau :** bouton « Modifier » en haut de la vue tableau (l'état est enregistré dans le navigateur). Ensuite, les cellules **catégorie** (liste déroulante), **note** et **pièce** sont modifiables directement ; chaque modification est enregistrée immédiatement via `PATCH` et la vue est actualisée. Sans le mode édition, le tableau est en lecture seule (sauf la case à cocher pour « Connecté à »).
 
 ## 7. Recherche & filtres
 
