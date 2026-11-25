@@ -124,7 +124,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
   Sie zeigt alle Symbole mit Kategorienamen sowie Gateway-Ring, offline und die Linienarten.
 - **Automatisch aufgeräumt:** Labels erst ab Zoom ≥ 0,85 vollständig sichtbar (darunter nur Hubs:
   Router/Switch/Gateway/Internet), sehr kleine Schrift wird gar nicht gezeichnet; ab > 25 Geräten werden
-  Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar). Zusätzlich bei vielen Geräten: ab 41 Knoten Labels erst ab Zoom ≥ 1,05 (ab 81: ≥ 1,3), ab 61 Knoten kleinere Knoten und größere Abstände im Baum-Layout — übersichtlich auch bei 100+ Geräten.
+  Subnetz-Gruppen automatisch aktiviert; „Nur online“ ist standardmäßig aktiv (umschaltbar).
 - Virtuelle Knoten: **Internet** (mit WAN-IP), **Gateway** (falls das Gateway selbst nicht in der
   Geräteliste ist) und **wlan:…** für WLAN-Geräte ohne eigenen Knoten.
 - **Internet ↔ Router:** Liest TR-064 den WAN-Status aus (z. B. von der FRITZ!Box), verbindet die Karte den Internet-Knoten mit dem Router — über die Gateway-IP oder den TR-064-Endpunkt (Hostname/IP wie „fritz.box“), auch wenn das Gateway nicht in der Geräteliste steht (`wan_endpoint` in `/api/meta`). WAN-Status ≠ „Connected“ → Internet-Knoten offline.
@@ -162,7 +162,7 @@ Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-E
 
 ### Räume/Ebenen
 
-Jedes Gerät kann einen **Raum** erhalten (z. B. „EG Wohnzimmer“, max. 64 Zeichen) — im Detail-Panel oder direkt in der Tabelle im **Bearbeiten-Modus** (API: `PATCH /api/device/{mac}` mit `room`, Liste: `GET /api/rooms`). Der Raum ist reine Zusatzinformation für die **Tabelle**: Spalte „Raum“, JSON/CSV-Export (`room`-Feld) und Filter in der Filterleiste (`room`-Parameter in `/api/devices` und den Exports). **Die Karte bleibt davon unberührt.** Der Scanner überschreibt den Raum beim Scan nicht.
+Jedes Gerät kann einen **Raum** erhalten (z. B. „EG Wohnzimmer“, max. 64 Zeichen) — im Detail-Panel oder direkt in der Tabelle im **Bearbeiten-Modus** (API: `PATCH /api/device/{mac}` mit `room`, Liste: `GET /api/rooms`). Der Raum ist reine Zusatzinformation für die **Tabelle**: Spalte „Raum“, JSON/CSV-Export (`room`-Feld) sowie serverseitig filterbar (`room`-Parameter in `/api/devices` und den Exports). **Die Karte bleibt davon unberührt.** Der Scanner überschreibt den Raum beim Scan nicht.
 
 **Bearbeiten-Modus der Tabelle:** Button „Bearbeiten“ oben in der Tabellenansicht (Zustand wird im Browser gespeichert). Danach sind die Zellen **Kategorie** (Auswahlliste), **Notiz** und **Raum** direkt editierbar; jede Änderung wird sofort per `PATCH` gespeichert und die Ansicht aktualisiert. Ohne Bearbeiten-Modus ist die Tabelle read-only (abgesehen von der Auswahlbox für „Verbunden mit“).
 

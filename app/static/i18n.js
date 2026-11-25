@@ -1570,43 +1570,31 @@ const I18N_EXTRA12 = {
     "cols.room": "Raum",
     "d.room": "Raum/Ebene",
     "det.roomPh": "z. B. EG Wohnzimmer",
-    "filter.roomAria": "Raum filtern",
-    "filter.allRooms": "Alle R\u00e4ume",
   },
   en: {
     "cols.room": "Room",
     "d.room": "Room/Floor",
     "det.roomPh": "e.g. ground floor living room",
-    "filter.roomAria": "Filter by room",
-    "filter.allRooms": "All rooms",
   },
   fr: {
     "cols.room": "Pi\u00e8ce",
     "d.room": "Pi\u00e8ce/Niveau",
     "det.roomPh": "p. ex. salon RDC",
-    "filter.roomAria": "Filtrer par pi\u00e8ce",
-    "filter.allRooms": "Toutes les pi\u00e8ces",
   },
   es: {
     "cols.room": "Habitaci\u00f3n",
     "d.room": "Habitaci\u00f3n/Planta",
     "det.roomPh": "p. ej. sal\u00f3n planta baja",
-    "filter.roomAria": "Filtrar por habitaci\u00f3n",
-    "filter.allRooms": "Todas las habitaciones",
   },
   it: {
     "cols.room": "Stanza",
     "d.room": "Stanza/Piano",
     "det.roomPh": "es. soggiorno piano terra",
-    "filter.roomAria": "Filtra per stanza",
-    "filter.allRooms": "Tutte le stanze",
   },
   pt: {
     "cols.room": "Divis\u00e3o",
     "d.room": "Divis\u00e3o/Piso",
     "det.roomPh": "ex.: sala r\u00e9s-do-ch\u00e3o",
-    "filter.roomAria": "Filtrar por divis\u00e3o",
-    "filter.allRooms": "Todas as divis\u00f5es",
   },
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA12[lang] || {});

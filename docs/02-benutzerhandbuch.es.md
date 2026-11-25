@@ -123,7 +123,7 @@ Al hacer clic en un dispositivo (o en ⚙) se abre el panel derecho con las pest
   Muestra todos los símbolos con su categoría, el anillo de pasarela, offline y los tipos de línea.
 - **Despeje automático:** etiquetas completas a partir de zoom ≥ 0,85 (por debajo solo hubs:
   router/switch/pasarela/Internet), el texto muy pequeño no se dibuja; los grupos de subred se activan
-  automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto. Además con muchos dispositivos: desde 41 nodos, etiquetas solo desde zoom ≥ 1,05 (desde 81: ≥ 1,3); desde 61 nodos, nodos más pequeños y mayor espacio en el árbol — legible incluso con más de 100 dispositivos.
+  automáticamente con más de 25 dispositivos; «Solo online» está activo por defecto.
 - Nodos virtuales: **Internet** (con IP WAN), **Pasarela** (si la pasarela no está en la lista) y
   **wlan:…** para dispositivos WLAN sin nodo propio.
 - **Internet ↔ router:** si TR-064 lee el estado WAN (p. ej. de la FRITZ!Box), el mapa conecta el nodo Internet con el router — por la IP de pasarela o el endpoint TR-064 (nombre/IP como «fritz.box»), aunque la pasarela no esté en la lista (`wan_endpoint` en `/api/meta`). Estado WAN ≠ «Connected» → nodo Internet sin conexión.
@@ -161,7 +161,7 @@ filtro por nivel y descarga del archivo completo. Lo mismo ofrecen `/api/logs` y
 
 ### Habitaciones/Plantas
 
-Cada dispositivo puede tener una **habitación** (p. ej. «salón planta baja», máx. 64 caracteres) — en el panel de detalles o directamente en la tabla con el **modo edición** (API: `PATCH /api/device/{mac}` con `room`, lista: `GET /api/rooms`). La habitación es información adicional solo para la **tabla**: columna «Habitación», exportación JSON/CSV (campo `room`) y filtro en la barra de filtros (parámetro `room` en `/api/devices` y las exportaciones). **El mapa no se ve afectado.** El escáner no sobrescribe la habitación durante los escaneos.
+Cada dispositivo puede tener una **habitación** (p. ej. «salón planta baja», máx. 64 caracteres) — en el panel de detalles o directamente en la tabla con el **modo edición** (API: `PATCH /api/device/{mac}` con `room`, lista: `GET /api/rooms`). La habitación es información adicional solo para la **tabla**: columna «Habitación», exportación JSON/CSV (campo `room`) y filtrable en el servidor (parámetro `room` en `/api/devices` y las exportaciones). **El mapa no se ve afectado.** El escáner no sobrescribe la habitación durante los escaneos.
 
 **Modo edición de la tabla:** botón «Editar» arriba en la vista de tabla (el estado se guarda en el navegador). Después, las celdas **categoría** (lista desplegable), **nota** y **habitación** se pueden editar directamente; cada cambio se guarda de inmediato vía `PATCH` y la vista se actualiza. Sin modo edición, la tabla es de solo lectura (salvo la casilla de «Conectar a»).
 

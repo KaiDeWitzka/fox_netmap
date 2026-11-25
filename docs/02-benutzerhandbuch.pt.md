@@ -121,7 +121,7 @@ Clicar num dispositivo (ou em ⚙) abre o painel direito com os separadores **De
   todos os símbolos com a categoria, o anel do gateway, offline e os tipos de linha.
 - **Limpeza automática:** etiquetas completas a partir de zoom ≥ 0,85 (abaixo só os hubs:
   router/switch/gateway/Internet), texto muito pequeno não é desenhado; acima de 25 dispositivos os grupos
-  de sub-rede ativam-se sozinhos; «Só online» está ativo por omissão. Além disso com muitos dispositivos: a partir de 41 nós, rótulos só a partir de zoom ≥ 1,05 (a partir de 81: ≥ 1,3); a partir de 61 nós menores e maior espaçamento na árvore — legível mesmo com mais de 100 dispositivos.
+  de sub-rede ativam-se sozinhos; «Só online» está ativo por omissão.
 - Nós virtuais: **Internet** (com IP WAN), **Gateway** (se o gateway não estiver na lista) e **wlan:…** para
 - **Internet ↔ roteador:** se o TR-064 lê o estado WAN (p. ex. da FRITZ!Box), o mapa liga o nó Internet ao roteador — pelo IP do gateway ou pelo endpoint TR-064 (hostname/IP como "fritz.box"), mesmo que o gateway não esteja na lista (`wan_endpoint` em `/api/meta`). Estado WAN ≠ "Connected" → nó Internet offline.
   dispositivos WLAN sem nó próprio.
@@ -159,7 +159,7 @@ A vista **Registo** mostraOs níveis são coloridos (INFO azul, WARN âmbar, ERR
 
 ### Divisões/Pisos
 
-Cada dispositivo pode ter uma **divisão** (ex.: “sala rés-do-chão”, máx. 64 caracteres) — no painel de detalhes ou diretamente na tabela no **modo edição** (API: `PATCH /api/device/{mac}` com `room`, lista: `GET /api/rooms`). A divisão é informação extra apenas para a **tabela**: coluna «Divisão», exportação JSON/CSV (campo `room`) e filtro na barra de filtros (parâmetro `room` em `/api/devices` e nas exportações). **O mapa não é afetado.** O scanner não sobrescreve a divisão durante as verificações.
+Cada dispositivo pode ter uma **divisão** (ex.: “sala rés-do-chão”, máx. 64 caracteres) — no painel de detalhes ou diretamente na tabela no **modo edição** (API: `PATCH /api/device/{mac}` com `room`, lista: `GET /api/rooms`). A divisão é informação extra apenas para a **tabela**: coluna «Divisão», exportação JSON/CSV (campo `room`) e filtrável no servidor (parâmetro `room` em `/api/devices` e nas exportações). **O mapa não é afetado.** O scanner não sobrescreve a divisão durante as verificações.
 
 **Modo edição da tabela:** botão «Editar» no topo da vista de tabela (o estado é guardado no navegador). Depois, as células **categoria** (lista), **nota** e **divisão** ficam editáveis diretamente; cada alteração é gravada de imediato via `PATCH` e a vista atualiza. Sem modo edição, a tabela é apenas de leitura (exceto a caixa de seleção para «Ligar a»).
 

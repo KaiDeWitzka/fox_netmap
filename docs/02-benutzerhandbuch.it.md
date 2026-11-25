@@ -123,7 +123,7 @@ Cliccando su un dispositivo (o su ⚙) si apre il pannello laterale a destra con
   predefinita). Mostra tutti i simboli con la categoria, l'anello del gateway, offline e i tipi di linea.
 - **Pulizia automatica:** etichette complete da zoom ≥ 0,85 (sotto solo gli hub: router/switch/gateway/Internet),
   il testo molto piccolo non viene disegnato; oltre 25 dispositivi i gruppi di sottorete si attivano da soli;
-  «Solo online» è attivo per impostazione predefinita. Inoltre con molti dispositivi: da 41 nodi etichette solo da zoom ≥ 1,05 (da 81: ≥ 1,3); da 61 nodi più piccoli e maggiore spaziatura dell'albero — leggibile anche con oltre 100 dispositivi.
+  «Solo online» è attivo per impostazione predefinita.
 - Nodi virtuali: **Internet** (con IP WAN), **Gateway** (se il gateway non è nell'elenco) e **wlan:…** per
 - **Internet ↔ router:** se TR-064 legge lo stato WAN (p. es. dalla FRITZ!Box), la mappa collega il nodo Internet al router — tramite l'IP del gateway o l'endpoint TR-064 (hostname/IP come "fritz.box"), anche se il gateway non è nell'elenco (`wan_endpoint` in `/api/meta`). Stato WAN ≠ "Connected" → nodo Internet offline.
   dispositivi WLAN senza nodo proprio.
@@ -161,7 +161,7 @@ filtro per livello e download del file completo. Lo stesso è offerto da `/api/l
 
 ### Stanze/Piani
 
-Ogni dispositivo può avere una **stanza** (es. “soggiorno piano terra”, max 64 caratteri) — nel pannello dettagli o direttamente nella tabella in **modalità modifica** (API: `PATCH /api/device/{mac}` con `room`, elenco: `GET /api/rooms`). La stanza è un'informazione extra solo per la **tabella**: colonna «Stanza», export JSON/CSV (campo `room`) e filtro nella barra dei filtri (parametro `room` in `/api/devices` e negli export). **La mappa non viene modificata.** Lo scanner non sovrascrive la stanza durante le scansioni.
+Ogni dispositivo può avere una **stanza** (es. “soggiorno piano terra”, max 64 caratteri) — nel pannello dettagli o direttamente nella tabella in **modalità modifica** (API: `PATCH /api/device/{mac}` con `room`, elenco: `GET /api/rooms`). La stanza è un'informazione extra solo per la **tabella**: colonna «Stanza», export JSON/CSV (campo `room`) e filtrabile lato server (parametro `room` in `/api/devices` e negli export). **La mappa non viene modificata.** Lo scanner non sovrascrive la stanza durante le scansioni.
 
 **Modalità modifica della tabella:** pulsante «Modifica» in alto nella vista tabella (lo stato viene salvato nel browser). Poi le celle **categoria** (menu a discesa), **nota** e **stanza** sono modificabili direttamente; ogni modifica viene salvata subito via `PATCH` e la vista si aggiorna. Senza modalità modifica la tabella è di sola lettura (tranne la casella per «Connetti a»).
 
