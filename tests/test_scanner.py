@@ -729,3 +729,11 @@ def test_effective_vpn_pool_fallback_auto_bei_tr064():
     from app.scanner import topology
     assert topology.is_vpn_ip("192.168.178.201", "auto", "192.168.178.1") is True
     assert topology.is_vpn_ip("192.168.178.10", "auto", "192.168.178.1") is False
+def test_tr064_401_hint():
+    from app.scanner import run
+    from app.scanner.tr064 import TR064Error
+
+    hint = run.tr064_401_hint(TR064Error("X_AVM-DE_GetMeshListPath -> HTTP 401"))
+    assert "HTTP 401" in hint and "'App'" in hint and "UPnP" in hint
+    assert run.tr064_401_hint(TR064Error("GetInfo -> HTTP 500")) == ""
+    assert run.tr064_401_hint(TR064Error("Verbindungsfehler")) == ""

@@ -284,7 +284,7 @@ Box: welches Gerät an welchem Repeater oder LAN-Port hängt, per LAN oder WLAN 
 Anschluss, z. B. `WLAN · 5 GHz` oder `LAN · LAN 1`. Der TR-064-Benutzer braucht laut AVM-Spezifikation die
 Berechtigung „App“ oder „Phone“. Abschalten mit `NETZ_FRITZ_MESH=false`. Die Mesh-Liste wird nur aus dem lokalen Netz geladen
 (nur relativer Pfad, keine Weiterleitungen, max. 5 MB); die Session-ID im Pfad wird nicht protokolliert. Im Log steht
-`Mesh: X Knoten, Y Repeater, Z Zuordnungen`.
+`Mesh: X Knoten, Y Repeater, Z Zuordnungen`. Bei `HTTP 401` im Log fehlt dem TR-064-Benutzer die Berechtigung (laut AVM „App“ oder „Phone“, am einfachsten Admin-Rechte) bzw. es fehlen die globalen Schalter „Zugriff für Anwendungen zulassen“ und „Statusinformationen über UPnP übermitteln“ (Heimnetz → Netzwerk → Netzwerkeinstellungen); manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab.
 
 **Switch-Heuristik:** Nicht verwaltete Switches sind für die Box unsichtbar. Sieht sie an einem LAN-Port mehrere
 Geräte und ist genau eines davon als Switch kategorisiert, werden die übrigen diesem Switch zugeordnet. Hängen zwei

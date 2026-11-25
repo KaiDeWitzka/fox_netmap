@@ -136,6 +136,16 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
     return list(by_mac.values())
 
 
+def tr064_401_hint(exc: Exception) -> str:
+    """HTTP 401 = Authentifizierung/Berechtigung fehlgeschlagen: Der TR-064-Benutzer braucht in der
+    FRITZ!Box Admin-Rechte bzw. alle Berechtigungen sowie 'Zugriff fuer Anwendungen zulassen' und
+    'Statusinformationen ueber UPnP uebermitteln' (Heimnetz > Netzwerk > Netzwerkeinstellungen).
+    Manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab."""
+    if "HTTP 401" in str(exc):
+        return " — HTTP 401: TR-064-Benutzer in der FRITZ!Box pruefen (laut AVM braucht er die Berechtigung 'App' oder 'Phone', am einfachsten Admin-Rechte; zusaetzlich 'Zugriff fuer Anwendungen zulassen' + 'Statusinformationen ueber UPnP uebermitteln' in Heimnetz > Netzwerk > Netzwerkeinstellungen; manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab)"
+    return ""
+
+
 def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
     """Mesh-Topologie vom ersten erreichbaren FRITZ!-Endpunkt (in der Regel der Mesh-Master)."""
     if not (settings.fritz_mesh and settings.fritz_user and settings.fritz_pass):
@@ -144,7 +154,7 @@ def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
         try:
             info = tr064.parse_mesh(tr064.fetch_mesh(ep, settings.fritz_user, settings.fritz_pass))
         except tr064.TR064Error as exc:
-            log.warning("Mesh-Topologie nicht abrufbar (%s): %s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc)
+            log.warning("Mesh-Topologie nicht abrufbar (%s): %s%s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc, tr064_401_hint(exc))
             continue
         repeaters = sum(1 for n in info["nodes"].values() if n["role"] == "slave")
         log.info("Mesh: %s Knoten, %s Repeater, %s Zuordnungen", len(info["nodes"]), repeaters, len(info["parents"]))
@@ -233,7 +243,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                     wan_endpoints.add(host_part)
                     conn.commit()
             except tr064.TR064Error as exc:
-                log.warning("TR-064 nicht erreichbar (%s): %s", ep, exc)
+                log.warning("TR-064 nicht erreichbar (%s): %s%s", ep, exc, tr064_401_hint(exc))
     if wan_endpoints:
         db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
         conn.commit()
