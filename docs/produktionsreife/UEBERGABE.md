@@ -147,7 +147,7 @@ sie um, wenn die Spalte "Kais Wahl" leer bleibt.** Eine Frage ist schon entschie
 | --- | ------------------------------------------------------- | ---------- | --------- |
 | E-1 | Geräte mit gleicher IP automatisch zusammenführen?      | B          |           |
 | E-2 | Login über die Oberfläche abschaltbar?                  | B          |           |
-| E-3 | TR-064: bei Fehler von HTTPS auf HTTP zurückfallen?     | B          |           |
+| E-3 | TR-064: bei Fehler von HTTPS auf HTTP zurückfallen?     | B          | C (abweichend): Fallback bleibt (seit #111 fuer Hosts/WAN/Mesh, mit WARN je Lauf + Port-Hinweis); das Restrisiko traegt, wer den Downgrade aktiv nutzt (z. B. Port 49000 statt 49443) -> Doku-Korrektur + Restrisiko in docs/03-sicherheit.md Abschnitt 4 |
 | E-4 | Oberfläche in Module aufteilen?                         | B          |           |
 | E-5 | Wie streng prüft `mypy` die Typen?                      | B          |           |
 | E-6 | Wie wird JavaScript geprüft?                            | A          |           |
