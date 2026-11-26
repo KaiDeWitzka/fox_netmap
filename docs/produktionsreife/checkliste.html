@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0-W6 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b), W7 als naechstes",
+        "stand": "2026-11-26, W0-W7 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b, 303d36d), W8 als naechstes",
         "wellen": [
                 {
                         "id": "W0",
@@ -730,10 +730,10 @@
                         "titel": "validate_settings ist eine Wenn-Dann-Leiter mit Komplexität 46 im Routenmodul",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "in_arbeit",
-                        "nachweis": "",
-                        "commit": "",
-                        "notiz": "Parser zentral in validation.py, C901-Zerlegung folgt in W7 (noqa)"
+                        "status": "erledigt",
+                        "nachweis": "app/validation.py: validate_patch als reine Funktion (Meldungen byte-identisch); 0 noqa: C901 in app/ (ruff C90 clean); tests/test_settings_api.py gruen; gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": "C901-Zerlegung in W7 erledigt (war in_arbeit seit W1)"
                 },
                 {
                         "id": "Q-8",
@@ -1070,9 +1070,9 @@
                         "titel": "collect_devices hat 125 Anweisungen und Komplexität 40, und der Scanner schreibt selbst in die Datenbank",
                         "welle": "W7",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "app/scanner/pipeline.py: stufiges collect_devices; Charakterisierung tests/test_pipeline.py::test_collect_devices_output_unchanged (gruen auf altem und neuem Code); gate.sh gruen",
+                        "commit": "303d36d",
                         "notiz": ""
                 },
                 {
@@ -1080,9 +1080,9 @@
                         "titel": "SQL und Fachlogik stecken in den Routen von api.py",
                         "welle": "W7",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "Split app/api.py -> app/routers/{common,devices,scan,export,settings,tokens,meta}.py + app/services/{authz,devices}.py + app/models.py + db-Helper; tests/test_routes_inventory.py::test_route_table_unchanged; gate.sh gruen",
+                        "commit": "303d36d",
                         "notiz": ""
                 },
                 {
@@ -1090,9 +1090,9 @@
                         "titel": "Parser und Klassifikator sind zu komplex",
                         "welle": "W7",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "classify + parse_mesh gesplittet (categorize.py, tr064.py); tests/test_categorize.py::test_rule_order_unchanged + 25er-Snapshot; 0 noqa: C901 in app/ (ruff C90 clean)",
+                        "commit": "303d36d",
                         "notiz": ""
                 },
                 {
@@ -1100,9 +1100,9 @@
                         "titel": "Typ-Artefakte und 159 Fehler unter mypy --strict, aber kein Laufzeitfehler",
                         "welle": "W7",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "mypy --strict app: 0 Fehler in 41 Dateien (neuer Gate-Schritt in scripts/gate.sh); app/types.py TypedDicts + response_model an den Routen; gate.sh gruen",
+                        "commit": "303d36d",
                         "notiz": ""
                 },
                 {
@@ -1110,19 +1110,19 @@
                         "titel": "Die Route /api/rooms wird von der Oberfläche nicht genutzt, und Altschlüssel halten zwei Konfigurationspfade",
                         "welle": "W7",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
-                        "notiz": ""
+                        "status": "erledigt",
+                        "nachweis": "tests/test_routes_inventory.py::test_no_unreferenced_routes (KEEP={/api/health,/api/rooms}); Entscheidung /api/rooms bleibt in docs/entscheidungen.md dokumentiert",
+                        "commit": "303d36d",
+                        "notiz": "/api/rooms bleibt (dokumentierte Entscheidung)"
                 },
                 {
                         "id": "Q-16",
                         "titel": "Doppelte Konfigurationspfade und Alias-Einstellungen ließen sich löschen",
                         "welle": "W7",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "db._migrate_setting_aliases in init_db (subnet->subnets, fritz_url->fritz_urls); tests/test_settings_schema.py::test_legacy_alias_migrated + test_legacy_alias_migrated_allein",
+                        "commit": "303d36d",
                         "notiz": ""
                 },
                 {
@@ -1130,10 +1130,10 @@
                         "titel": "Namen und Sprache sind gemischt, und Kategorien werden als deutsche Anzeigetexte gespeichert",
                         "welle": "W7",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
-                        "notiz": ""
+                        "status": "erledigt",
+                        "nachweis": "Entscheidung in docs/entscheidungen.md dokumentiert (Namen/Kategorien: nur Doku, kein Code-Eingriff); gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": "nur Doku-Entscheidung"
                 },
                 {
                         "id": "Q-5",
