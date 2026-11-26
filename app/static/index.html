@@ -19,7 +19,7 @@
         <button data-view="table" aria-pressed="false" data-i18n="nav.table">Tabelle</button>
         <button data-view="log" aria-pressed="false" data-i18n="nav.log">Log</button>
       </nav>
-      <input id="search" type="search" data-i18n-aria="search.aria" data-i18n-ph="search.ph" aria-label="Suche (IP, Hostname, MAC, Hersteller, Notiz)" placeholder="Suche (IP, Hostname, MAC, Hersteller, Notiz)…">
+      <input id="search" type="search" data-i18n-aria="search.aria" data-i18n-ph="search.ph" placeholder="Suche…">
       <select id="filter-category" data-i18n-aria="filter.catAria" aria-label="Kategorie filtern"><option value="" data-i18n="filter.allCategories">Alle Kategorien</option></select>
       <select id="filter-status" data-i18n-aria="filter.statusAria" aria-label="Status filtern">
         <option value="" data-i18n="filter.allStatus">alle</option>
@@ -28,7 +28,7 @@
       </select>
       <select id="filter-site" data-i18n-aria="filter.siteAria" aria-label="Standort filtern"><option value="" data-i18n="filter.allSites">Alle Standorte</option></select>
       <button id="btn-online" aria-pressed="false" data-i18n="btn.onlyOnline" data-i18n-title="btn.onlyOnlineTitle" title="Nur online-Geräte anzeigen (Karte + Tabelle)">Nur online</button>
-      <span id="scan-status" role="status" aria-live="polite" title="Scan-Status"></span>
+      <span id="scan-status" role="status" aria-live="polite" data-i18n-title="scan.title" title="Scan-Status"></span>
     </div>
   </div>
   <div class="hdr-row">
@@ -49,8 +49,8 @@
     <div class="hdr-group" role="group" data-i18n-aria="hdr.g.actionsAria">
       <span class="hdr-label" data-i18n="hdr.g.actions">Aktionen</span>
       <button id="btn-scan" data-i18n="btn.scan" data-i18n-title="btn.scanTitle" title="Scan jetzt auslösen">Jetzt scannen</button>
-      <a class="hdr-btn" href="/api/export/json" download>JSON</a>
-      <a class="hdr-btn" href="/api/export/csv?sep=semicolon" download>CSV</a>
+      <a class="hdr-btn" id="exp-json" href="/api/export/json" download>JSON</a>
+      <a class="hdr-btn" id="exp-csv" href="/api/export/csv?sep=semicolon" download>CSV</a>
       <button id="btn-pdf" data-i18n="btn.pdf" data-i18n-title="btn.pdfTitle" title="Karte + Tabelle als PDF exportieren">PDF</button>
       <select id="pdf-orientation" data-i18n-title="pdf.orientTitle" title="PDF-Ausrichtung">
         <option value="portrait" data-i18n="pdf.portrait">hoch</option>
@@ -68,6 +68,8 @@
     </div>
   </div>
 </header>
+<div id="app-alert" role="alert" hidden></div>
+<div id="offline-banner" role="status" hidden data-i18n="msg.offline">Offline – Verbindung zum Server verloren. Die Anzeige kann veraltet sein.</div>
 <main id="main" tabindex="-1">
   <section id="view-map" class="view" data-i18n-aria="map.aria" aria-label="Netzwerkkarte">
     <p class="visually-hidden" data-i18n="map.hint">Interaktive Netzwerkkarte. Alle Geräte und Details sind in der Tabellenansicht auch per Tastatur erreichbar (Zeile fokussieren, dann Enter drücken).</p>
@@ -79,8 +81,8 @@
   </section>
   <aside id="detail" hidden aria-label="Gerätedetails und Einstellungen" data-i18n-aria="aside.aria">
       <div class="tabs" role="tablist" data-i18n-aria="tabs.aria" aria-label="Detail-Bereich">
-        <button id="tab-detail" class="active" role="tab" aria-selected="true" data-i18n="tab.details">Details</button>
-        <button id="tab-settings" role="tab" aria-selected="false" data-i18n="tab.settings">Einstellungen</button>
+        <button id="tab-detail" class="active" role="tab" aria-selected="true" aria-controls="detail-content" data-i18n="tab.details">Details</button>
+        <button id="tab-settings" role="tab" aria-selected="false" aria-controls="settings-content" data-i18n="tab.settings">Einstellungen</button>
         <button id="btn-close-detail" data-i18n-title="title.close" title="Schließen">✕</button>
       </div>
       <div id="detail-content" role="tabpanel" aria-labelledby="tab-detail"><p class="muted" data-i18n="detail.hint">Gerät anklicken für Details.</p></div>
@@ -95,7 +97,6 @@
               <label><span data-i18n="st.lang">Sprache</span>
                 <select id="st-lang"></select>
               </label>
-              <label><input id="st-auth" type="checkbox"> <span data-i18n="st.auth">Login aktiv</span></label>
             </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.scan">Scan</legend>
               <label><span data-i18n="st.interval">Scan-Intervall (s)</span> <input id="st-interval" type="number" min="30"></label>
@@ -112,14 +113,14 @@
               <label><span data-i18n="st.fritzUrl">TR-064 Hauptgerät (URL oder host:port)</span> <input id="st-fritzurl" type="text" placeholder="http://192.168.178.1:49000"></label>
               <label><span data-i18n="st.fritzUrls">Weitere TR-064-Endpunkte (kommagetrennt, z. B. Repeater)</span> <input id="st-fritzurls" type="text" placeholder="192.168.178.14:49000"></label>
               <label><span data-i18n="st.fritzUser">TR-064 Benutzer</span> <input id="st-fritzuser" type="text"></label>
-              <label><span data-i18n="st.fritzPass">TR-064 Passwort</span> <input id="st-fritzpass" type="password" autocomplete="new-password" data-i18n-ph="st.fritzPassPh" placeholder="unverändert, wenn leer"></label>
+              <label><span data-i18n="st.fritzPass">TR-064 Passwort</span> <input id="st-fritzpass" type="password" autocomplete="new-password" data-i18n-ph="st.fritzPassPh" placeholder="unverändert, wenn leer"> <button type="button" id="st-fritzpass-clear" class="secret-clear" hidden data-i18n="btn.clear_secret">Löschen</button></label>
               <label><input id="st-tr064insecuretls" type="checkbox"> <span data-i18n="st.tr064InsecureTls">TR-064: TLS-Zertifikatsprüfung abschalten (nur bei https://…:49443)</span></label>
               <p class="muted" data-i18n="st.tr064InsecureTlsHint">Nur im eigenen LAN aktivieren — ohne Prüfung kann die TR-064-Verbindung mitgeschnitten/gefälscht werden (MITM). Default: aus (sichere Prüfung). WARN im Log beim Scan.</p>
             </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.snmp">SNMP</legend>
               <label><input id="st-snmp" type="checkbox"> <span data-i18n="st.snmp">SNMP-Scan aktiv</span></label>
               <label><span data-i18n="st.switches">SNMP-Switches (IPs, kommagetrennt)</span> <input id="st-switches" type="text"></label>
-              <label><span data-i18n="st.snmpCommunity">SNMP-Community</span> <input id="st-snmpcommunity" type="password" autocomplete="off" aria-describedby="st-snmpcommunity-hint"></label>
+              <label><span data-i18n="st.snmpCommunity">SNMP-Community</span> <input id="st-snmpcommunity" type="password" autocomplete="off" aria-describedby="st-snmpcommunity-hint"> <button type="button" id="st-snmpcommunity-clear" class="secret-clear" hidden data-i18n="btn.clear_secret">Löschen</button></label>
               <p id="st-snmpcommunity-hint" class="muted" data-i18n="st.snmpCommunityHint">Kein Standardwert. Ohne Community wird SNMP übersprungen. Nicht „public“ verwenden.</p>
             </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.alarms">Alarme</legend>
@@ -127,6 +128,7 @@
               <label><span data-i18n="st.notifyGotify">Gotify-URL</span> <input id="st-notifygotify" type="url" placeholder="https://…"></label>
               <label><span data-i18n="st.notifyNtfy">Ntfy-URL</span> <input id="st-notifyntfy" type="url" placeholder="https://…"></label>
               <label><span data-i18n="st.whitelist">Whitelist (MAC/IP, kommagetrennt; kein Alarm)</span> <input id="st-whitelist" type="text" placeholder="aa:bb:cc:dd:ee:ff, 192.168.178.50"></label>
+              <p id="st-notify-status" class="muted" role="status"></p>
             </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.export">Exporte, Standorte & VPN</legend>
               <label><input id="st-autoexport" type="checkbox"> <span data-i18n="st.autoexport">automatische Exporte</span></label>
@@ -164,7 +166,7 @@
       <span class="muted" data-i18n="edit.hint">Bearbeiten-Modus: Kategorie, Notiz und Raum direkt in der Tabelle ändern (sofort gespeichert)</span>
     </div>
     <div id="bulk-bar" class="bulk-bar" role="group" aria-labelledby="bulk-count">
-      <span id="bulk-count">0 ausgewählt</span>
+      <span id="bulk-count" data-i18n="sel.count">0 ausgewählt</span>
       <label><span data-i18n="bulk.connect">Verbunden mit</span> <select id="bulk-parent"></select></label>
       <button id="bulk-apply" type="button" data-i18n="btn.set" disabled>Setzen</button>
       <button id="bulk-clear" type="button" data-i18n="bulk.clear" disabled>Auswahl aufheben</button>
@@ -191,6 +193,7 @@
 <script src="/static/vendor/cytoscape.min.js"></script>
 <script src="/static/i18n.js"></script>
 <script src="/static/icons.js"></script>
+<script src="/static/api.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -274,6 +274,9 @@ def scan_status(request: Request, conn=Depends(get_conn), _=Depends(require_auth
             stale = False
     state["scan_age_limit_s"] = limit
     state["stale_scanning"] = stale
+    # SF-5 (Anzeige): letzter Zustellstatus der Benachrichtigungen (Frontend zeigt ihn in den Einstellungen)
+    state["last_notify_status"] = db.get_setting(conn, "last_notify_status") or ""
+    state["last_notify_at"] = db.get_setting(conn, "last_notify_at") or ""
     return state
 
 
@@ -522,7 +525,7 @@ def patch_settings(body: SettingsPatch, request: Request, conn=Depends(get_conn)
     if error:
         raise HTTPException(status_code=422, detail=error)
     settings = request.app.state.settings
-    data = body.model_dump(exclude_none=True)
+    data = {k: v for k, v in body.model_dump().items() if k in body.model_fields_set}
     # S-7: wer den FRITZ!Box-Endpunkt aendert, darf das gespeicherte Passwort nicht an den neuen Host senden
     if any(k in data for k in ("fritz_url", "fritz_urls", "fritz_user")) and "fritz_pass" not in data:
         if get_settings().fritz_pass:  # Umgebungs-Passwort aktiv
@@ -532,6 +535,13 @@ def patch_settings(body: SettingsPatch, request: Request, conn=Depends(get_conn)
             )
         db.set_setting(conn, "fritz_pass", "")
     for key, value in data.items():
+        if value is None:
+            # S-8 (Frontend "Loeschen"): explizites null bei einem Secret-Feld entfernt den gespeicherten
+            # Wert (Zeile weg - C-2: ein leerer String wuerde die Umgebung ueberschreiben)
+            if FIELDS[key].secret:
+                db.delete_setting(conn, key)
+                setattr(settings, key, "")
+            continue
         if FIELDS[key].secret and value == "":
             continue  # S-8: leeres Secret-Feld im PATCH heisst "unveraendert", loescht nichts
         db.set_setting(conn, key, str(value).lower() if isinstance(value, bool) else str(value))

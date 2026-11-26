@@ -79,3 +79,17 @@ def test_compose_passes_every_config_field():
         assert f"NETZ_{key.upper()}:" in compose, key
     for extra in ("NETZ_DATA_DIR", "NETZ_HOST", "NETZ_PORT", "NETZ_SQLITE_JOURNAL", "TZ"):
         assert re.search(rf"^  {extra}:", compose, re.M), extra
+
+
+def test_null_secret_in_patch_deletes_stored_value(auth_client, app):
+    auth_client.patch("/api/settings", json={"snmp_community": "geheim"})
+    conn = db.connect(app.state.db_path)
+    assert db.get_setting(conn, "snmp_community") == "geheim"
+    conn.close()
+    r = auth_client.patch("/api/settings", json={"snmp_community": None})
+    assert r.status_code == 200
+    conn = db.connect(app.state.db_path)
+    assert db.get_setting(conn, "snmp_community") is None  # W5/S-8: explizites null loescht (Zeile weg, nicht "")
+    conn.close()
+    body = auth_client.get("/api/settings").json()
+    assert body["snmp_community"] == {"configured": False}

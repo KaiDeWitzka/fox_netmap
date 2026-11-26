@@ -3,13 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint app/static tests/ui_dom_check.mjs",
-    "test:ui": "node tests/ui_dom_check.mjs"
+    "lint": "eslint app/static tests/ui_dom_check.mjs tests/ui scripts",
+    "test:ui": "node tests/ui_dom_check.mjs",
+    "update:vendor": "node scripts/update_vendor.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
     "globals": "^17.14.0",
-    "jsdom": "^31.0.1"
+    "jsdom": "^31.0.1",
+    "cytoscape": "^3.35.0"
   }
 }

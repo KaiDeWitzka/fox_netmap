@@ -516,6 +516,12 @@ def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
     )
 
 
+def delete_setting(conn: sqlite3.Connection, key: str) -> None:
+    """S-8: explizites Loeschen eines gespeicherten Werts (Zeile entfernen, nicht leeren String -
+    C-2: ein gespeicherter leerer String wuerde die Umgebung ueberschreiben)."""
+    conn.execute("DELETE FROM settings WHERE key = ?", (key,))
+
+
 def get_user(conn: sqlite3.Connection, username: str) -> dict | None:
     row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
     return dict(row) if row else None

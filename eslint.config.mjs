@@ -4,6 +4,9 @@ import globals from "globals";
 // Geteilte Globals: mehrere klassische Script-Tags teilen sich den globalen Scope
 // (index.html laedt i18n.js, icons.js, vendor/cytoscape.min.js, app.js in dieser Reihenfolge).
 const sharedGlobals = {
+  ApiError: "readonly",
+  api: "readonly",
+  apiJson: "readonly",
   I18N: "readonly",
   LANGS: "readonly",
   iconUri: "readonly",
@@ -13,6 +16,9 @@ const sharedGlobals = {
 };
 
 export default [
+  {
+    ignores: ["app/static/vendor/**"], // D-5: minifiziertes Fremdfile (cytoscape) nicht linten
+  },
   {
     files: ["app/static/**/*.js"],
     ...js.configs.recommended,

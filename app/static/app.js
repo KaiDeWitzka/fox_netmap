@@ -9,10 +9,12 @@ const MAP_PALETTES = {
   dark: {
     bg: "#0f172a", body: "#1e293b", border: "#64748b", root: "#38bdf8", repeater: "#cbd5e1", icon: "#e2e8f0",
     text: "#e2e8f0", textOff: "#cbd5e1", edge: "#64748b", hl: "#facc15", sel: "#ffffff", frame: "#38bdf8", frameText: "#94a3b8",
+    vpn: "#f59e0b",
   },
   light: {
     bg: "#f8fafc", body: "#ffffff", border: "#64748b", root: "#0284c7", repeater: "#334155", icon: "#334155",
     text: "#0f172a", textOff: "#334155", edge: "#64748b", hl: "#b45309", sel: "#0f172a", frame: "#0284c7", frameText: "#475569",
+    vpn: "#b45309",
   },
 };
 
@@ -36,7 +38,8 @@ let SITES = [];
 let SITE_MAP = {};
 
 const QP = new URLSearchParams(location.search);
-let LANG = QP.get("lang") || localStorage.getItem("fox_lang") || "de";
+// F-12: gleiches Fallback wie login.js (Query, localStorage, Browser-Sprache)
+let LANG = QP.get("lang") || localStorage.getItem("fox_lang") || (navigator.language || "de").slice(0, 2);
 if (!LANGS.some(([c]) => c === LANG)) LANG = "de";
 
 // Sicherheit: Alle Werte, die per innerHTML eingesetzt werden, MUESSEN durch esc() laufen.
@@ -71,10 +74,6 @@ let groupMode = localStorage.getItem("fox_groups") || "none";
 let editMode = localStorage.getItem("fox_editmode") === "1";
 // Geräte ohne IP (z. B. TR-064-Host nur mit MAC/Name) erst auf der Karte zeigen, wenn angehakt (Default: ausblenden)
 let hideNoIp = localStorage.getItem("fox_noip") ?? "1";
-
-function groupOf(d) {
-  return d.subnet ? "subnet:" + d.subnet : null;
-}
 
 function childCount(mac) {
   return devices.filter((d) => parentId(d) === mac).length;
@@ -115,8 +114,8 @@ function loadColOrder() {
     const saved = JSON.parse(localStorage.getItem("fox_table_cols") || "null");
     if (Array.isArray(saved) && saved.length === TABLE_COLS.length && saved.every((k) => TABLE_COLS.some(([key]) => key === k)))
       return saved;
-  } catch (e) {
-    // ungültiger Stand -> Default
+  } catch {
+    // ungueltiger Stand -> Default
   }
   return TABLE_COLS.map(([k]) => k);
 }
@@ -127,7 +126,7 @@ function loadColWidths() {
   try {
     const s = JSON.parse(localStorage.getItem("fox_table_widths") || "{}");
     return s && typeof s === "object" ? s : {};
-  } catch (e) {
+  } catch {
     return {};
   }
 }
@@ -143,7 +142,10 @@ function currentLayout() {
   return localStorage.getItem("fox_layout") || "auto";
 }
 
-function applyLayout() {
+let lastLayoutChoice = "";
+let mapFitted = false;
+
+function applyLayout(forceFit = false) {
   if (!cy || !devices.length) return;
   const choice = currentLayout();
   const hasPos = devices.every((d) => typeof d.x === "number" && typeof d.y === "number");
@@ -152,8 +154,18 @@ function applyLayout() {
     opts = { name: "preset", animate: false };
   } else if (choice === "auto" || choice === "tree") {
     // Baum nach Topologie: Internet -> Router -> Switch -> Endgeraete (Anforderung "Layout", 01-anforderungen.md)
+    // F-5: gespeicherte x/y je Knoten behalten, nur unpositionierte Knoten per Baum platzieren
     const pos = computeTreePositions(lastElements);
-    opts = { name: "preset", animate: false, positions: (node) => pos[node.id()] || node.position() };
+    const byMac = Object.fromEntries(devices.map((d) => [d.mac, d]));
+    opts = {
+      name: "preset",
+      animate: false,
+      positions: (node) => {
+        const d = byMac[node.id()];
+        if (d && typeof d.x === "number" && typeof d.y === "number") return { x: d.x, y: d.y };
+        return pos[node.id()] || node.position();
+      },
+    };
   } else if (choice === "force") {
     const big = devices.length > 60;
     opts = {
@@ -167,7 +179,12 @@ function applyLayout() {
     opts = { name: LAYOUTS[choice], animate: false };
   }
   cy.layout(opts).run();
-  cy.fit(undefined, 40);
+  // F-6: Zoom/Ausschnitt nur beim ersten Rendern oder bei Layoutwechsel zuruecksetzen, nicht bei jedem Refresh
+  if (forceFit || !mapFitted || choice !== lastLayoutChoice) {
+    cy.fit(undefined, 40);
+    mapFitted = true;
+    lastLayoutChoice = choice;
+  }
 }
 
 let lastElements = [];
@@ -274,12 +291,33 @@ function computeTreePositions(els) {
   return pos;
 }
 
-function api(path, opts = {}) {
-  const url = TOKEN ? path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN) : path;
-  return fetch(url, { headers: { "Content-Type": "application/json" }, ...opts }).then((r) => {
-    if (r.status === 401 && !EMBED) location.href = "/login";
-    return r;
-  });
+// F-3/F-4: zentrale Fehleranzeige (role="alert") und Offline-Banner; api()/apiJson() liegen in api.js
+function showAlert(text) {
+  const el = document.getElementById("app-alert");
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
+}
+
+function hideAlert() {
+  const el = document.getElementById("app-alert");
+  if (el) {
+    el.textContent = "";
+    el.hidden = true;
+  }
+}
+
+function setOffline(on) {
+  const el = document.getElementById("offline-banner");
+  if (el) el.hidden = !on;
+}
+
+// F-14: Zeitstempel sprachabhaengig formatieren statt rohes ISO
+function fmtTs(s) {
+  if (!s) return "–";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return String(s);
+  return new Intl.DateTimeFormat(LANG, { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
 function applyTheme(theme) {
@@ -305,14 +343,28 @@ function currentFilters() {
   return p.toString();
 }
 
+let sidebarOpener = null;
+let settingsLoaded = false;
+
 function showSidebar(tab) {
   const aside = document.getElementById("detail");
+  if (aside.hidden) sidebarOpener = document.activeElement; // F-9: Fokus beim Schliessen zurueckgeben
   aside.hidden = false;
   activateTab(tab);
+  if (tab === "settings" && !settingsLoaded) {
+    settingsLoaded = true; // F-15: Einstellungen nur einmal je Oeffnen laden (Tabwechsel leert nichts)
+    loadSettings();
+  }
+  const panel = tab === "detail" ? document.getElementById("detail-content") : document.getElementById("settings-content");
+  const focusable = panel.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+  if (focusable) focusable.focus(); // F-9: Fokus ins Panel setzen
 }
 
 function hideSidebar() {
   document.getElementById("detail").hidden = true;
+  settingsLoaded = false;
+  if (sidebarOpener && sidebarOpener.focus) sidebarOpener.focus();
+  sidebarOpener = null;
 }
 
 function activateTab(tab) {
@@ -325,7 +377,7 @@ function activateTab(tab) {
   tabSettings.setAttribute("aria-selected", String(!isDetail));
   document.getElementById("detail-content").hidden = !isDetail;
   document.getElementById("settings-content").hidden = isDetail;
-  if (!isDetail) loadSettings();
+  if (!isDetail) document.getElementById("settings-msg").textContent = ""; // F-15: alte Meldung weg beim Tabwechsel
 }
 
 function fillCategoryOptions() {
@@ -342,8 +394,11 @@ function fillCategoryOptions() {
 }
 
 async function loadCategories() {
-  const r = await api("/api/categories");
-  categories = r.ok ? await r.json() : Object.keys(CATEGORY_ICON_KEYS).filter((c) => !["Internet", "Gateway", "WLAN"].includes(c));
+  try {
+    categories = await apiJson("/api/categories");
+  } catch {
+    categories = Object.keys(CATEGORY_ICON_KEYS).filter((c) => !["Internet", "Gateway", "WLAN"].includes(c));
+  }
   fillCategoryOptions();
   renderLegend();
 }
@@ -361,25 +416,47 @@ function maybeAutoGroup() {
   }
 }
 
+let loadSeq = 0;
+let currentDetailMac = null;
+
+function closeStaleDetail() {
+  // F-6: ist das gezeigte Geraet nicht mehr in der Liste, Detailfenster schliessen (keine Geisterdaten)
+  const aside = document.getElementById("detail");
+  if (!aside || aside.hidden || !currentDetailMac) return;
+  if (!devices.some((d) => d.mac === currentDetailMac)) hideSidebar();
+}
+
 async function loadDevices() {
-  const r = await api("/api/devices?" + currentFilters());
-  if (!r.ok) return;
-  devices = await r.json();
-  maybeAutoGroup();
-  renderMap();
-  renderTable();
+  const seq = ++loadSeq;
+  try {
+    const data = await apiJson("/api/devices?" + currentFilters());
+    if (seq !== loadSeq) return; // F-1: veraltete Antwort verwerfen (zuletzt gestellte gewinnt)
+    devices = data;
+    maybeAutoGroup();
+    renderMap();
+    renderTable();
+    closeStaleDetail();
+  } catch (e) {
+    if (seq === loadSeq && e instanceof ApiError) showAlert(t("msg.rejected") + e.detail);
+  }
 }
 
 async function loadMeta() {
-  const r = await api("/api/meta");
-  if (r.ok) META = await r.json();
+  try {
+    META = await apiJson("/api/meta");
+  } catch {
+    // F-4: Netzwerkfehler -> Offline-Banner (api()), META bleibt Default
+  }
   document.getElementById("hdr-version").textContent = META.version ? "v" + META.version : "";
 }
 
 async function loadSites() {
-  const r = await api("/api/sites");
-  if (!r.ok) return;
-  const data = await r.json();
+  let data;
+  try {
+    data = await apiJson("/api/sites");
+  } catch {
+    return;
+  }
   SITES = data.names || [];
   SITE_MAP = data.map || {};
   const sel = document.getElementById("filter-site");
@@ -514,6 +591,12 @@ function buildElements() {
   }
 
   const groupIdx = {};
+  // F-7: Kinderzahlen einmal je Render berechnen statt devices.some() pro Knoten (kubisch bei 1000 Geraeten)
+  const kidCounts = {};
+  for (const d of devices) {
+    const p = parentId(d);
+    if (p) kidCounts[p] = (kidCounts[p] || 0) + 1;
+  }
   list.forEach((d, i) => {
     if (isHiddenByCollapse(d.mac)) return;
     let x = d.x;
@@ -535,7 +618,7 @@ function buildElements() {
         y = Math.sin(a) * R;
       }
     }
-    const kids = childCount(d.mac);
+    const kids = kidCounts[d.mac] || 0;
     const fullName = d.hostname || d.ip || d.mac;
     // Zwei Zeilen wie im Soll-Entwurf: Name, darunter "IP · Kategorie" (+N eingeklappt, offline als Text)
     const second = [d.ip && d.ip !== fullName ? d.ip : "", t("cat." + d.category)].filter(Boolean).join(" · ") +
@@ -691,7 +774,7 @@ function mapStyle(theme) {
     // Offline: nur der Körper wird abgeblendet und gestrichelt, die Beschriftung bleibt lesbar (>= 4,5:1) und nennt "offline"
     { selector: "node[status='offline']", style: { "background-opacity": 0.45, "background-image-opacity": 0.6, "border-style": "dashed", color: P.textOff } },
     // VPN-Client (z. B. FRITZ!Box IPSec/WireGuard): auffaelliger gestrichelter Rand
-    { selector: "node[vpn = 1]", style: { "border-style": "dashed", "border-width": 2.5, "border-color": "#f59e0b" } },
+    { selector: "node[vpn = 1]", style: { "border-style": "dashed", "border-width": 2.5, "border-color": P.vpn } }, // F-11: >= 3:1 in beiden Themes
     { selector: "node:selected", style: { "border-width": 3, "border-color": P.sel } },
     { selector: "node.hl", style: { "border-width": 4, "border-color": P.hl } },
     { selector: "node.spot", style: { "border-width": 5, "border-color": P.hl } },
@@ -756,7 +839,9 @@ function renderMap() {
     cy.on("dragfree", "node", (e) => {
       if (EMBED || e.target.data("virtual")) return;
       const p = e.target.position();
-      api("/api/device/" + e.target.data("id"), { method: "PATCH", body: JSON.stringify({ x: p.x, y: p.y }) });
+      apiJson("/api/device/" + e.target.data("id"), { method: "PATCH", body: JSON.stringify({ x: p.x, y: p.y }) }).catch((err) =>
+        showAlert(t("msg.rejected") + (err.detail || err.message))
+      );
     });
     cy.on("zoom", updateZoomLabels);
     // Voller Name als Tooltip (Beschriftung wird ab 20 Zeichen gekürzt)
@@ -767,13 +852,22 @@ function renderMap() {
   cy.elements().remove();
   lastElements = buildElements();
   cy.add(lastElements);
-  applyLayout();
+  applyLayout(); // F-6: fit nur beim ersten Rendern/bei Layoutwechsel (innen in applyLayout)
 }
 
+let detailSeq = 0;
+
 async function showDetail(mac) {
-  const r = await api("/api/device/" + mac);
-  if (!r.ok) return;
-  const d = await r.json();
+  const seq = ++detailSeq;
+  let d;
+  try {
+    d = await apiJson("/api/device/" + mac);
+  } catch (e) {
+    if (seq === detailSeq) showAlert(t("msg.rejected") + (e.detail || e.message));
+    return;
+  }
+  if (seq !== detailSeq) return; // F-1: veraltete Detail-Antwort verwerfen
+  currentDetailMac = mac;
   cy.nodes().removeClass("hl");
   cy.edges().removeClass("hl");
   const isNet = isNetCategory(d.category);
@@ -789,7 +883,7 @@ async function showDetail(mac) {
     [t("d.category"), esc(t("cat." + d.category))], [t("d.reason"), esc(reasonText(d))], [t("d.status"), esc(d.status)], [t("d.subnet"), esc(d.subnet)], [t("d.site"), esc(d.site || "–")], [t("d.room"), esc(d.room || "–")], [t("d.source"), esc(d.source)],
     [t("d.vpn"), d.vpn ? t("d.yes") : "–"],
     [t("d.connection"), esc(connectionText(d))], [t("d.connected"), esc(d.layout.connected_to || t("d.auto"))], [t("d.note"), esc(d.note)],
-    [t("d.firstSeen"), esc(d.first_seen)], [t("d.lastSeen"), esc(d.last_seen)],
+    [t("d.firstSeen"), esc(fmtTs(d.first_seen))], [t("d.lastSeen"), esc(fmtTs(d.last_seen))],
   ];
   let html = `<h2>${esc(d.hostname || d.ip)}</h2><table>` + rows.map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${v ?? ""}</td></tr>`).join("") + "</table>";
   html += `<h3>${t("d.ports", { n: d.ports.length })}</h3><div class="chips">` + (d.ports.map((p) => `<span>${esc(p.port)}${p.service ? " " + esc(p.service) : ""}</span>`).join("") || "–") + "</div>";
@@ -797,17 +891,17 @@ async function showDetail(mac) {
     html += `<h3>${t("d.children", { n: children.length })}</h3><ul>` + children.map((c) => `<li><button type="button" class="dev-link" data-mac="${esc(c.mac)}">${esc(c.hostname || c.ip)}</button> (${esc(t("cat." + c.category))})</li>`).join("") + "</ul>";
   }
   if (!EMBED) {
-    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}"><input id="ed-room" type="text" maxlength="64" placeholder="${esc(t("det.roomPh"))}" value="${esc(d.room || "")}" aria-label="${esc(t("d.room"))}"><button id="ed-save">${t("btn.save")}</button></div>`;
+    html += `<h3>${t("d.edit")}</h3><div class="edit-row"><select id="ed-cat" aria-label="${esc(t("d.category"))}">` + categories.map((c) => `<option value="${esc(c)}"${c === d.category ? " selected" : ""}>${esc(t("cat." + c))}</option>`).join("") + `</select><input id="ed-note" type="text" placeholder="${esc(t("cols.note"))}" value="${esc(d.note)}" aria-label="${esc(t("cols.note"))}"><input id="ed-room" type="text" maxlength="64" placeholder="${esc(t("det.roomPh"))}" value="${esc(d.room || "")}" aria-label="${esc(t("d.room"))}"><button id="ed-save">${t("btn.save")}</button></div>`;
     const parents = devices.filter((x) => isNetCategory(x.category));
     const cur = d.layout.connected_to || "";
-    html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${esc(x.mac)}"${cur === x.mac ? " selected" : ""}>${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
+    html += `<h3>${t("d.connected")}</h3><div class="edit-row"><select id="ed-parent" aria-label="${esc(t("d.connected"))}"><option value="">${t("d.auto")}</option>` + parents.map((x) => `<option value="${esc(x.mac)}"${cur === x.mac ? " selected" : ""}>${esc(x.hostname || x.ip)} (${esc(x.ip)})</option>`).join("") + `</select><button id="ed-parent-save">${t("btn.set")}</button></div>`;
     if (isNet) {
       const kids = childCount(mac);
       html += `<div class="edit-row"><button id="ed-collapse">${collapsed.has(mac) ? t("collapse.show", { n: kids }) : t("collapse.hide", { n: kids })}</button></div>`;
     }
   }
-  html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${esc(h.ts)} – ${esc(h.status)}</li>`).join("") + "</ul>";
-  html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${esc(e.ts)} – ${esc(e.type)}${e.detail ? " " + esc(e.detail) : ""}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.history")}</h3><ul>` + d.history.slice(0, 20).map((h) => `<li>${esc(fmtTs(h.ts))} – ${esc(h.status)}</li>`).join("") + "</ul>";
+  html += `<h3>${t("d.events")}</h3><ul>` + d.events.map((e) => `<li>${esc(fmtTs(e.ts))} – ${esc(e.type)}${e.detail ? " " + esc(e.detail) : ""}</li>`).join("") + "</ul>";
   // Endgültige Aktion bewusst am Ende des Panels, getrennt von den Bearbeiten-Funktionen
   if (!EMBED) {
     html += `<h3>${t("d.deleteTitle")}</h3><p class="muted" id="ed-delete-hint">${t("d.deleteHint")}</p><div class="edit-row"><button id="ed-delete" class="danger" aria-describedby="ed-delete-hint">${t("btn.deleteDevice")}</button></div>`;
@@ -817,28 +911,42 @@ async function showDetail(mac) {
   const save = document.getElementById("ed-save");
   if (save) {
     save.addEventListener("click", async () => {
-      await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ category: document.getElementById("ed-cat").value, note: document.getElementById("ed-note").value, room: document.getElementById("ed-room").value }) });
-      await loadDevices();
-      showDetail(mac);
+      try {
+        await apiJson("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ category: document.getElementById("ed-cat").value, note: document.getElementById("ed-note").value, room: document.getElementById("ed-room").value }) });
+        hideAlert();
+        await loadDevices();
+        showDetail(mac);
+      } catch (e) {
+        // F-3/SF-6: Fehler sichtbar melden, Eingabe bleibt stehen, kein Reload
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
     });
   }
   const psave = document.getElementById("ed-parent-save");
   if (psave) {
     psave.addEventListener("click", async () => {
-      await api("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ connected_to: document.getElementById("ed-parent").value }) });
-      await loadDevices();
-      showDetail(mac);
+      try {
+        await apiJson("/api/device/" + mac, { method: "PATCH", body: JSON.stringify({ connected_to: document.getElementById("ed-parent").value }) });
+        hideAlert();
+        await loadDevices();
+        showDetail(mac);
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
     });
   }
   const delBtn = document.getElementById("ed-delete");
   if (delBtn) {
     delBtn.addEventListener("click", async () => {
       if (!confirm(t("d.deleteConfirm", { name: d.hostname || d.ip || mac }))) return;
-      const res = await api("/api/device/" + mac, { method: "DELETE" });
-      if (!res.ok) return;
-      hideSidebar();
-      await loadDevices();
-      document.getElementById("main")?.focus();
+      try {
+        await apiJson("/api/device/" + mac, { method: "DELETE" });
+        hideSidebar();
+        await loadDevices();
+        document.getElementById("main")?.focus();
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
     });
   }
   const collapseBtn = document.getElementById("ed-collapse");
@@ -862,7 +970,7 @@ function renderTable() {
   }
   for (const m of [...selectedMacs]) if (!devices.some((d) => d.mac === m)) selectedMacs.delete(m);
   const selHead = EMBED ? "" : `<th scope="col" class="sel-col"><input type="checkbox" id="sel-all" aria-label="${esc(t("bulk.all"))}"></th>`;
-  thead.innerHTML = "<tr>" + selHead + cols.map(([k, label]) => `<th data-key="${esc(k)}" scope="col" draggable="true">${esc(label)}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
+  thead.innerHTML = "<tr>" + selHead + cols.map(([k, label]) => `<th data-key="${esc(k)}" scope="col" draggable="true" tabindex="0" aria-sort="${sortKey === k ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${esc(label)}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}<span class="resizer"></span></th>`).join("") + "</tr>";
   thead.querySelectorAll("th[data-key]").forEach((th) => {
     th.addEventListener("click", () => {
       if (suppressSortClick) { suppressSortClick = false; return; }
@@ -871,6 +979,15 @@ function renderTable() {
       renderTable();
     });
     th.addEventListener("keydown", (e) => {
+      // F-8: Kopfzellen per Tastatur sortieren (Enter/Leerzeichen); Alt+Pfeil verschiebt die Spalte
+      if ((e.key === "Enter" || e.key === " ") && !e.target.closest(".resizer")) {
+        e.preventDefault();
+        if (suppressSortClick) { suppressSortClick = false; return; }
+        const k = th.dataset.key;
+        if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+        renderTable();
+        return;
+      }
       if (!e.altKey) return;
       const dir = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
       if (!dir) return;
@@ -889,6 +1006,13 @@ function renderTable() {
     const vb = String(b[sortKey] ?? "").toLowerCase();
     return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir;
   });
+  // F-2: laufende Eingabe (Fokus + Wert + Cursor) merken, nach dem Neuaufbau wiederherstellen
+  const active = document.activeElement;
+  const inTbody = active && active.closest && active.closest("#device-table tbody");
+  const editState =
+    inTbody && (active.tagName === "INPUT" || active.tagName === "SELECT") && active.dataset.key
+      ? { mac: active.closest("tr")?.dataset.mac || "", key: active.dataset.key, value: active.value, sel: active.selectionStart }
+      : null;
   tbody.innerHTML = "";
   const frag = document.createDocumentFragment(); // ab ~200 Zeilen spuerbar schneller
   for (const d of rows) {
@@ -913,10 +1037,12 @@ function renderTable() {
       tr.appendChild(buildCell(d, key));
     }
     tr.tabIndex = 0;
+    tr.dataset.mac = d.mac;
     tr.setAttribute("aria-label", t("row.aria", { v: d.hostname || d.ip || d.mac }));
     tr.addEventListener("click", (e) => { if (e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") showDetail(d.mac); });
     tr.addEventListener("keydown", (e) => {
-      if ((e.key === "Enter" || e.key === " ") && e.target.tagName !== "SELECT" && e.target.tagName !== "INPUT") {
+      // F-8: Enter auf Link/Button/Select/Input in der Zeile nicht verschlucken
+      if ((e.key === "Enter" || e.key === " ") && !e.target.closest("a,button,select,input")) {
         e.preventDefault();
         showDetail(d.mac);
       }
@@ -924,6 +1050,14 @@ function renderTable() {
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
+  if (editState && editState.mac && editState.key) {
+    const el = tbody.querySelector(`tr[data-mac="${editState.mac}"] [data-key="${editState.key}"]`);
+    if (el) {
+      el.value = editState.value;
+      el.focus();
+      if (typeof editState.sel === "number" && el.setSelectionRange) el.setSelectionRange(editState.sel, editState.sel);
+    }
+  }
   const all = document.getElementById("sel-all");
   if (all) {
     all.addEventListener("change", () => {
@@ -969,16 +1103,18 @@ function bindBulk() {
     const macs = [...selectedMacs];
     if (!macs.length) return;
     const target = document.getElementById("bulk-parent").value;
-    const r = await api("/api/devices/connect", { method: "POST", body: JSON.stringify({ macs, connected_to: target }) });
-    if (r.ok) {
-      const body = await r.json();
+    try {
+      const body = await apiJson("/api/devices/connect", { method: "POST", body: JSON.stringify({ macs, connected_to: target }) });
       result.textContent = t("bulk.done", { n: body.count });
       selectedMacs.clear();
       await loadDevices();
-    } else {
-      let detail = "";
-      try { detail = (await r.json()).detail || ""; } catch (err) { /* ignorieren */ }
-      result.textContent = String(detail).includes("cycle") ? t("bulk.errCycle") : t("bulk.err");
+    } catch (e) {
+      // F-3: 422 (z. B. Zyklus) sichtbar mit Detail, Auswahl bleibt erhalten
+      const detail = e.detail || "";
+      result.textContent = String(detail).includes("cycle") || String(detail).includes("Kreis") || String(detail).includes("Zyklus")
+        ? t("bulk.errCycle")
+        : t("bulk.err") + " " + detail;
+      showAlert(result.textContent);
     }
   });
 }
@@ -1052,7 +1188,7 @@ function buildCell(d, key) {
   } else if (key === "mac") {
     const m = d.mac || "";
     td.textContent = m.startsWith("ip:") ? "–" : m;
-    td.title = m.startsWith("ip:") ? `nur IP bekannt (${m.slice(3)})` : m;
+    td.title = m.startsWith("ip:") ? t("d.native_ip_only", { ip: m.slice(3) }) : m; // F-13: kein fester deutscher Text
   } else if (key === "category") {
     // Gleiches Symbol wie in Karte und Legende; der Kategoriename steht daneben als Text
     const img = document.createElement("img");
@@ -1068,14 +1204,34 @@ function buildCell(d, key) {
       return td;
     }
     const sel = document.createElement("select");
+    sel.dataset.mac = d.mac;
+    sel.dataset.key = key;
+    sel.setAttribute("aria-label", t("d.category") + " " + (d.hostname || d.ip || d.mac));
     for (const c of categories) { const o = document.createElement("option"); o.value = c; o.textContent = t("cat." + c); if (c === d.category) o.selected = true; sel.appendChild(o); }
-    sel.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) }).then(loadDevices));
+    sel.addEventListener("change", async () => {
+      try {
+        await apiJson("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ category: sel.value }) });
+        await loadDevices();
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
+    });
     td.appendChild(sel);
   } else if (key === "note" && editMode && !EMBED) {
     const inp = document.createElement("input");
     inp.value = d.note || "";
     inp.placeholder = t("cols.note");
-    inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) }).then(loadDevices));
+    inp.setAttribute("aria-label", t("cols.note") + " " + (d.hostname || d.ip || d.mac));
+    inp.dataset.mac = d.mac;
+    inp.dataset.key = key;
+    inp.addEventListener("change", async () => {
+      try {
+        await apiJson("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ note: inp.value }) });
+        await loadDevices();
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
+    });
     td.appendChild(inp);
   } else if (key === "room" && editMode && !EMBED) {
     const inp = document.createElement("input");
@@ -1083,7 +1239,16 @@ function buildCell(d, key) {
     inp.maxLength = 64;
     inp.placeholder = t("det.roomPh");
     inp.setAttribute("aria-label", t("d.room"));
-    inp.addEventListener("change", () => api("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ room: inp.value }) }).then(loadDevices));
+    inp.dataset.mac = d.mac;
+    inp.dataset.key = key;
+    inp.addEventListener("change", async () => {
+      try {
+        await apiJson("/api/device/" + d.mac, { method: "PATCH", body: JSON.stringify({ room: inp.value }) });
+        await loadDevices();
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
+    });
     td.appendChild(inp);
   } else {
     td.textContent = d[key] ?? "";
@@ -1167,7 +1332,7 @@ function bindNav() {
     b.classList.add("active");
     b.setAttribute("aria-pressed", "true");
     document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.view));
-    if (b.dataset.view === "map" && cy) setTimeout(() => { cy.resize(); cy.fit(undefined, 40); }, 50);
+    if (b.dataset.view === "map" && cy) setTimeout(() => { cy.resize(); }, 50); // F-6: kein fit beim Ansichtswechsel
     if (b.dataset.view === "log") loadLogs();
   }));
 }
@@ -1205,11 +1370,15 @@ function renderLogLines(lines) {
 async function loadLogs() {
   const lines = document.getElementById("log-lines").value;
   const level = document.getElementById("log-level").value;
-  const r = await api(`/api/logs?lines=${lines}&level=${level}`);
-  if (!r.ok) return;
-  const data = await r.json();
+  let data;
+  try {
+    data = await apiJson(`/api/logs?lines=${lines}&level=${level}`);
+  } catch {
+    return; // Offline-Banner uebernimmt api()
+  }
   renderLogLines(data.lines);
-  document.getElementById("log-status").textContent = t("log.meta", { ret: data.returned, total: data.total, file: data.file });
+  const ls = document.getElementById("log-status");
+  if (ls) ls.textContent = t("log.meta", { ret: data.returned, total: data.total, file: data.file }); // F-16: Schreibschutz
 }
 
 function bindLog() {
@@ -1220,8 +1389,8 @@ function bindLog() {
 }
 
 function bindFilters() {
-  let t = null;
-  document.getElementById("search").addEventListener("input", () => { clearTimeout(t); t = setTimeout(loadDevices, 300); });
+  let debounceTimer = null; // nicht "t" - das waere die Uebersetzungsfunktion t()
+  document.getElementById("search").addEventListener("input", () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(loadDevices, 300); });
   document.getElementById("filter-category").addEventListener("change", loadDevices);
   document.getElementById("filter-site").addEventListener("change", loadDevices);
   const editBtn = document.getElementById("btn-edit-mode");
@@ -1269,8 +1438,12 @@ function bindFilters() {
         const bg = document.documentElement.dataset.theme === "light" ? "#f8fafc" : "#0f172a";
         image = cy.png({ output: "datauri", full: true, scale: 2, bg });
       }
-      const r = await api("/api/export/pdf", { method: "POST", body: JSON.stringify({ image, title: "Netzwerkkarte", orientation: document.getElementById("pdf-orientation").value }) });
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      const r = await api("/api/export/pdf", { method: "POST", body: JSON.stringify({ image, title: t("d.nic"), orientation: document.getElementById("pdf-orientation").value }) });
+      if (!r.ok) {
+        let detail = "HTTP " + r.status;
+        try { detail = (await r.json()).detail || detail; } catch { /* kein JSON-Body */ }
+        throw new ApiError(r.status, detail);
+      }
       const blob = await r.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -1281,6 +1454,7 @@ function bindFilters() {
       URL.revokeObjectURL(a.href);
     } catch (e) {
       console.error("PDF-Export fehlgeschlagen", e);
+      showAlert(t("err.pdf") + " " + (e.detail || e.message)); // F-3: Fehler sichtbar
       btn.textContent = t("err.pdf");
       setTimeout(() => { btn.textContent = t("btn.pdf"); }, 2500);
     } finally {
@@ -1318,7 +1492,6 @@ function bindSidebar() {
       notify_webhook: document.getElementById("st-notifywebhook").value,
       notify_gotify: document.getElementById("st-notifygotify").value,
       notify_ntfy: document.getElementById("st-notifyntfy").value,
-      auth_enabled: document.getElementById("st-auth").checked,
       auto_export: document.getElementById("st-autoexport").checked,
       auto_export_interval_hours: parseInt(document.getElementById("st-autoexport-interval").value, 10),
       auto_export_dir: document.getElementById("st-autoexportdir").value,
@@ -1337,30 +1510,46 @@ function bindSidebar() {
       msg.textContent = t("msg.check") + errs.join("; ");
       return;
     }
-    const r = await api("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
-    if (r.ok) {
+    try {
+      await apiJson("/api/settings", { method: "PATCH", body: JSON.stringify(body) });
+      hideAlert();
       msg.textContent = t("msg.saved");
-    } else {
-      let detail = "Fehler beim Speichern";
-      try { detail = (await r.json()).detail || detail; } catch (err) { /* ignorieren */ }
-      msg.textContent = t("msg.rejected") + detail;
+      applyTheme(body.theme); // F-15: gespeichertes Theme sofort anwenden
+    } catch (e) {
+      msg.textContent = t("msg.rejected") + (e.detail || e.message); // F-3: Detail statt stiller Erfolg
     }
   });
+  // S-8 (Frontend): gespeicherte Secrets als "configured" anzeigen, Loeschen-Button nur wenn gesetzt
+  for (const [inputId, field] of [["st-fritzpass", "fritz_pass"], ["st-snmpcommunity", "snmp_community"]]) {
+    const clearBtn = document.getElementById(inputId + "-clear");
+    if (!clearBtn) continue;
+    clearBtn.addEventListener("click", async () => {
+      const msg = document.getElementById("settings-msg");
+      try {
+        await apiJson("/api/settings", { method: "PATCH", body: JSON.stringify({ [field]: null }) });
+        msg.textContent = t("msg.saved");
+        await loadSettings();
+      } catch (e) {
+        msg.textContent = t("msg.rejected") + (e.detail || e.message);
+      }
+    });
+  }
   document.getElementById("token-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const hours = document.getElementById("tk-hours").value;
-    const r = await api("/api/tokens", {
-      method: "POST",
-      body: JSON.stringify({
-        expires_hours: hours ? parseInt(hours, 10) : null,
-        subnets: document.getElementById("tk-subnets").value,
-        categories: document.getElementById("tk-categories").value,
-      }),
-    });
-    if (r.ok) {
-      const tk = await r.json();
+    try {
+      const tk = await apiJson("/api/tokens", {
+        method: "POST",
+        body: JSON.stringify({
+          expires_hours: hours ? parseInt(hours, 10) : null, // C-10: leer/0 -> null (nie ablaufen)
+          subnets: document.getElementById("tk-subnets").value,
+          categories: document.getElementById("tk-categories").value,
+        }),
+      });
       document.getElementById("token-result").textContent = t("tk.resultPrefix") + location.origin + tk.embed_url + " " + t("tk.once");
       loadTokens();
+    } catch (err) {
+      document.getElementById("token-result").textContent = t("msg.rejected") + (err.detail || err.message);
     }
   });
 }
@@ -1461,10 +1650,15 @@ function bindLayout() {
   sel.value = currentLayout();
   sel.addEventListener("change", () => {
     localStorage.setItem("fox_layout", sel.value);
-    applyLayout();
+    applyLayout(true); // expliziter Layoutwechsel -> Ansicht neu einpassen (F-6)
   });
   document.getElementById("btn-layout-reset").addEventListener("click", async () => {
-    await api("/api/layout/reset", { method: "POST" });
+    try {
+      await apiJson("/api/layout/reset", { method: "POST" });
+    } catch (e) {
+      showAlert(t("msg.rejected") + (e.detail || e.message));
+      return;
+    }
     await loadDevices();
   });
 }
@@ -1493,33 +1687,54 @@ function bindGroups() {
 function bindScan() {
   const btn = document.getElementById("btn-scan");
   if (EMBED) return;
-  btn.addEventListener("click", async () => { await api("/api/scan", { method: "POST" }); pollScanStatus(); });
+  btn.addEventListener("click", async () => {
+    try {
+      await apiJson("/api/scan", { method: "POST" });
+    } catch (e) {
+      showAlert(t("msg.rejected") + (e.detail || e.message));
+    }
+    pollScanStatus();
+  });
 }
 
 let lastScanSeen = null;
 let wasScanning = false;
+let pollRunning = false;
 
 async function pollScanStatus() {
-  const r = await api("/api/scan/status");
-  if (!r.ok) return;
-  const s = await r.json();
-  const el = document.getElementById("scan-status");
-  el.classList.toggle("running", !!s.scanning);
-  const text =
-    (s.scanning ? t("scan.running") : "") +
-    (s.last_scan ? t("scan.last") + s.last_scan : t("scan.none")) +
-    (s.next_scan ? t("scan.next") + s.next_scan : "");
-  // Live-Region nur bei echter Änderung neu schreiben, sonst lesen Screenreader alle 5 s dasselbe vor.
-  if (el.textContent !== text) el.textContent = text;
-  if (!s.scanning && (wasScanning || (s.last_scan && s.last_scan !== lastScanSeen))) loadDevices();
-  wasScanning = !!s.scanning;
-  if (s.last_scan) lastScanSeen = s.last_scan;
+  if (pollRunning) return; // F-16: keine ueberlappenden Abfragen
+  pollRunning = true;
+  try {
+    const s = await apiJson("/api/scan/status");
+    const el = document.getElementById("scan-status");
+    el.classList.toggle("running", !!s.scanning);
+    const text =
+      (s.scanning ? t("scan.running") : "") +
+      (s.last_scan ? t("scan.last") + fmtTs(s.last_scan) : t("scan.none")) +
+      (s.next_scan ? t("scan.next") + fmtTs(s.next_scan) : "");
+    // Live-Region nur bei echter Änderung neu schreiben, sonst lesen Screenreader alle 5 s dasselbe vor.
+    if (el.textContent !== text) el.textContent = text;
+    if (!s.scanning && (wasScanning || (s.last_scan && s.last_scan !== lastScanSeen))) loadDevices();
+    wasScanning = !!s.scanning;
+    if (s.last_scan) lastScanSeen = s.last_scan;
+    // SF-5 (Anzeige): Zustellstatus der Benachrichtigungen in den Einstellungen zeigen
+    const ns = document.getElementById("st-notify-status");
+    if (ns) ns.textContent = s.last_notify_status ? t("settings.notifyStatus", { s: s.last_notify_status, at: fmtTs(s.last_notify_at) }) : "";
+  } catch {
+    // Netzwerkfehler: Offline-Banner uebernimmt api(); hier nur den Lauf beenden
+  } finally {
+    pollRunning = false;
+  }
 }
 
 async function loadSettings() {
-  const r = await api("/api/settings");
-  if (!r.ok) return;
-  const s = await r.json();
+  let s;
+  try {
+    s = await apiJson("/api/settings");
+  } catch {
+    showAlert(t("msg.network"));
+    return;
+  }
   document.getElementById("st-theme").value = s.theme;
   document.getElementById("st-lang").value = s.lang || "de";
   document.getElementById("st-interval").value = s.scan_interval;
@@ -1527,7 +1742,16 @@ async function loadSettings() {
   document.getElementById("st-scantimeout").value = s.scan_timeout;
   document.getElementById("st-porttop").value = s.port_top;
   document.getElementById("st-ports").value = s.ports || "";
-  document.getElementById("st-snmpcommunity").value = s.snmp_community || "";
+  // S-8 (Frontend): Secrets kommen als {"configured": bool} - Feld leer lassen, Loeschen-Button nur wenn gesetzt
+  for (const [id, val] of [["st-snmpcommunity", s.snmp_community], ["st-fritzpass", s.fritz_pass]]) {
+    const input = document.getElementById(id);
+    const clearBtn = document.getElementById(id + "-clear");
+    input.value = "";
+    const configured = !!(val && typeof val === "object" && val.configured);
+    if (!input.dataset.phDefault) input.dataset.phDefault = input.placeholder;
+    input.placeholder = configured ? t("settings.secret_configured") : input.dataset.phDefault;
+    if (clearBtn) clearBtn.hidden = !configured;
+  }
   document.getElementById("st-fritzurl").value = s.fritz_url || "";
   document.getElementById("st-fritzurls").value = s.fritz_urls || "";
   document.getElementById("st-fritzuser").value = s.fritz_user || "";
@@ -1536,16 +1760,15 @@ async function loadSettings() {
   document.getElementById("st-notifygotify").value = s.notify_gotify || "";
   document.getElementById("st-notifyntfy").value = s.notify_ntfy || "";
   document.getElementById("st-autoexportdir").value = s.auto_export_dir || "";
-  document.getElementById("st-ouionline").checked = !!s.oui_online_enabled;
+  document.getElementById("st-ouionline").checked = s.oui_online_enabled === true || s.oui_online_enabled === "true"; // C-3: getypter bool, "false" ist nicht wahr
   document.getElementById("st-ouimax").value = s.oui_online_max ?? 10;
   document.getElementById("st-ouiurl").value = s.oui_online_url || "";
   document.getElementById("st-history").value = s.history_hours;
   document.getElementById("st-retention").value = s.device_retention_days;
   document.getElementById("st-eventretention").value = s.event_retention_days ?? 90;
-  document.getElementById("st-snmp").checked = String(s.snmp_enabled) === "true" || s.snmp_enabled === true;
+  document.getElementById("st-snmp").checked = s.snmp_enabled === true || s.snmp_enabled === "true";
   document.getElementById("st-switches").value = s.snmp_switches;
-  document.getElementById("st-auth").checked = String(s.auth_enabled) === "true" || s.auth_enabled === true;
-  document.getElementById("st-autoexport").checked = String(s.auto_export) === "true" || s.auto_export === true;
+  document.getElementById("st-autoexport").checked = s.auto_export === true || s.auto_export === "true";
   document.getElementById("st-autoexport-interval").value = s.auto_export_interval_hours;
   document.getElementById("st-mdns").checked = String(s.mdns_enabled) === "true" || s.mdns_enabled === true;
   document.getElementById("st-whitelist").value = s.alarm_whitelist || "";
@@ -1555,9 +1778,12 @@ async function loadSettings() {
 }
 
 async function loadTokens() {
-  const r = await api("/api/tokens");
-  if (!r.ok) return;
-  const list = await r.json();
+  let list;
+  try {
+    list = await apiJson("/api/tokens");
+  } catch {
+    return;
+  }
   const ul = document.getElementById("token-list");
   ul.innerHTML = "";
   for (const tk of list) {
@@ -1566,7 +1792,14 @@ async function loadTokens() {
     const del = document.createElement("button");
     del.textContent = t("tok.delete");
     del.setAttribute("aria-label", t("tok.delete") + " " + tk.hint + "…");
-    del.addEventListener("click", async () => { await api("/api/tokens/" + encodeURIComponent(tk.id), { method: "DELETE" }); loadTokens(); });
+    del.addEventListener("click", async () => {
+      try {
+        await apiJson("/api/tokens/" + encodeURIComponent(tk.id), { method: "DELETE" });
+      } catch (e) {
+        showAlert(t("msg.rejected") + (e.detail || e.message));
+      }
+      loadTokens();
+    });
     li.appendChild(del);
     ul.appendChild(li);
   }
@@ -1596,7 +1829,13 @@ async function setLang(l) {
   fillCategoryOptions();
   renderLegend();
   if (cy) renderMap();
-  if (!EMBED) await api("/api/settings", { method: "PATCH", body: JSON.stringify({ lang: l }) });
+  if (!EMBED) {
+    try {
+      await apiJson("/api/settings", { method: "PATCH", body: JSON.stringify({ lang: l }) });
+    } catch (e) {
+      showAlert(t("msg.rejected") + (e.detail || e.message));
+    }
+  }
 }
 
 async function init() {
@@ -1605,31 +1844,44 @@ async function init() {
   applyI18n();
   document.getElementById("lang-select").addEventListener("change", (e) => setLang(e.target.value));
   if (!EMBED) {
-    const me = await api("/api/me");
-    if (me.status === 401) return;
+    const me = await api("/api/me").catch(() => null); // F-4: Netzwerkfehler nicht als unbehandelte Ablehnung
+    if (me && me.status === 401) return;
     document.getElementById("btn-logout").addEventListener("click", async () => {
-      await api("/api/logout", { method: "POST" });
+      await api("/api/logout", { method: "POST" }).catch(() => {});
       location.href = "/login";
     });
   } else {
     document.body.classList.add("embed");
+    // F-12: Exportlinks im Embed tragen den Token (sonst 401 fuer anonyme Betrachter)
+    for (const id of ["exp-json", "exp-csv"]) {
+      const a = document.getElementById(id);
+      if (a && TOKEN) a.href += (a.href.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
+    }
   }
   if (!EMBED) {
-    const rs = await api("/api/settings");
-    if (rs.ok) {
-      const sv = await rs.json();
+    try {
+      const sv = await apiJson("/api/settings");
+      if (sv.theme && sv.theme !== document.documentElement.dataset.theme) applyTheme(sv.theme); // F-15: gespeichertes Theme anwenden
       if (sv.lang && LANGS.some(([c]) => c === sv.lang) && sv.lang !== LANG) {
         LANG = sv.lang;
         localStorage.setItem("fox_lang", LANG);
         fillLangSelects();
         applyI18n();
       }
+    } catch {
+      // F-4: Server nicht erreichbar -> Offline-Banner (api()), Seite bleibt bedienbar
     }
   }
-  await loadCategories();
-  await loadMeta();
-  await loadSites();
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") clearSpotlight(); });
+  // F-4: Handler binden, BEVOR die awaits laufen - sonst hat der Scan-Knopf bei fehlendem /api/meta keinen Handler
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const aside = document.getElementById("detail");
+    if (!aside.hidden) {
+      hideSidebar(); // F-9: Escape schliesst die Seitenleiste
+      return;
+    }
+    clearSpotlight();
+  });
   bindNav();
   bindFilters();
   bindSidebar();
@@ -1641,9 +1893,16 @@ async function init() {
   bindLayout();
   bindGroups();
   startLogTimer();
+  await loadCategories();
+  await loadMeta();
+  await loadSites();
   await loadDevices();
   pollScanStatus();
   setInterval(pollScanStatus, 5000);
 }
 
-init();
+init().catch((e) => {
+  // F-4: letzter Fangnetz - Seite bleibt mit Offline-Banner bedienbar
+  console.error("init fehlgeschlagen", e);
+  setOffline(true);
+});

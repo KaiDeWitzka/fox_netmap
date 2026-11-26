@@ -39,7 +39,37 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* F-16: dynamische Viewport-Hoehe (mobile Browser mit Adressleiste) */
   overflow: hidden;
+}
+/* F-16: schmale Anzeigen (Smartphone) - volle Breite fuer Seitenleiste und HeaderGruppen */
+@media (max-width: 760px) {
+  aside#detail { width: 100%; }
+  #search { min-width: 140px; flex: 1; }
+  .hdr-row { gap: 6px; }
+}
+#app-alert {
+  background: var(--danger);
+  color: #fff;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+html[data-theme="light"] #app-alert { color: #fff; }
+#offline-banner {
+  background: #b45309;
+  color: #fff;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.secret-clear {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 6px;
 }
 header {
   display: block;
@@ -248,7 +278,7 @@ aside#detail {
 .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
 .status-online { background: #34d399; }
 .status-offline { background: #64748b; }
-.badge-vpn { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f59e0b; border: 1px solid #f59e0b; border-radius: 4px; padding: 0 4px; }
+.badge-vpn { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; border: 1px solid; border-radius: 4px; padding: 0 4px; }
 .panel { margin: 0 0 12px; }
 .panel h2 { margin: 0 0 8px; font-size: 14px; }
 .panel label { display: block; margin: 8px 0; font-size: 13px; }
@@ -268,11 +298,13 @@ body.embed header #btn-logout,
 body.embed header #btn-settings,
 body.embed header #btn-scan,
 body.embed header #btn-print,
+body.embed header #btn-pdf, /* F-12: PDF-Knopf in der Embed-Ansicht wirkungslos ausblenden */
 body.embed header #exp-json,
 body.embed header #exp-csv,
 body.embed #tab-settings,
 body.embed #nav [data-view="log"],
-body.embed #btn-layout-reset { display: none; }
+body.embed #btn-layout-reset,
+body.embed .table-tools { display: none; } /* F-12: Bearbeiten-Modus in der Embed-Ansicht ausblenden */
 .login-page { display: flex; align-items: center; justify-content: center; }
 .login-page .panel {
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
@@ -328,15 +360,39 @@ body.embed #btn-layout-reset { display: none; }
 #log-view .log-line { white-space: pre-wrap; word-break: break-all; }
 #log-view .log-ts { color: var(--muted); }
 #log-view .lv { font-weight: 700; }
+/* F-11: Log-Stufen brauchen in beiden Themes >= 4,5:1 Kontrast (WCAG 1.4.3) - geprueft in tests/test_a11y_css.py */
 #log-view .lv-DEBUG { color: #94a3b8; }
 #log-view .lv-INFO { color: #38bdf8; }
 #log-view .lv-WARN { color: #fbbf24; }
 #log-view .lv-ERROR, #log-view .lv-CRITICAL { color: #f87171; }
+html[data-theme="light"] #log-view .lv-DEBUG { color: #475569; }
+html[data-theme="light"] #log-view .lv-INFO { color: #0369a1; }
+html[data-theme="light"] #log-view .lv-WARN { color: #b45309; }
+html[data-theme="light"] #log-view .lv-ERROR, html[data-theme="light"] #log-view .lv-CRITICAL { color: #b91c1c; }
+/* F-11: VPN-Badge ebenfalls >= 4,5:1 (Text) bzw. >= 3:1 (Rahmen) gegen den Panel-Hintergrund */
+.badge-vpn { color: #d97706; border-color: #f59e0b; }
+html[data-theme="light"] .badge-vpn { color: #b45309; border-color: #b45309; }
 @media print {
-  body { height: auto; overflow: visible; }
-  header, aside#detail { display: none !important; }
+  /* F-10: Druck erzwingt helle Variablen (dunkles Theme waere unlesbar) und bricht Zellen um */
+  :root {
+    --bg: #ffffff;
+    --fg: #0f172a;
+    --panel: #ffffff;
+    --border: #94a3b8;
+    --accent: #0369a1;
+    --accent-strong: #075985;
+    --muted: #475569;
+    --danger: #b91c1c;
+  }
+  body { height: auto; overflow: visible; background: #fff; color: #0f172a; }
+  header, aside#detail, #app-alert, #offline-banner { display: none !important; }
   #view-map { display: none; }
   #view-table { display: block !important; height: auto; overflow: visible; }
   .bulk-bar, #device-table .sel-col { display: none !important; }
+  #device-table th, #device-table td { white-space: normal; overflow: visible; text-overflow: clip; }
   #device-table .cat-icon { filter: brightness(0); }
+  #log-view .lv-DEBUG { color: #475569; }
+  #log-view .lv-INFO { color: #0369a1; }
+  #log-view .lv-WARN { color: #b45309; }
+  #log-view .lv-ERROR, #log-view .lv-CRITICAL { color: #b91c1c; }
 }

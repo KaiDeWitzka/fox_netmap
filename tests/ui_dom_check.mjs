@@ -7,6 +7,7 @@ const html = fs
   .readFileSync(path.join(repo, "app/static/index.html"), "utf8")
   .replace('<script src="/static/vendor/cytoscape.min.js"></script>', "")
   .replace('<script src="/static/i18n.js"></script>', "")
+  .replace('<script src="/static/api.js"></script>', "")
   .replace('<script src="/static/app.js"></script>', "");
 const css = fs.readFileSync(path.join(repo, "app/static/styles.css"), "utf8");
 
@@ -194,6 +195,8 @@ w.eval(
     "\n;\n" +
     fs.readFileSync(path.join(repo, "app/static/icons.js"), "utf8") +
     "\n;\n" +
+    fs.readFileSync(path.join(repo, "app/static/api.js"), "utf8") +
+    "\n;\n" +
     fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8")
 );
 await new Promise((r) => setTimeout(r, 200));
@@ -255,7 +258,7 @@ check(
 );
 check(
   "Settings: alle Eingabe-IDs stabil geblieben",
-  ["st-theme", "st-lang", "st-auth", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
+  ["st-theme", "st-lang", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
 );
 
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
@@ -1033,6 +1036,19 @@ check("VPN: ungueltiger Pool -> kein PATCH (clientseitige Validierung)", patchCo
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));
 check("Sicherheit: login.html ohne Inline-Skript (CSP script-src 'self')", !/<script>/i.test(loginHtml) && loginHtml.includes('src="/static/login.js"'));
+
+// W5: alle tests/ui/*.mjs mitlaufen lassen (eigenes Harness je Datei)
+const uiDir = path.join(repo, "tests", "ui");
+if (fs.existsSync(uiDir)) {
+  for (const f of fs.readdirSync(uiDir).filter((x) => x.endsWith(".mjs") && x !== "harness.mjs").sort()) {
+    const mod = await import(path.join(uiDir, f));
+    if (typeof mod.run === "function") {
+      const f2 = await mod.run();
+      failures += f2;
+      console.log(`tests/ui/${f}: ${f2 === 0 ? "OK" : f2 + " FAILED"}`);
+    }
+  }
+}
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);
