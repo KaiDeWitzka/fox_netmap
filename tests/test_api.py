@@ -508,3 +508,12 @@ def test_devices_api_und_export_mit_vpn(auth_client, app):
     row = next(line for line in lines[1:] if line.startswith("00:7a:a4:9b:d9:68"))
     assert row.split(";")[header.index("vpn")] == "ja"
     assert row.split(";")[header.index("link_port")] == "LAN:2"
+
+
+def test_settings_tr064_insecure_tls_roundtrip(auth_client):
+    body = auth_client.get("/api/settings").json()
+    assert "tr064_insecure_tls" in body
+    assert auth_client.patch("/api/settings", json={"tr064_insecure_tls": True}).status_code == 200
+    assert str(auth_client.get("/api/settings").json()["tr064_insecure_tls"]).lower() == "true"
+    assert auth_client.patch("/api/settings", json={"tr064_insecure_tls": False}).status_code == 200
+    assert str(auth_client.get("/api/settings").json()["tr064_insecure_tls"]).lower() == "false"

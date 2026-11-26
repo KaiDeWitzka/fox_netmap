@@ -1632,3 +1632,32 @@ const I18N_EXTRA13 = {
   },
 };
 for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA13[lang] || {});
+
+
+const I18N_EXTRA14 = {
+  de: {
+    "st.tr064InsecureTls": "TR-064: TLS-Zertifikatspr\u00fcfung abschalten (nur bei https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Nur im eigenen LAN aktivieren \u2014 ohne Pr\u00fcfung kann die TR-064-Verbindung mitgeschnitten/gef\u00e4lscht werden (MITM). Default: aus (sichere Pr\u00fcfung). WARN im Log beim Scan.",
+  },
+  en: {
+    "st.tr064InsecureTls": "TR-064: disable TLS certificate check (only for https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Enable only in your own LAN \u2014 without the check the TR-064 connection can be sniffed/forged (MITM). Default: off (secure check). WARN in the log on scan.",
+  },
+  fr: {
+    "st.tr064InsecureTls": "TR-064 : d\u00e9sactiver la v\u00e9rification du certificat TLS (uniquement pour https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Activer uniquement dans votre r\u00e9seau local \u2014 sans v\u00e9rification, la connexion TR-064 peut \u00eatre \u00e9cout\u00e9e/falsifi\u00e9e (MITM). D\u00e9faut : d\u00e9sactiv\u00e9 (v\u00e9rification s\u00e9curis\u00e9e). WARN dans le journal lors du scan.",
+  },
+  es: {
+    "st.tr064InsecureTls": "TR-064: desactivar la verificaci\u00f3n del certificado TLS (solo para https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Activar solo en tu red local \u2014 sin verificaci\u00f3n, la conexi\u00f3n TR-064 puede ser interceptada/falsificada (MITM). Por defecto: desactivado (verificaci\u00f3n segura). WARN en el registro durante el escaneo.",
+  },
+  it: {
+    "st.tr064InsecureTls": "TR-064: disattiva la verifica del certificato TLS (solo per https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Attiva solo nella tua rete locale \u2014 senza verifica la connessione TR-064 pu\u00f2 essere intercettata/falsificata (MITM). Predefinito: disattivato (verifica sicura). WARN nel log durante la scansione.",
+  },
+  pt: {
+    "st.tr064InsecureTls": "TR-064: desativar a verifica\u00e7\u00e3o do certificado TLS (apenas para https://\u2026:49443)",
+    "st.tr064InsecureTlsHint": "Ativar apenas na tua rede local \u2014 sem verifica\u00e7\u00e3o, a liga\u00e7\u00e3o TR-064 pode ser intercetada/falsificada (MITM). Predefini\u00e7\u00e3o: desativado (verifica\u00e7\u00e3o segura). WARN no registo durante a varredura.",
+  },
+};
+for (const lang of Object.keys(I18N)) Object.assign(I18N[lang], I18N_EXTRA14[lang] || {});

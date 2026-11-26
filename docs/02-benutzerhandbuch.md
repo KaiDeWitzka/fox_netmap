@@ -191,6 +191,7 @@ Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 | Port-Umfang / Eigene Ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | Top-N (0 = alle) oder eigene Liste `80,443,…` |
 | SNMP aktiv / Switches / Community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM-Tabelle + LLDP der Switches (161/udp). Community ohne Standardwert (seit v1.6.0), ohne Community kein SNMP |
 | TR-064 Hauptgerät / weitere Endpunkte / Benutzer / Passwort | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL oder `host:port`; Repeater als weitere Endpunkte; Passwort ist **write-only** (wird nie per GET ausgeliefert, leer = unverändert) |
+| TR-064 TLS-Zertifikatsprüfung abschalten (Häkchen) | `NETZ_TR064_INSECURE_TLS` | nur bei `https://…:49443` (selbstsigniertes Zertifikat) nötig — **nur im eigenen LAN** (MITM-Risiko); Default aus; WARN im Log |
 | Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
 | Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.0.2.0/24; Remote:198.51.100.0/24` |

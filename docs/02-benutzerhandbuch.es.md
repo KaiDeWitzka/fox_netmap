@@ -191,6 +191,7 @@ vacío = valor por defecto del entorno).
 | Alcance de puertos / puertos propios | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = todos) o lista propia `80,443,…` |
 | SNMP activado / switches / comunidad | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabla CAM + LLDP de los switches (161/udp). Comunidad sin valor predeterminado (desde v1.6.0); sin comunidad no hay SNMP |
 | TR-064 dispositivo principal / otros endpoints / usuario / contraseña | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL o `host:puerto`; repetidores como endpoints extra; la contraseña es **write-only** (GET nunca la devuelve, vacío = sin cambios) |
+| Desactivar la verificación del certificado TLS de TR-064 (casilla) | `NETZ_TR064_INSECURE_TLS` | solo necesaria para `https://…:49443` (certificado autofirmado) — **solo red local** (riesgo MITM); desactivada por defecto; WARN en el registro |
 | URL de alarma (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; los tokens siguen siendo solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Lista blanca | `NETZ_ALARM_WHITELIST` | MAC/IP que no disparan la alarma «nuevo dispositivo» |
 | Sitios | `NETZ_SITES` | `Nombre:subred; …` p. ej. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |

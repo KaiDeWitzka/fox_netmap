@@ -184,6 +184,7 @@ Everything changed here takes effect **on the next scan without restarting the c
 | Port scope / custom ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = all) or custom list `80,443,…` |
 | SNMP on / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM table + LLDP of switches (161/udp). Community has no default (since v1.6.0); without one SNMP is skipped |
 | TR-064 main device / more endpoints / user / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL or `host:port`; repeaters as extra endpoints; password is **write-only** (never returned by GET, empty = unchanged) |
+| Disable TR-064 TLS certificate check (checkbox) | `NETZ_TR064_INSECURE_TLS` | only needed for `https://…:49443` (self-signed certificate) — **own LAN only** (MITM risk); default off; WARN in log |
 | Alarm URLs (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; tokens stay env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs that do not trigger a "new device" alarm |
 | Sites | `NETZ_SITES` | `Name:subnet; …` e.g. `Home:192.0.2.0/24; Remote:198.51.100.0/24` |

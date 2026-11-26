@@ -187,6 +187,7 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 | Âmbito de portas / portas próprias | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = todas) ou lista própria `80,443,…` |
 | SNMP ativo / switches / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabela CAM + LLDP dos switches (161/udp). Community sem valor predefinido (desde v1.6.0); sem community não há SNMP |
 | TR-064 dispositivo principal / outros endpoints / utilizador / palavra-passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `host:porta`; repetidores como endpoints extra; a palavra-passe é **write-only** (o GET nunca a devolve, vazia = inalterada) |
+| Desativar a verificação do certificado TLS do TR-064 (caixa de seleção) | `NETZ_TR064_INSECURE_TLS` | necessária apenas para `https://…:49443` (certificado autoassinado) — **apenas rede local** (risco MITM); desativada por padrão; WARN no registo |
 | URL de alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; os tokens ficam só em env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP que não disparam o alarme «novo dispositivo» |
 | Locais | `NETZ_SITES` | `Nome:sub-rede; …` p. ex. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |

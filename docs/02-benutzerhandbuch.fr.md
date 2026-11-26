@@ -189,6 +189,7 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 | Portée des ports / ports perso | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tous) ou liste perso `80,443,…` |
 | SNMP activé / switches / communauté | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | table CAM + LLDP des switches (161/udp). Pas de communauté par défaut (depuis v1.6.0) ; sans communauté, pas de SNMP |
 | TR-064 appareil principal / autres points / utilisateur / mot de passe | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL ou `hôte:port` ; répéteurs comme points supplémentaires ; le mot de passe est **write-only** (jamais renvoyé par GET, vide = inchangé) |
+| Désactiver la vérification du certificat TLS TR-064 (case à cocher) | `NETZ_TR064_INSECURE_TLS` | nécessaire uniquement pour `https://…:49443` (certificat auto-signé) — **réseau local uniquement** (risque MITM) ; désactivé par défaut ; WARN dans le journal |
 | URL d'alarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…` ; les tokens restent env-only (`NETZ_NOTIFY_*_TOKEN`) |
 | Liste blanche | `NETZ_ALARM_WHITELIST` | MAC/IP qui ne déclenchent pas d'alarme « nouvel appareil » |
 | Sites | `NETZ_SITES` | `Nom:sous-réseau; …` p. ex. `Maison:192.0.2.0/24; Remote:198.51.100.0/24` |

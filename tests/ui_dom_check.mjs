@@ -129,6 +129,7 @@ w.fetch = async (url, opts = {}) => {
         fritz_url: "",
         fritz_urls: "",
         fritz_user: "",
+        tr064_insecure_tls: false,
         snmp_community: "public",
         notify_webhook: "",
         notify_gotify: "",
@@ -254,12 +255,13 @@ check(
 );
 check(
   "Settings: alle Eingabe-IDs stabil geblieben",
-  ["st-theme", "st-lang", "st-auth", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
+  ["st-theme", "st-lang", "st-auth", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
 );
 
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
 await sleep(50);
 check("Tabelle: Settings speichern -> PATCH /api/settings", calls.some((c) => c.url.includes("/api/settings") && c.method === "PATCH"));
+check("Settings: TLS-Haken in TR-064-Gruppe vorhanden + PATCH enthaelt tr064_insecure_tls", !!$("#st-tr064insecuretls") && calls.some((c) => c.url.includes("/api/settings") && c.method === "PATCH" && c.body.includes('"tr064_insecure_tls":')));
 
 $("#tab-detail").click();
 check("Tab Details: Detail-Content sichtbar", $("#detail-content").hidden === false && $("#settings-content").hidden === true);

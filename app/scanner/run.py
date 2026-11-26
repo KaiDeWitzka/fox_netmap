@@ -40,6 +40,7 @@ OVERRIDABLE = {
     "fritz_user": str,
     "fritz_pass": str,
     "fritz_mesh": lambda v: str(v).lower() in ("1", "true", "yes"),
+    "tr064_insecure_tls": lambda v: str(v).lower() in ("1", "true", "yes"),
     "vpn_pool": str,
     "snmp_community": str,
     "notify_webhook": str,
