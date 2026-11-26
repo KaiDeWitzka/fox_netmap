@@ -51,6 +51,7 @@ x-netz-env: &netz-env
 
 services:
   netmap:
+    init: true  # K-8: SIGTERM sauber an den Prozess weiterreichen
     build: .
     container_name: fox-netmap
     restart: unless-stopped
@@ -69,6 +70,7 @@ services:
     mem_limit: 512m  # S-6: Deckel fuer PDF-Export und Bilder
 
   netmap-scanner:
+    init: true  # K-8: SIGTERM sauber an den Prozess weiterreichen
     build: .
     container_name: fox-netmap-scanner
     restart: unless-stopped

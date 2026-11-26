@@ -2,8 +2,10 @@ import hashlib
 import logging
 import os
 import sqlite3
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from datetime import UTC, datetime, timedelta
+
+from . import dedupe
 
 log = logging.getLogger("fox_netmap")
 
@@ -71,7 +73,11 @@ CREATE TABLE IF NOT EXISTS scan_state (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     last_scan TEXT,
     next_scan TEXT,
-    scanning INTEGER NOT NULL DEFAULT 0
+    scanning INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    last_error_at TEXT,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    scan_started_at TEXT
 );
 CREATE TABLE IF NOT EXISTS oui_cache (
     prefix TEXT PRIMARY KEY,
@@ -152,12 +158,32 @@ def connect(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
     _harden_file(path)  # S-17: 0600
     conn.row_factory = sqlite3.Row
-    _set_journal_mode(conn, path)
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA foreign_keys=ON")
+    # K-1: teure Schreibprobe (Journal-Modus + BEGIN IMMEDIATE) nur einmal je Prozess und Pfad,
+    # nicht bei jedem connect() - sonst skaliert die Verbindungszeit mit jedem Healthcheck/Read
+    if path not in _journal_probed:
+        _set_journal_mode(conn, path)
+        _journal_probed.add(path)
     return conn
 
 
+_journal_probed: set[str] = set()
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
+    # K-4: Web und Scanner koennen beim ersten Start dieselbe Migration fahren - "duplicate column
+    # name" ist dann harmlos (der andere Prozess war schneller)
+    try:
+        _migrate_inner(conn)
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" in str(exc):
+            log.info("Migration uebersprungen (anderer Prozess war schneller): %s", exc)
+        else:
+            raise
+
+
+def _migrate_inner(conn: sqlite3.Connection) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
     if "connection" not in cols:
         conn.execute("ALTER TABLE devices ADD COLUMN connection TEXT NOT NULL DEFAULT ''")
@@ -182,6 +208,17 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # v1.6.14: Raum/Ebene (frei vergebbar, z. B. "EG Wohnzimmer") fuer Karten-Gruppierung, Filter, Exporte
         conn.execute("ALTER TABLE devices ADD COLUMN room TEXT NOT NULL DEFAULT ''")
         log.info("Migration: Spalte devices.room ergaenzt")
+    # W3: Scanzustand um Fehler-Spalten erweitert (SF-2, W4 nutzt sie)
+    ss_cols = {r["name"] for r in conn.execute("PRAGMA table_info(scan_state)")}
+    for col, decl in (
+        ("last_error", "TEXT"),
+        ("last_error_at", "TEXT"),
+        ("consecutive_failures", "INTEGER NOT NULL DEFAULT 0"),
+        ("scan_started_at", "TEXT"),
+    ):
+        if col not in ss_cols:
+            conn.execute(f"ALTER TABLE scan_state ADD COLUMN {col} {decl}")
+            log.info("Migration: Spalte scan_state.%s ergaenzt", col)
 
 
 TOKEN_PREFIX = "sha256:"  # noqa: S105 - Konstantenpraefix, kein Passwort
@@ -215,56 +252,18 @@ def init_db(conn: sqlite3.Connection) -> None:
     # C-2: leere Altzeilen loeschen (app.js sendete frueher jedes Feld; leer darf nicht die Umgebung ueberschreiben)
     conn.execute("DELETE FROM settings WHERE value = ''")
     conn.execute("INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)")
+    # Schema/Migration/scan_state dauerhaft sichern, bevor die Dedupe fehlschlagen darf (K-12)
+    conn.commit()
     try:
-        removed = dedupe_devices_by_ip(conn)
+        removed = dedupe.merge_placeholders(conn)
     except sqlite3.OperationalError as exc:
         # Cleanup darf den Start nicht toeten (z. B. I/O-Fehler auf ungeeignetem Mount)
         log.error("Dedupe fehlgeschlagen (%s) - wird uebersprungen", exc)
+        conn.rollback()  # K-12: keine halbe Zusammenfuehrung committen
         removed = 0
     conn.commit()
     if removed:
         log.info("Identitaet: %s doppelte Geraete (gleiche IP) zusammengefuehrt", removed)
-
-
-def dedupe_devices_by_ip(conn: sqlite3.Connection) -> int:
-    rows = conn.execute(
-        "SELECT mac, ip, status, last_seen, source FROM devices WHERE ip != '' ORDER BY ip, last_seen DESC"
-    ).fetchall()
-    by_ip: dict[str, list[dict]] = {}
-    for r in rows:
-        by_ip.setdefault(r["ip"], []).append(dict(r))
-    removed = 0
-    for group in by_ip.values():
-        if len(group) < 2:
-            continue
-        real = [g for g in group if not g["mac"].startswith("ip:")]
-        keep = max(real or group, key=lambda g: g["last_seen"])
-        keep_mac = keep["mac"]
-        for g in group:
-            if g["mac"] == keep_mac:
-                continue
-            conn.execute(
-                "INSERT OR IGNORE INTO device_ports (mac, port, proto, service, scan_ts) "
-                "SELECT ?, port, proto, service, scan_ts FROM device_ports WHERE mac = ?",
-                (keep_mac, g["mac"]),
-            )
-            conn.execute("DELETE FROM device_ports WHERE mac = ?", (g["mac"],))
-            if conn.execute("SELECT 1 FROM device_layout WHERE mac = ?", (keep_mac,)).fetchone() is None:
-                conn.execute("UPDATE device_layout SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
-            else:
-                conn.execute("DELETE FROM device_layout WHERE mac = ?", (g["mac"],))
-            conn.execute("UPDATE device_history SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
-            conn.execute("UPDATE device_events SET mac = ? WHERE mac = ?", (keep_mac, g["mac"]))
-            conn.execute("DELETE FROM devices WHERE mac = ?", (g["mac"],))
-            removed += 1
-        sources = sorted({s for g in group for s in g["source"].split(",") if s})
-        status = "online" if any(g["status"] == "online" for g in group) else "offline"
-        last_seen = max(g["last_seen"] for g in group)
-        conn.execute(
-            "UPDATE devices SET source = ?, status = ?, last_seen = ? WHERE mac = ?",
-            (",".join(sources), status, last_seen, keep_mac),
-        )
-    return removed
 
 
 def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
@@ -294,8 +293,12 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
         )
     else:
         category = row["category_override"] or dev.get("category", "Unbekannt")
+        # C-6: unvollstaendige Erkennung (leere Felder) darf Hostname/Hersteller/IPv6/IP nicht
+        # loeschen - COALESCE behaelt den letzten bekannten Wert; ip erst recht (N-1)
         conn.execute(
-            "UPDATE devices SET ip=?, ip6=?, vpn=?, hostname=?, vendor=?, category=?, status=?, subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
+            "UPDATE devices SET ip=COALESCE(NULLIF(?, ''), ip), ip6=COALESCE(NULLIF(?, ''), ip6), vpn=?, "
+            "hostname=COALESCE(NULLIF(?, ''), hostname), vendor=COALESCE(NULLIF(?, ''), vendor), category=?, status=?, "
+            "subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
             (
                 dev.get("ip", ""),
                 dev.get("ip6", ""),
@@ -313,6 +316,8 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
                 dev["mac"],
             ),
         )
+    # N-1: sobald diese MAC eine IP meldet, wird die IP anderer (stale) Zeilen geleert
+    dedupe.blank_stale_ip(conn, dev.get("ip", ""), dev["mac"])
 
 
 def replace_ports(conn: sqlite3.Connection, mac: str, port_list: list[dict], now: str) -> tuple[set, set]:
@@ -429,16 +434,32 @@ def set_layout(
     connected_to: str | None = None,
     connected_manual: int | None = None,
 ) -> None:
-    row = get_layout(conn, mac)
-    x = x if x is not None else (row["x"] if row else None)
-    y = y if y is not None else (row["y"] if row else None)
-    ct = connected_to if connected_to is not None else (row["connected_to"] if row else None)
-    cm = connected_manual if connected_manual is not None else (row["connected_manual"] if row else 0)
+    # K-6: spaltengenauer UPSERT - nur die uebergebenen Felder werden geschrieben, ein
+    # konkurrierender Schreibzugriff auf eine andere Spalte kann nicht verloren gehen
+    fields = {"x": x, "y": y, "connected_to": connected_to, "connected_manual": connected_manual}
+    fields = {k: v for k, v in fields.items() if v is not None}
+    if not fields:
+        return
+    cols = ", ".join(fields)
+    marks = ", ".join("?" * len(fields))
+    sets = ", ".join(f"{k}=excluded.{k}" for k in fields)
     conn.execute(
-        "INSERT INTO device_layout (mac, x, y, connected_to, connected_manual) VALUES (?,?,?,?,?) "
-        "ON CONFLICT(mac) DO UPDATE SET x=excluded.x, y=excluded.y, connected_to=excluded.connected_to, connected_manual=excluded.connected_manual",
-        (mac, x, y, ct, cm),
+        f"INSERT INTO device_layout (mac, {cols}) VALUES (?, {marks}) "  # noqa: S608 - Spaltennamen aus internen fields-Schluesseln, Werte per Parameter
+        f"ON CONFLICT(mac) DO UPDATE SET {sets}",
+        (mac, *fields.values()),
     )
+
+
+@contextmanager
+def read_snapshot(conn: sqlite3.Connection):
+    """K-10/K-11: gemeinsamer konsistenter Schnappschuss fuer mehrteilige Lesezugriffe
+    (Exporte, Detailansicht) - Daten mischen nicht vor und nach einem Scan-Commit."""
+    conn.execute("BEGIN")
+    try:
+        yield conn
+    finally:
+        with suppress(sqlite3.Error):
+            conn.rollback()
 
 
 def get_scan_state(conn: sqlite3.Connection) -> dict:
@@ -461,6 +482,7 @@ def set_oui_cache(conn: sqlite3.Connection, prefix: str, vendor: str) -> None:
         "INSERT OR REPLACE INTO oui_cache (prefix, vendor, fetched_at) VALUES (?, ?, ?)",
         (prefix, vendor, utcnow()),
     )
+    conn.commit()  # K-2: Transaktion sofort beenden, nicht bis apply_scan offen halten
 
 
 def _harden_file(path: str) -> None:

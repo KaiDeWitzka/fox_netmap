@@ -116,21 +116,30 @@ def auto_export_due(last: str | None, interval_hours: int, now=None) -> bool:
     return bool((now - last_dt) >= timedelta(hours=interval_hours))
 
 
+def _write_atomic(path: str, data: str) -> None:
+    # K-8: atomar schreiben (tmp + os.replace) - ein Abbruch hinterlaesst keine abgeschnittene Datei
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        fh.write(data)
+    os.replace(tmp, path)
+
+
 def auto_export(settings, conn) -> list[str]:
     out_dir = os.path.join(settings.data_dir, settings.auto_export_dir)
     os.makedirs(out_dir, exist_ok=True)
-    rows = db.list_devices(conn)
-    for r in rows:
-        r["site"] = settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""
+    with db.read_snapshot(conn):  # K-11: konsistenter Schnappschuss statt Daten vor/nach Scan
+        rows = db.list_devices(conn)
+        for r in rows:
+            r["site"] = settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""
+        payload = devices_payload(settings, rows, conn)
+        csv_text = to_csv(rows, ";")
     stamp = db.utcnow().replace(":", "-")
     written = []
     json_path = os.path.join(out_dir, f"netmap-{stamp}.json")
-    with open(json_path, "w", encoding="utf-8") as fh:
-        json.dump(devices_payload(settings, rows, conn), fh, ensure_ascii=False, indent=2)
+    _write_atomic(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
     written.append(json_path)
     csv_path = os.path.join(out_dir, f"netmap-{stamp}.csv")
-    with open(csv_path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(to_csv(rows, ";"))
+    _write_atomic(csv_path, csv_text)
     written.append(csv_path)
     return written
 

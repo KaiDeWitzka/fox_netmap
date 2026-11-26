@@ -378,6 +378,20 @@ def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pip
 
 def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = None) -> dict:
     now = now or db.utcnow()
+    # K-10: Schreib-Lock sofort nehmen - Lesen und erstes Schreiben laufen sonst ohne
+    # gemeinsamen Schnappschuss (Exporte mischen Daten vor/nach dem Scan)
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    try:
+        return _apply_scan_body(conn, settings, devices, now)
+    except Exception:
+        # K-5: ein Fehler mitten im Scan verwirft den GANZEN Scan (kein halber Stand),
+        # das finally in run_once schreibt danach nur noch den Scanstatus
+        conn.rollback()
+        raise
+
+
+def _apply_scan_body(conn, settings: Settings, devices: list[dict], now: str) -> dict:
     existing = {r["mac"]: dict(r) for r in conn.execute("SELECT mac, status FROM devices")}
     seen: set[str] = set()
     new_devices: list[dict] = []
@@ -485,13 +499,22 @@ def run_once(settings: Settings, conn) -> dict:
 
 
 def main() -> None:
+    import signal
+
     settings = get_settings()
     os.makedirs(settings.data_dir, exist_ok=True)
     conn = db.connect(db.db_path(settings.data_dir))
     db.init_db(conn)
     log = get_logger(data_dir=settings.data_dir)
     log.info("Scanner startet: Intervall %ss, Daten: %s", settings.scan_interval, settings.data_dir)
-    while True:
+    stop = {"flag": False}
+
+    def _on_sigterm(signum, frame):
+        stop["flag"] = True  # K-8: docker stop -> sauberes Ende statt SIGKILL nach 10 s
+
+    signal.signal(signal.SIGTERM, _on_sigterm)
+    signal.signal(signal.SIGINT, _on_sigterm)
+    while not stop["flag"]:
         eff = effective_settings(conn, settings)
         if db.get_setting(conn, "scan_requested"):
             db.set_setting(conn, "scan_requested", "")
@@ -519,7 +542,8 @@ def main() -> None:
         deadline = time.time() + eff.scan_interval
         db.set_scan_state(conn, next_scan=datetime.fromtimestamp(deadline, UTC).isoformat(timespec="seconds"))
         conn.commit()
-        while time.time() < deadline:
+        while time.time() < deadline and not stop["flag"]:
             if db.get_setting(conn, "scan_requested"):
                 break
-            time.sleep(1)
+            time.sleep(0.5)
+    log.info("Scanner beendet (SIGTERM/SIGINT)")

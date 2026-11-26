@@ -18,6 +18,13 @@ Produktionsreife Welle 1 (Bausteine, siehe docs/produktionsreife/UEBERGABE.md):
 - CSRF: unsichere Methoden mit Sitzungscookie brauchen passenden Origin/Referer (S-16); `umask 077` + DB/Log 0600 (S-17); `expires_hours` fuer Embed-Tokens validiert (C-10)
 - E-3 (Kais Wahl C): TR-064-HTTPS-zu-HTTP-Fallback bleibt bestehen (WARN je Lauf); Restrisiko wird in W8 in `docs/03-sicherheit.md` Abschnitt 4 dokumentiert - kein Code-Eingriff in W2
 
+Produktionsreife Welle 3 (Datenbank + Nebenlaeufigkeit, siehe docs/produktionsreife/UEBERGABE.md):
+- Geraete-Zusammenfuehrung neu in `app/dedupe.py`: nur noch `ip:`-Platzhalter werden in die echte MAC derselben IP eingemischt (Quellen vereint, "online" gewinnt, juengster last_seen); zwei echte MACs auf derselben IP werden nie verschmolzen - sonst gaenge ein Geraet samt Notiz/Verlauf verloren (K-3/C-14); `init_db` sichert Schema + scan_state vor der Dedupe per Commit und rollt bei Fehler nur die Dedupe zurueck (K-12)
+- `connect()` fuehrt die Journal-Schreibprobe (WAL/Fallback + BEGIN IMMEDIATE) nur noch einmal je Prozess und Pfad aus - reine Lesezugriffe und der Healthcheck nehmen keinen Schreib-Lock mehr (K-1); `set_oui_cache` committet sofort, der Scanner haelt keine offene Schreibtransaktion mehr (K-2); Migrationen ueberleben ein "duplicate column name" (Web + Scanner starten gleichzeitig) (K-4)
+- Scanner: `apply_scan` nimmt sofort `BEGIN IMMEDIATE` und rollt bei einem Fehler den GANZEN Scan zurueck, statt einen halben Stand zu speichern (K-10/K-5); SIGTERM/SIGINT beendet die Scan-Schleife sauber (`init: true` in docker-compose) (K-8); Auto-Export schreibt atomar (tmp-Datei + os.replace) aus einem konsistenten Lese-Schnappschuss `db.read_snapshot` (K-8/K-11)
+- Upsert: leere Felder ueberschreiben Hostname/Hersteller/IPv6/IP nicht mehr (COALESCE, C-6), und eine MAC mit gemeldeter IP leert die IP anderer (stale) Zeilen (N-1); `set_layout` schreibt spaltengenau per UPSERT, gleichzeitige Aenderungen anderer Spalten gehen nicht verloren (K-6)
+- `scan_state` um Fehler-Spalten erweitert (`last_error`, `last_error_at`, `consecutive_failures`, `scan_started_at`) - Basis fuer die Scan-Fehleranzeige (SF-2) in W4
+
 ## [1.6.17] – 2026-11-26
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).

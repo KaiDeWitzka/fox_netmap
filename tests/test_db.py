@@ -104,7 +104,7 @@ def test_trim_history(tmp_path):
     assert len(conn.execute("SELECT ts FROM device_history").fetchall()) == 1
 
 
-def test_dedupe_devices_by_ip(tmp_path):
+def test_merge_placeholders(tmp_path):
     conn = make_conn(tmp_path)
     now = db.utcnow()
     conn.execute(
@@ -120,7 +120,7 @@ def test_dedupe_devices_by_ip(tmp_path):
     conn.execute("INSERT INTO device_ports (mac, port, scan_ts) VALUES ('ip:192.168.178.33', 443, ?)", (now,))
     conn.execute("INSERT INTO device_layout (mac, x, y) VALUES ('ip:192.168.178.33', 5, 6)")
     conn.commit()
-    removed = db.dedupe_devices_by_ip(conn)
+    removed = db.dedupe.merge_placeholders(conn)
     conn.commit()
     assert removed == 1
     rows = db.list_devices(conn)
@@ -309,7 +309,7 @@ def test_init_db_survives_dedupe_io_error(monkeypatch, tmp_path):
     def boom(c):
         raise sqlite3.OperationalError("disk I/O error")
 
-    monkeypatch.setattr(db, "dedupe_devices_by_ip", boom)
+    monkeypatch.setattr(db.dedupe, "merge_placeholders", boom)
     db.init_db(conn)  # darf nicht crashen
     assert db.get_scan_state(conn)["id"] == 1
     conn.close()
