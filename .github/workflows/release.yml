@@ -10,7 +10,8 @@ on:
     paths:
       - Dockerfile
       - docker/**
-      - requirements.txt
+      - pyproject.toml
+      - uv.lock
       - scripts/trivy.sh
       - .trivyignore
       - .github/workflows/release.yml
@@ -34,21 +35,16 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
-      - name: Abhängigkeiten installieren (hash-gepinnt)
-        run: pip install --require-hashes --no-deps -r requirements-dev.txt && pip check
-      - name: Lint
-        run: ruff check .
-      - name: Tests
-        run: python -m pytest -q
-      - name: UI DOM-Test
-        run: |
-          npm ci --no-audit --no-fund
-          node tests/ui_dom_check.mjs
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+      - name: Gate (ruff, format, mypy, pytest+cov, UI-DOM, eslint, pip-audit)
+        run: bash scripts/gate.sh
       - name: Tag passt zur App-Version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          v=$(python -c "import app; print(app.__version__)")
-          test "v$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME ≠ app.__version__ $v"; exit 1; }
+          v=$(uv run python -c "import app; print(app.__version__)")
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != app.__version__ $v"; exit 1; }
 
   image:
     runs-on: ubuntu-latest

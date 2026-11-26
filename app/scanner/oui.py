@@ -34,9 +34,10 @@ def lookup(mac: str, table: dict[str, str]) -> str:
 
 
 def _http_get(url: str, timeout: float = 5.0) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": "fox_netmap (OUI lookup)"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode("utf-8", "ignore")
+    req = urllib.request.Request(url, headers={"User-Agent": "fox_netmap (OUI lookup)"})  # noqa: S310 - nur bei oui_online_enabled, URL aus Settings; Redirect/Read-Cap in W2 (S-14)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - nur bei oui_online_enabled, URL aus Settings; Redirect/Read-Cap in W2 (S-14)
+        text: str = resp.read().decode("utf-8", "ignore")
+        return text
 
 
 def parse_vendor(body: str) -> str:

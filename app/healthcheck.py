@@ -10,7 +10,7 @@ Exit-Code 0 = gesund, 1 = ungesund.
 import os
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 GRACE = 300
 
@@ -29,7 +29,7 @@ def detect_role() -> str:
 
 def check_web(port: int) -> tuple[bool, str]:
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=4) as r:  # noqa: S310 (lokal)
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=4) as r:
             return r.status == 200, f"HTTP {r.status}"
     except Exception as exc:  # noqa: BLE001
         return False, f"web nicht erreichbar: {exc}"
@@ -51,7 +51,7 @@ def check_scanner(data_dir: str, now: datetime | None = None) -> tuple[bool, str
     nxt = state.get("next_scan")
     if not nxt:
         return True, "noch kein Scan geplant"
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     overdue = (now - datetime.fromisoformat(nxt)).total_seconds()
     if overdue > GRACE:
         return False, f"Scan-Schleife haengt: naechster Scan seit {int(overdue)} s ueberfaellig"

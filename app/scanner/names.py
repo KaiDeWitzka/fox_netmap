@@ -25,7 +25,7 @@ def resolve_aaaa(hostname: str) -> str:
     except (socket.herror, socket.gaierror, OSError, TimeoutError):
         return ""
     for info in infos:
-        addr = info[4][0]
+        addr = str(info[4][0])
         if addr and not addr.lower().startswith("fe80:"):
             return addr
     return ""
@@ -123,7 +123,7 @@ def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
         while time.time() < deadline:
             try:
                 data, _ = sock.recvfrom(9000)
-            except (socket.timeout, OSError):
+            except (TimeoutError, OSError):
                 break
             for hostname in parse_mdns_answers(data):
                 host = hostname.rstrip(".")
@@ -139,12 +139,14 @@ def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
 
 def resolve_all(ips: list[str], workers: int = 32, use_mdns: bool = False, mdns_timeout: float = 1.0) -> dict[str, str]:
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        result = dict(zip(ips, pool.map(resolve_hostname, ips)))
+        result = dict(zip(ips, pool.map(resolve_hostname, ips), strict=True))
     if use_mdns:
         missing = [ip for ip, name in result.items() if not name]
         if missing:
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                for ip, name in zip(missing, pool.map(lambda i: resolve_hostname_mdns(i, mdns_timeout), missing)):
+                for ip, name in zip(
+                    missing, pool.map(lambda i: resolve_hostname_mdns(i, mdns_timeout), missing), strict=True
+                ):
                     if name:
                         result[ip] = name
     return result

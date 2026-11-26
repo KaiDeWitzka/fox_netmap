@@ -24,16 +24,19 @@ def is_whitelisted(settings, dev: dict) -> bool:
     ip = (dev.get("ip") or "").strip()
     if mac and not mac.startswith("ip:") and mac in entries:
         return True
-    if ip and ip in entries:
-        return True
-    return False
+    return bool(ip and ip in entries)
 
 
 def notify_new_devices(settings, devices: list[dict]) -> None:
     if not devices:
         return
-    summary = [{"mac": d.get("mac"), "ip": d.get("ip"), "hostname": d.get("hostname"), "vendor": d.get("vendor")} for d in devices]
-    message = f"{len(devices)} neue(s) Geraet(e): " + ", ".join(f"{d.get('hostname') or d.get('ip')} ({d.get('mac')})" for d in devices)
+    summary = [
+        {"mac": d.get("mac"), "ip": d.get("ip"), "hostname": d.get("hostname"), "vendor": d.get("vendor")}
+        for d in devices
+    ]
+    message = f"{len(devices)} neue(s) Geraet(e): " + ", ".join(
+        f"{d.get('hostname') or d.get('ip')} ({d.get('mac')})" for d in devices
+    )
     if settings.notify_webhook:
         _post("Webhook", settings.notify_webhook, json={"event": "new_devices", "devices": summary})
     if settings.notify_gotify and settings.notify_gotify_token:

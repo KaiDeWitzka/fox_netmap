@@ -11,15 +11,36 @@ from app.scanner import mdns, names
 @pytest.mark.parametrize(
     "host,exp",
     [
-        ("iPhone", c.MOBILE), ("Kais-iPad", c.MOBILE), ("Galaxy-S23", c.MOBILE), ("android-3f2a", c.MOBILE),
-        ("PS5-642", c.MEDIA), ("LGwebOSTV", c.MEDIA), ("MagentaTV-One-2-Generation", c.MEDIA), ("Nintendo-Switch", c.MEDIA),
-        ("Apple-TV-Wohnzimmer", c.MEDIA), ("sonos-kueche", c.MEDIA),
-        ("Mac", c.CLIENT), ("iMac", c.CLIENT), ("NettiMac", c.CLIENT), ("Kais-Mac-mini", c.CLIENT), ("MacBook-Pro", c.CLIENT),
+        ("iPhone", c.MOBILE),
+        ("Kais-iPad", c.MOBILE),
+        ("Galaxy-S23", c.MOBILE),
+        ("android-3f2a", c.MOBILE),
+        ("PS5-642", c.MEDIA),
+        ("LGwebOSTV", c.MEDIA),
+        ("MagentaTV-One-2-Generation", c.MEDIA),
+        ("Nintendo-Switch", c.MEDIA),
+        ("Apple-TV-Wohnzimmer", c.MEDIA),
+        ("sonos-kueche", c.MEDIA),
+        ("Mac", c.CLIENT),
+        ("iMac", c.CLIENT),
+        ("NettiMac", c.CLIENT),
+        ("Kais-Mac-mini", c.CLIENT),
+        ("MacBook-Pro", c.CLIENT),
         ("DESKTOP-4KQ7T1B", c.CLIENT),
-        ("NPI077254", c.PRINTER), ("BRW0080927AFBCE", c.PRINTER), ("drucker-buero", c.PRINTER),
-        ("HueBridge", c.IOT), ("shelly-wohnzimmer", c.IOT), ("steckdose-1", c.IOT), ("ring-tuer", c.IOT),
-        ("PupsNAS", c.SERVER), ("pups-nas", c.SERVER), ("pve", c.SERVER), ("pi-hole", c.SERVER),
-        ("TL-SG108E-GZ", c.SWITCH), ("fritz.box", c.ROUTER), ("fritz-repeater", c.REPEATER),
+        ("NPI077254", c.PRINTER),
+        ("BRW0080927AFBCE", c.PRINTER),
+        ("drucker-buero", c.PRINTER),
+        ("HueBridge", c.IOT),
+        ("shelly-wohnzimmer", c.IOT),
+        ("steckdose-1", c.IOT),
+        ("ring-tuer", c.IOT),
+        ("PupsNAS", c.SERVER),
+        ("pups-nas", c.SERVER),
+        ("pve", c.SERVER),
+        ("pi-hole", c.SERVER),
+        ("TL-SG108E-GZ", c.SWITCH),
+        ("fritz.box", c.ROUTER),
+        ("fritz-repeater", c.REPEATER),
     ],
 )
 def test_hostnamen(host, exp):
@@ -92,6 +113,7 @@ def test_kategorien_api_entspricht_scanner():
 
 
 # ---- mDNS ----
+
 
 def _name(n: str) -> bytes:
     return names._encode_name(n)

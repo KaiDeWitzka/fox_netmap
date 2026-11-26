@@ -244,7 +244,12 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"ports": "80,443,8080"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"fritz_url": "192.168.178.1:49000"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"fritz_url": "kein endpoint!"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"fritz_urls": "http://192.168.178.14:49000, 192.168.178.16:49000"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"fritz_urls": "http://192.168.178.14:49000, 192.168.178.16:49000"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"notify_webhook": "keine-url"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"notify_webhook": "https://hook.example/x"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"notify_ntfy": "https://ntfy.example/t"}).status_code == 200
@@ -266,7 +271,12 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 721}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 24}).status_code == 200
     assert auth_client.patch("/api/settings", json={"alarm_whitelist": "bogus!!"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"alarm_whitelist": "AA:BB:CC:DD:EE:FF, 192.168.178.50, 2003::1"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"alarm_whitelist": "AA:BB:CC:DD:EE:FF, 192.168.178.50, 2003::1"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"mdns_enabled": False}).status_code == 200
     r = auth_client.patch("/api/settings", json={"scan_interval": 600})
     assert r.status_code == 200
@@ -300,7 +310,9 @@ def test_sites_api_filter_export(auth_client, app):
     assert auth_client.patch("/api/settings", json={"sites": "Kaputt"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"sites": ":192.168.1.0/24"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"sites": "X:keine-ip"}).status_code == 422
-    r = auth_client.patch("/api/settings", json={"sites": "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24, 10.9.0.0/16"})
+    r = auth_client.patch(
+        "/api/settings", json={"sites": "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24, 10.9.0.0/16"}
+    )
     assert r.status_code == 200
     body = auth_client.get("/api/sites").json()
     assert body["names"] == ["Remote", "Zuhause"]
@@ -313,7 +325,22 @@ def test_sites_api_filter_export(auth_client, app):
         ("aa:bb:cc:00:00:01", "192.168.178.10", "192.168.178.0/24"),
         ("aa:bb:cc:00:00:02", "192.168.179.20", "192.168.179.0/24"),
     ]:
-        db.upsert_device(conn, {"mac": mac, "ip": ip, "hostname": "h-" + ip, "vendor": "", "category": "Client", "status": "online", "subnet": subnet, "source": "ping", "ports": [], "layout": {}}, now)
+        db.upsert_device(
+            conn,
+            {
+                "mac": mac,
+                "ip": ip,
+                "hostname": "h-" + ip,
+                "vendor": "",
+                "category": "Client",
+                "status": "online",
+                "subnet": subnet,
+                "source": "ping",
+                "ports": [],
+                "layout": {},
+            },
+            now,
+        )
     conn.commit()
     conn.close()
 
@@ -384,13 +411,12 @@ def _pdf_text(pdf: bytes) -> bytes:
     """Rohe PDF-Bytes + alle FlateDecode-Streams entpackt (damit Text assertions greifen)."""
     import re
     import zlib
+    from contextlib import suppress
 
     out = pdf
     for m in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
-        try:
+        with suppress(Exception):
             out += zlib.decompress(m.group(1))
-        except Exception:
-            pass
     return out
 
 
@@ -476,7 +502,12 @@ def test_settings_vpn_pool(auth_client, app):
     assert r.json()["vpn_pool"] == "off"  # Default: keine Pool-Annahme
     assert auth_client.patch("/api/settings", json={"vpn_pool": "keine-ip"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"vpn_pool": "192.168.178.210-192.168.178.201"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"vpn_pool": "auto, 10.8.0.0/24, 192.168.178.201-192.168.178.210"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"vpn_pool": "auto, 10.8.0.0/24, 192.168.178.201-192.168.178.210"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"vpn_pool": "off"}).status_code == 200
     conn = db.connect(app.state.db_path)
     assert db.get_setting(conn, "vpn_pool") == "off"
@@ -487,7 +518,16 @@ def test_devices_api_und_export_mit_vpn(auth_client, app):
     conn = db.connect(app.state.db_path)
     db.upsert_device(
         conn,
-        {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online", "category": "Unbekannt", "hostname": "fritz.box", "link_port": "LAN:2", "connection": "lan"},
+        {
+            "mac": "00:7a:a4:9b:d9:68",
+            "ip": "192.168.178.201",
+            "vpn": True,
+            "status": "online",
+            "category": "Unbekannt",
+            "hostname": "fritz.box",
+            "link_port": "LAN:2",
+            "connection": "lan",
+        },
         db.utcnow(),
     )
     conn.commit()

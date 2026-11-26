@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from . import db, exporters
 from .auth import is_valid_session
 from .auth import router as auth_router
+from .config import Settings
 from .scanner.categorize import CATEGORIES
 from .scanner.topology import vpn_pool_rules
 
@@ -87,13 +88,16 @@ def _token_filters(conn, token: str | None, subnet: str, category: str) -> tuple
     return subnet, category
 
 
-def _site_of(subnet: str, settings) -> str:
+def _site_of(subnet: str, settings: Settings) -> str:
     if not subnet:
         return ""
-    return settings.site_map.get(subnet, "")
+    site: str = settings.site_map.get(subnet, "")
+    return site
 
 
-def _filtered_devices(request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, room: str, token: str | None):
+def _filtered_devices(
+    request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, room: str, token: str | None
+):
     subnet, category = _token_filters(conn, token, subnet, category)
     rows = db.list_devices(conn, q=q, category=category, status=status, subnet=subnet)
     settings = request.app.state.settings
@@ -269,7 +273,17 @@ def scan_status(conn=Depends(get_conn)):
 
 
 @router.get("/api/export/json")
-def export_json(request: Request, q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", room: str = "", token: str = "", conn=Depends(get_conn)):
+def export_json(
+    request: Request,
+    q: str = "",
+    category: str = "",
+    status: str = "",
+    subnet: str = "",
+    site: str = "",
+    room: str = "",
+    token: str = "",
+    conn=Depends(get_conn),
+):
     rows = _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
     return exporters.devices_payload(request.app.state.settings, rows, conn)
 
@@ -301,7 +315,7 @@ def export_pdf(
             data = data.split(",", 1)[1] if "," in data else ""
         try:
             image_bytes = base64.b64decode(data, validate=True)
-        except Exception:
+        except Exception:  # noqa: BLE001 - W4/N-4: nur Decode-Fehler als 422, Rest -> 500 + log.exception
             raise HTTPException(422, "image ist kein gueltiges base64") from None
         if not image_bytes:
             raise HTTPException(422, "image ist leer")
@@ -314,7 +328,9 @@ def export_pdf(
     if orientation not in ("portrait", "landscape"):
         raise HTTPException(422, "orientation muss 'portrait' oder 'landscape' sein")
     try:
-        pdf = exporters.build_pdf(request.app.state.settings, rows, conn, image_bytes=image_bytes, title=title, orientation=orientation)
+        pdf = exporters.build_pdf(
+            request.app.state.settings, rows, conn, image_bytes=image_bytes, title=title, orientation=orientation
+        )
     except HTTPException:
         raise
     except Exception:
@@ -329,7 +345,18 @@ def export_pdf(
 
 
 @router.get("/api/export/csv")
-def export_csv(request: Request, sep: str = "semicolon", q: str = "", category: str = "", status: str = "", subnet: str = "", site: str = "", room: str = "", token: str = "", conn=Depends(get_conn)):
+def export_csv(
+    request: Request,
+    sep: str = "semicolon",
+    q: str = "",
+    category: str = "",
+    status: str = "",
+    subnet: str = "",
+    site: str = "",
+    room: str = "",
+    token: str = "",
+    conn=Depends(get_conn),
+):
     delimiter = ";" if sep == "semicolon" else ","
     rows = _filtered_devices(request, conn, q, category, status, subnet, site, room, token or None)
     return PlainTextResponse(
@@ -398,7 +425,7 @@ def _valid_endpoint(s: str) -> bool:
     return bool(re.match(r"^[a-zA-Z0-9.\-]+(:\d+)?$", s))
 
 
-def validate_settings(body: SettingsPatch) -> str | None:
+def validate_settings(body: SettingsPatch) -> str | None:  # noqa: C901 - Zerlegung in W7 (Q-2)
     if body.scan_interval is not None and not 30 <= body.scan_interval <= 86400:
         return "scan_interval muss zwischen 30 und 86400 Sekunden liegen"
     if body.port_top is not None and not 0 <= body.port_top <= 65535:
@@ -431,13 +458,21 @@ def validate_settings(body: SettingsPatch) -> str | None:
         val = getattr(body, key)
         if val is not None and val.strip() and not val.strip().startswith(("http://", "https://")):
             return f"{key} muss eine http(s)-URL sein: {val.strip()!r}"
-    if body.snmp_community is not None and body.snmp_community.strip() and re.search(r"\s", body.snmp_community.strip()):
+    if (
+        body.snmp_community is not None
+        and body.snmp_community.strip()
+        and re.search(r"\s", body.snmp_community.strip())
+    ):
         return "snmp_community darf keine Leerzeichen enthalten"
     if body.fritz_pass is not None and len(body.fritz_pass) > 256:
         return "fritz_pass darf hoechstens 256 Zeichen haben"
     if body.oui_online_max is not None and not 0 <= body.oui_online_max <= 200:
         return "oui_online_max muss zwischen 0 und 200 liegen"
-    if body.oui_online_url is not None and body.oui_online_url.strip() and not body.oui_online_url.strip().startswith(("http://", "https://")):
+    if (
+        body.oui_online_url is not None
+        and body.oui_online_url.strip()
+        and not body.oui_online_url.strip().startswith(("http://", "https://"))
+    ):
         return f"oui_online_url muss eine http(s)-URL sein: {body.oui_online_url.strip()!r}"
     if body.vpn_pool is not None:
         try:
@@ -473,7 +508,9 @@ def validate_settings(body: SettingsPatch) -> str | None:
             except ValueError:
                 pass
             parts = e.replace("-", ":").split(":")
-            is_mac = len(parts) == 6 and all(len(p) in (1, 2) and all(c in "0123456789abcdefABCDEF" for c in p) for p in parts)
+            is_mac = len(parts) == 6 and all(
+                len(p) in (1, 2) and all(c in "0123456789abcdefABCDEF" for c in p) for p in parts
+            )
             if not is_mac:
                 return f"ungueltiger Whitelist-Eintrag: {e!r} (MAC oder IP erwartet)"
     if body.sites is not None and body.sites.strip():
@@ -521,7 +558,7 @@ def create_token(body: TokenCreate, request: Request, conn=Depends(get_conn), _=
     token = secrets.token_urlsafe(24)
     expires = ""
     if body.expires_hours:
-        expires = (datetime.now(timezone.utc) + timedelta(hours=body.expires_hours)).isoformat(timespec="seconds")
+        expires = (datetime.now(UTC) + timedelta(hours=body.expires_hours)).isoformat(timespec="seconds")
     db.create_token(conn, token, expires, body.subnets, body.categories, db.utcnow())
     conn.commit()
     return {"token": token, "expires": expires, "embed_url": f"/embed?token={token}"}

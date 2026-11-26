@@ -1,4 +1,5 @@
 import os
+from datetime import UTC
 
 from app import db
 from app.config import Settings
@@ -16,14 +17,32 @@ def make(tmp_path):
 
 
 def dev(mac, ip, **kw):
-    base = {"mac": mac, "ip": ip, "hostname": "", "vendor": "", "category": "Unbekannt", "status": "online", "subnet": "10.0.0.0/24", "source": "ping+arp", "ports": [], "layout": {}}
+    base = {
+        "mac": mac,
+        "ip": ip,
+        "hostname": "",
+        "vendor": "",
+        "category": "Unbekannt",
+        "status": "online",
+        "subnet": "10.0.0.0/24",
+        "source": "ping+arp",
+        "ports": [],
+        "layout": {},
+    }
     base.update(kw)
     return base
 
 
 def test_apply_scan_new_offline_events(tmp_path):
     conn, settings = make(tmp_path)
-    d1 = dev("aa:aa:aa:aa:aa:01", "10.0.0.2", hostname="pc", category="Client", ports=[{"port": 80}], layout={"connected_to": "10.0.0.1"})
+    d1 = dev(
+        "aa:aa:aa:aa:aa:01",
+        "10.0.0.2",
+        hostname="pc",
+        category="Client",
+        ports=[{"port": 80}],
+        layout={"connected_to": "10.0.0.1"},
+    )
     summary = apply_scan(conn, settings, [d1])
     assert summary["new"] == 1 and summary["seen"] == 1
     assert len(summary["new_online"]) == 1
@@ -55,7 +74,11 @@ def test_apply_scan_ports_changed_and_manual_layout_kept(tmp_path):
     apply_scan(conn, settings, [dev(mac, "10.0.0.3", ports=[{"port": 80}])])
     db.set_layout(conn, mac, connected_to="manual-parent", connected_manual=1)
     conn.commit()
-    apply_scan(conn, settings, [dev(mac, "10.0.0.3", ports=[{"port": 80}, {"port": 443}], layout={"connected_to": "auto-parent"})])
+    apply_scan(
+        conn,
+        settings,
+        [dev(mac, "10.0.0.3", ports=[{"port": 80}, {"port": 443}], layout={"connected_to": "auto-parent"})],
+    )
     stored = db.get_device(conn, mac)
     assert any(e["type"] == "ports_changed" for e in stored["events"])
     assert stored["layout"]["connected_to"] == "manual-parent"
@@ -184,7 +207,15 @@ def test_merge_sources_by_ip():
     from app.scanner.run import merge_sources
 
     found = [{"ip": "192.168.179.20", "mac": None, "source": "tcp"}]
-    tr = {"aa:bb:cc:dd:ee:01": {"mac": "aa:bb:cc:dd:ee:01", "ip": "192.168.179.20", "hostname": "iot-plug", "active": True, "type": "WLAN"}}
+    tr = {
+        "aa:bb:cc:dd:ee:01": {
+            "mac": "aa:bb:cc:dd:ee:01",
+            "ip": "192.168.179.20",
+            "hostname": "iot-plug",
+            "active": True,
+            "type": "WLAN",
+        }
+    }
     out = merge_sources(found, tr)
     assert len(out) == 1
     assert out[0]["mac"] == "aa:bb:cc:dd:ee:01"
@@ -197,8 +228,20 @@ def test_merge_sources_mac_konflikt_arp_gewinnt():
 
     found = [{"ip": "192.168.178.33", "mac": "b0:4a:39:01:78:3c", "source": "ping+arp"}]
     tr = {
-        "bc:24:11:67:14:23": {"mac": "bc:24:11:67:14:23", "ip": "192.168.178.33", "hostname": "kid-robot", "active": False, "type": "LAN"},
-        "bc:24:11:67:14:24": {"mac": "bc:24:11:67:14:24", "ip": "192.168.178.33", "hostname": "kid-robot", "active": False, "type": "LAN"},
+        "bc:24:11:67:14:23": {
+            "mac": "bc:24:11:67:14:23",
+            "ip": "192.168.178.33",
+            "hostname": "kid-robot",
+            "active": False,
+            "type": "LAN",
+        },
+        "bc:24:11:67:14:24": {
+            "mac": "bc:24:11:67:14:24",
+            "ip": "192.168.178.33",
+            "hostname": "kid-robot",
+            "active": False,
+            "type": "LAN",
+        },
     }
     out = merge_sources(found, tr)
     assert len(out) == 1
@@ -226,7 +269,15 @@ def test_merge_sources_macless_bekommt_ip_key():
 
     out = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], {})
     assert out[0]["mac"] == "ip:192.168.179.20"
-    tr = {"aa:bb:cc:dd:ee:02": {"mac": "aa:bb:cc:dd:ee:02", "ip": "192.168.179.20", "hostname": "remote", "active": True, "type": "LAN"}}
+    tr = {
+        "aa:bb:cc:dd:ee:02": {
+            "mac": "aa:bb:cc:dd:ee:02",
+            "ip": "192.168.179.20",
+            "hostname": "remote",
+            "active": True,
+            "type": "LAN",
+        }
+    }
     out2 = merge_sources([{"ip": "192.168.179.20", "mac": None, "source": "tcp"}], tr)
     assert len(out2) == 1
     assert out2[0]["mac"] == "aa:bb:cc:dd:ee:02"
@@ -244,8 +295,16 @@ def test_resolve_connected_to_prioritaet():
 
     gw = "192.168.178.1"
     assert topology.resolve_connected_to("m", "10.0.0.5", manual="man") == "man"
-    assert topology.resolve_connected_to("m", "10.0.0.5", snmp_map={"m": "192.168.178.10"}, tr064_parent={"m": "192.168.178.14"}, gateway=gw) == "192.168.178.10"
-    assert topology.resolve_connected_to("m", "10.0.0.5", tr064_parent={"m": "192.168.178.14"}, gateway=gw) == "192.168.178.14"
+    assert (
+        topology.resolve_connected_to(
+            "m", "10.0.0.5", snmp_map={"m": "192.168.178.10"}, tr064_parent={"m": "192.168.178.14"}, gateway=gw
+        )
+        == "192.168.178.10"
+    )
+    assert (
+        topology.resolve_connected_to("m", "10.0.0.5", tr064_parent={"m": "192.168.178.14"}, gateway=gw)
+        == "192.168.178.14"
+    )
     assert topology.resolve_connected_to("m", "10.0.0.5", tr064_type="WLAN", gateway=gw) == "wlan:" + gw
     assert topology.resolve_connected_to("m", "10.0.0.5", tr064_type="LAN", gateway=gw) == gw
     assert topology.resolve_connected_to("m", "10.0.0.5", gateway=gw) == gw
@@ -310,6 +369,7 @@ def _fake_post_factory(mapping):
             if key in body:
                 return resp if isinstance(resp, _FakeResponse) else _FakeResponse(resp)
         return _FakeResponse("", 404)
+
     return fake_post
 
 
@@ -331,7 +391,9 @@ def test_tr064_fetch_hosts(monkeypatch):
 def test_tr064_soap_fault_wird_gelesen(monkeypatch):
     import pytest
 
-    monkeypatch.setattr(tr064.httpx, "post", _fake_post_factory({"GetHostNumberOfEntries": _FakeResponse(SOAP_FAULT, 500)}))
+    monkeypatch.setattr(
+        tr064.httpx, "post", _fake_post_factory({"GetHostNumberOfEntries": _FakeResponse(SOAP_FAULT, 500)})
+    )
     with pytest.raises(tr064.TR064Error) as excinfo:
         tr064.fetch_hosts("http://192.168.178.1:49000", "user", "pass")
     assert "HTTP 500" in str(excinfo.value)
@@ -528,7 +590,9 @@ def test_tr064_tls_hint():
     from app.scanner.run import tr064_tls_hint
     from app.scanner.tr064 import TR064Error
 
-    hint = tr064_tls_hint(TR064Error("Verbindungsfehler: [SSL: WRONG_VERSION_NUMBER] wrong version number"), "https://192.168.178.1:49000")
+    hint = tr064_tls_hint(
+        TR064Error("Verbindungsfehler: [SSL: WRONG_VERSION_NUMBER] wrong version number"), "https://192.168.178.1:49000"
+    )
     assert "49443" in hint
     assert tr064_tls_hint(TR064Error("X -> HTTP 401"), "http://192.168.178.1:49000") == ""
     assert "49443" in tr064_tls_hint(TR064Error("egal"), "https://192.168.178.1:49000")
@@ -552,11 +616,11 @@ def test_notify_whitelist():
 
 
 def test_auto_export_due():
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from app.exporters import auto_export_due
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     assert auto_export_due(None, 24, now)
     assert auto_export_due("", 24, now)
     assert auto_export_due("kaputt", 24, now)
@@ -602,10 +666,7 @@ def test_resolve_all_mdns_fallback(monkeypatch):
 
 
 def test_discover_ipv6_parser():
-    sample6 = (
-        "1: lo    inet6 ::1/128 scope host lo\n"
-        "2: eth0    inet6 2003:db8:1::4/64 scope global eth0\n"
-    )
+    sample6 = "1: lo    inet6 ::1/128 scope host lo\n2: eth0    inet6 2003:db8:1::4/64 scope global eth0\n"
     assert discover.parse_ip_addr(sample6, 6) == ["2003:db8:1::/64"]
     neigh_sample = (
         "2003:db8:1::1 dev eth0 lladdr 3C:37:86:AB:CD:EF REACHABLE\n"
@@ -638,12 +699,18 @@ def test_sweep_hosts_guard_grosse_netze():
     import ipaddress
 
     assert discover.sweep_hosts(ipaddress.ip_network("2003:db8::/64", strict=False)) == []
-    assert discover.sweep_hosts(ipaddress.ip_network("2003:db8::/126", strict=False)) == ["2003:db8::1", "2003:db8::2", "2003:db8::3"]
+    assert discover.sweep_hosts(ipaddress.ip_network("2003:db8::/126", strict=False)) == [
+        "2003:db8::1",
+        "2003:db8::2",
+        "2003:db8::3",
+    ]
 
 
 def test_discover_v6_ndp_ohne_sweep(monkeypatch):
     monkeypatch.setattr(discover, "arp_table", lambda: {})
-    monkeypatch.setattr(discover, "neigh6_table", lambda: {"2003:db8:1::10": "aa:bb:cc:dd:ee:ff", "2003:db8:9::1": "11:22:33:44:55:66"})
+    monkeypatch.setattr(
+        discover, "neigh6_table", lambda: {"2003:db8:1::10": "aa:bb:cc:dd:ee:ff", "2003:db8:9::1": "11:22:33:44:55:66"}
+    )
     monkeypatch.setattr(discover.topology, "gateway_ip6", lambda: "2003:db8:1::1")
     monkeypatch.setattr(discover, "ping_host", lambda ip, timeout: ip == "2003:db8:1::1")
 
@@ -670,13 +737,20 @@ def test_topology_gateway6_und_v6_wahl(monkeypatch):
     monkeypatch.setattr(
         topology.subprocess,
         "run",
-        lambda cmd, **kw: R("default via 2003:db8::1 dev eth0\n") if "-6" in cmd else R("default via 192.168.178.1 dev eth0\n"),
+        lambda cmd, **kw: (
+            R("default via 2003:db8::1 dev eth0\n") if "-6" in cmd else R("default via 192.168.178.1 dev eth0\n")
+        ),
     )
     assert topology.gateway_ip6() == "2003:db8::1"
     assert topology.gateway_ip() == "192.168.178.1"
     assert topology.gateway_for("2003:db8::5", "192.168.178.1", "2003:db8::1") == "2003:db8::1"
     assert topology.gateway_for("192.168.178.5", "192.168.178.1", "2003:db8::1") == "192.168.178.1"
-    assert topology.resolve_connected_to("aa:bb:cc:00:00:01", "2003:db8::5", gateway="192.168.178.1", gateway6="2003:db8::1") == "2003:db8::1"
+    assert (
+        topology.resolve_connected_to(
+            "aa:bb:cc:00:00:01", "2003:db8::5", gateway="192.168.178.1", gateway6="2003:db8::1"
+        )
+        == "2003:db8::1"
+    )
 
 
 def test_effective_settings_neue_compose_keys(tmp_path):
@@ -706,7 +780,9 @@ def test_parse_vendor():
 
 def test_oui_online_fallback(tmp_path, monkeypatch):
     conn, settings = make(tmp_path)
-    settings = settings.model_copy(update={"oui_online_enabled": True, "oui_online_max": 5, "oui_online_url": "https://oui.example"})
+    settings = settings.model_copy(
+        update={"oui_online_enabled": True, "oui_online_max": 5, "oui_online_url": "https://oui.example"}
+    )
     calls = []
 
     def fake_get(url, timeout=5.0):
@@ -728,6 +804,7 @@ def test_oui_online_fallback(tmp_path, monkeypatch):
     # deaktiviert -> kein HTTP
     s_off = settings.model_copy(update={"oui_online_enabled": False})
     assert oui.lookup_online("11:22:33:44:55:66", s_off, conn, {"left": 5}) == "" and len(calls) == 1
+
     # HTTP-Fehler -> "" und nicht gecacht
     def boom(url, timeout=5.0):
         raise OSError("down")
@@ -740,6 +817,8 @@ def test_oui_online_fallback(tmp_path, monkeypatch):
     assert oui.lookup_online("DE:AD:BE:EF:00:02", settings, conn, {"left": 5}) == "JsonVendor"
     assert db.get_oui_cache(conn, "DEADBE") == "JsonVendor"
     conn.close()
+
+
 def test_discover_mixed_v4_v6_sort(monkeypatch):
     """Regression: gemischte v4/v6-Live-Mengen duerfen sorted() nicht crashen (TypeError: not of the same version)."""
     import ipaddress
@@ -801,22 +880,56 @@ def test_merge_sources_tr064_vpn_flag():
     from app.scanner.run import merge_sources
 
     found = [{"ip": "192.168.178.201", "mac": "00:7a:a4:9b:d9:68", "source": "ping+arp"}]
-    tr = {"00:7a:a4:9b:d9:68": {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "hostname": "fritz.box", "active": True, "type": "VPN"}}
+    tr = {
+        "00:7a:a4:9b:d9:68": {
+            "mac": "00:7a:a4:9b:d9:68",
+            "ip": "192.168.178.201",
+            "hostname": "fritz.box",
+            "active": True,
+            "type": "VPN",
+        }
+    }
     out = merge_sources(found, tr)
     assert out[0]["vpn"] is True
-    out2 = merge_sources([], {"00:7a:a4:9b:d9:69": {"mac": "00:7a:a4:9b:d9:69", "ip": "192.168.178.202", "hostname": "", "active": True, "type": "VPN"}})
+    out2 = merge_sources(
+        [],
+        {
+            "00:7a:a4:9b:d9:69": {
+                "mac": "00:7a:a4:9b:d9:69",
+                "ip": "192.168.178.202",
+                "hostname": "",
+                "active": True,
+                "type": "VPN",
+            }
+        },
+    )
     assert out2[0]["vpn"] is True
-    out3 = merge_sources([], {"aa:bb:cc:dd:ee:ff": {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.178.50", "hostname": "nas", "active": True, "type": "Ethernet"}})
+    out3 = merge_sources(
+        [],
+        {
+            "aa:bb:cc:dd:ee:ff": {
+                "mac": "aa:bb:cc:dd:ee:ff",
+                "ip": "192.168.178.50",
+                "hostname": "nas",
+                "active": True,
+                "type": "Ethernet",
+            }
+        },
+    )
     assert not out3[0].get("vpn")
 
 
 def test_apply_scan_speichert_vpn_flag(tmp_path):
     conn, settings = make(tmp_path)
-    d1 = dev("00:7a:a4:9b:d9:68", "192.168.178.201", vpn=True, category="Unbekannt", layout={"connected_to": "192.168.178.1"})
+    d1 = dev(
+        "00:7a:a4:9b:d9:68", "192.168.178.201", vpn=True, category="Unbekannt", layout={"connected_to": "192.168.178.1"}
+    )
     apply_scan(conn, settings, [d1])
     assert db.get_device(conn, d1["mac"])["vpn"] == 1
     # naechster Scan ohne VPN-Flag setzt es zurueck
-    d2 = dev("00:7a:a4:9b:d9:68", "192.168.178.201", vpn=False, status="offline", layout={"connected_to": "192.168.178.1"})
+    d2 = dev(
+        "00:7a:a4:9b:d9:68", "192.168.178.201", vpn=False, status="offline", layout={"connected_to": "192.168.178.1"}
+    )
     apply_scan(conn, settings, [d2])
     assert db.get_device(conn, d1["mac"])["vpn"] == 0
 
@@ -906,8 +1019,11 @@ def test_effective_vpn_pool_fallback_auto_bei_tr064():
     assert run.effective_vpn_pool(SimpleNamespace(**{**base, "vpn_pool": "auto"}), ep) == "auto"
     # is_vpn_ip mit auto: .201 im Gateway-/24 ist VPN, .10 nicht
     from app.scanner import topology
+
     assert topology.is_vpn_ip("192.168.178.201", "auto", "192.168.178.1") is True
     assert topology.is_vpn_ip("192.168.178.10", "auto", "192.168.178.1") is False
+
+
 def test_tr064_401_hint():
     from app.scanner import run
     from app.scanner.tr064 import TR064Error

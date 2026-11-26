@@ -11,8 +11,12 @@ C = "aa:aa:aa:aa:aa:03"
 def _setup(app):
     conn = db.connect(app.state.db_path)
     now = db.utcnow()
-    for mac, ip, cat in [(SW, "192.168.178.10", "Switch"), (A, "192.168.178.21", "Client"),
-                         (B, "192.168.178.22", "Client"), (C, "192.168.178.23", "Switch")]:
+    for mac, ip, cat in [
+        (SW, "192.168.178.10", "Switch"),
+        (A, "192.168.178.21", "Client"),
+        (B, "192.168.178.22", "Client"),
+        (C, "192.168.178.23", "Switch"),
+    ]:
         db.upsert_device(conn, {"mac": mac, "ip": ip, "status": "online", "category": cat}, now)
     conn.commit()
     conn.close()
@@ -47,7 +51,9 @@ def test_manuelle_zuordnung_ueberlebt_scan(auth_client, app, settings):
     _setup(app)
     auth_client.post("/api/devices/connect", json={"macs": [A], "connected_to": SW})
     conn = db.connect(app.state.db_path)
-    apply_scan(conn, settings, [{"mac": A, "ip": "192.168.178.21", "ports": [], "layout": {"connected_to": "192.168.178.1"}}])
+    apply_scan(
+        conn, settings, [{"mac": A, "ip": "192.168.178.21", "ports": [], "layout": {"connected_to": "192.168.178.1"}}]
+    )
     conn.close()
     assert _layout(app, A) == (SW, 1)
 
@@ -61,7 +67,10 @@ def test_unbekanntes_geraet_alles_oder_nichts(auth_client, app):
 
 def test_unbekanntes_ziel_abgelehnt(auth_client, app):
     _setup(app)
-    assert auth_client.post("/api/devices/connect", json={"macs": [A], "connected_to": "00:00:00:00:00:99"}).status_code == 422
+    assert (
+        auth_client.post("/api/devices/connect", json={"macs": [A], "connected_to": "00:00:00:00:00:99"}).status_code
+        == 422
+    )
 
 
 def test_selbstbezug_abgelehnt(auth_client, app):

@@ -11,8 +11,8 @@ LLDP_LINE_RE = re.compile(r"1\.1\.2\.1\.4\.1\.1\.6\.\d+\.\d+\.\d+\s*=\s*Hex-STRI
 
 def snmp_walk(ip: str, community: str, oid: str, timeout: int = 5) -> str:
     try:
-        result = subprocess.run(
-            ["snmpwalk", "-v2c", "-c", community, "-t", str(timeout), "-On", ip, oid],
+        result = subprocess.run(  # noqa: S603 - festes Systemprogramm, Argumente sind IP/Community/OID aus Settings
+            ["snmpwalk", "-v2c", "-c", community, "-t", str(timeout), "-On", ip, oid],  # noqa: S607 - PATH des Basis-Images, kontrolliert
             capture_output=True,
             text=True,
             timeout=timeout + 5,

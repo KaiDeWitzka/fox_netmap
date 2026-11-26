@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NETZ_", env_file=".env", extra="ignore")
 
     data_dir: str = "/data"
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104 - Container horcht bewusst auf allen Interfaces; Zugriff ueber Port-Mapping/Reverse-Proxy
     port: int = 8399
     subnets: str = ""
     subnet: str = ""
@@ -63,7 +63,12 @@ class Settings(BaseSettings):
     embed_ancestors: str = "*"
     # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
     cookie_secure: str = "auto"
-    app_version: str = "1.6.18"
+
+    @property
+    def app_version(self) -> str:
+        from app import __version__
+
+        return __version__
 
     @property
     def subnet_list(self) -> list[str]:

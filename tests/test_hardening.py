@@ -3,7 +3,7 @@
 import os
 import stat
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -21,7 +21,7 @@ def test_production_iterations_meet_owasp(monkeypatch):
 
 def test_hash_format_and_verify():
     h = auth.hash_password("geheim")
-    scheme, iterations, salt, digest = h.split("$")
+    scheme, iterations, salt, _digest = h.split("$")
     assert scheme == "pbkdf2_sha256" and int(iterations) == auth.PBKDF2_ITERATIONS and len(salt) == 32
     assert auth.verify_password("geheim", h)
     assert not auth.verify_password("falsch", h)
@@ -74,7 +74,9 @@ def test_logout_invalidates_session(auth_client):
 def test_cookie_secure_auto(client):
     r = client.post("/api/login", json={"username": "admin", "password": "secret"})
     assert "secure" not in r.headers["set-cookie"].lower()
-    r = client.post("/api/login", json={"username": "admin", "password": "secret"}, headers={"X-Forwarded-Proto": "https"})
+    r = client.post(
+        "/api/login", json={"username": "admin", "password": "secret"}, headers={"X-Forwarded-Proto": "https"}
+    )
     assert "secure" in r.headers["set-cookie"].lower()
 
 
@@ -131,7 +133,7 @@ def _state(tmp_path, **fields):
 
 
 def test_health_scanner_states(tmp_path):
-    now = datetime(2026, 11, 21, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 11, 21, 12, 0, tzinfo=UTC)
     assert healthcheck.check_scanner(str(tmp_path), now)[0]  # noch keine DB
     _state(tmp_path, scanning=0, next_scan=(now + timedelta(minutes=10)).isoformat())
     assert healthcheck.check_scanner(str(tmp_path), now)[0]

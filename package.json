@@ -3,9 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "lint": "eslint app/static tests/ui_dom_check.mjs",
     "test:ui": "node tests/ui_dom_check.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "jsdom": "^31.0.1"
   }
 }

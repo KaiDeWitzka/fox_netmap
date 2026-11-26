@@ -35,7 +35,9 @@ def test_upsert_list_ports(tmp_path):
         now,
     )
     conn.commit()
-    db.replace_ports(conn, "aa:bb:cc:dd:ee:ff", [{"port": 443, "service": "https"}, {"port": 80, "service": "http"}], now)
+    db.replace_ports(
+        conn, "aa:bb:cc:dd:ee:ff", [{"port": 443, "service": "https"}, {"port": 80, "service": "http"}], now
+    )
     conn.commit()
     rows = db.list_devices(conn)
     assert len(rows) == 1
@@ -54,10 +56,14 @@ def test_upsert_list_ports(tmp_path):
 def test_category_override_kept_on_rescan(tmp_path):
     conn = make_conn(tmp_path)
     now = db.utcnow()
-    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Unbekannt", "status": "online"}, now)
+    db.upsert_device(
+        conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Unbekannt", "status": "online"}, now
+    )
     conn.execute("UPDATE devices SET category_override='Drucker', category='Drucker' WHERE mac='aa:bb:cc:dd:ee:ff'")
     conn.commit()
-    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Client", "status": "online"}, now)
+    db.upsert_device(
+        conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.2", "category": "Client", "status": "online"}, now
+    )
     conn.commit()
     assert db.list_devices(conn)[0]["category"] == "Drucker"
 
@@ -139,10 +145,30 @@ def test_migration_adds_room_column(tmp_path):
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(devices)")}
     assert "room" in cols
     # Scanner-Upsert ueberschreibt room nicht
-    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "hostname": "nas", "subnet": "192.168.1.0/24", "source": "ping"}, db.utcnow())
+    db.upsert_device(
+        conn,
+        {
+            "mac": "aa:bb:cc:dd:ee:ff",
+            "ip": "192.168.1.10",
+            "hostname": "nas",
+            "subnet": "192.168.1.0/24",
+            "source": "ping",
+        },
+        db.utcnow(),
+    )
     conn.execute("UPDATE devices SET room = 'EG' WHERE mac = 'aa:bb:cc:dd:ee:ff'")
     conn.commit()
-    db.upsert_device(conn, {"mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.10", "hostname": "nas2", "subnet": "192.168.1.0/24", "source": "ping"}, db.utcnow())
+    db.upsert_device(
+        conn,
+        {
+            "mac": "aa:bb:cc:dd:ee:ff",
+            "ip": "192.168.1.10",
+            "hostname": "nas2",
+            "subnet": "192.168.1.0/24",
+            "source": "ping",
+        },
+        db.utcnow(),
+    )
     conn.commit()
     row = db.get_device(conn, "aa:bb:cc:dd:ee:ff")
     assert row["room"] == "EG"
@@ -195,11 +221,11 @@ def test_upsert_vpn_flag(tmp_path):
     conn.commit()
     assert db.get_device(conn, "00:7a:a4:9b:d9:68")["vpn"] == 1
     assert db.list_devices(conn)[0]["vpn"] == 1
-    db.upsert_device(conn, {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": False, "status": "offline"}, now)
+    db.upsert_device(
+        conn, {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": False, "status": "offline"}, now
+    )
     conn.commit()
     assert db.get_device(conn, "00:7a:a4:9b:d9:68")["vpn"] == 0
-
-
 
 
 class _Row:
@@ -302,7 +328,7 @@ def test_connect_usable_across_threads(tmp_path):
             db.set_scan_state(conn, scanning=1)
             conn.commit()
             assert db.get_scan_state(conn)["scanning"] == 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             errors.append(exc)
         finally:
             conn.close()

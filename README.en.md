@@ -71,12 +71,7 @@ Verify provenance: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_net
 
 ## Supply chain
 
-- **Dependencies hash-pinned:** `requirements.in` / `requirements-dev.in` hold the allowed version ranges, `requirements.txt` / `requirements-dev.txt` the exact resolved versions with SHA-256 (install with `--require-hashes`). Update:
-  ```bash
-  pip install pip-tools
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements.txt requirements.in
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements-dev.txt requirements-dev.in
-  ```
+- **Dependencies hash-pinned:** `pyproject.toml` holds the allowed version ranges (`dependencies` + `dependency-groups`), `uv.lock` the exact resolved versions with hashes (`uv sync --frozen` installs only from it; Dockerfile and CI use `uv.lock` as well). Update: `uv lock --upgrade`.
 - **Base image and GitHub Actions pinned by digest/SHA**, Trivy runs via `scripts/trivy.sh` from a pinned image.
 - **Trivy gate:** CI and release fail on `CRITICAL`/`HIGH` findings with an available fix. Exceptions only with justification in `.trivyignore`. Locally: `scripts/trivy.sh image <image>` (requires Docker).
 - **Dependabot** (`.github/dependabot.yml`) proposes weekly updates for pip, npm, the Docker base image and actions; `image-scan.yml` re-checks `latest` every Monday.
@@ -85,7 +80,8 @@ Verify provenance: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_net
 ## Development
 
 ```bash
-pip install --require-hashes --no-deps -r requirements-dev.txt
+uv sync                 # venv from uv.lock (versions + hashes pinned), dev group included
+bash scripts/gate.sh    # ruff + format + mypy + pytest+cov + UI-DOM + eslint + pip-audit in one run
 ruff check .
 python -m pytest -q
 npm ci && node tests/ui_dom_check.mjs   # UI DOM audit (jsdom)

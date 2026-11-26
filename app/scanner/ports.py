@@ -1,5 +1,6 @@
 import socket
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 
 COMMON_HIGH = [1433, 3306, 3389, 5432, 5900, 6379, 8000, 8080, 8443, 8888, 9000, 9090, 9100, 11211, 27017, 50000]
 DEFAULT_PORTS = list(range(1, 1025)) + COMMON_HIGH
@@ -27,9 +28,7 @@ def scan_ports(ip: str, port_numbers: list[int], timeout: float = 0.5, workers: 
         for port in pool.map(lambda p: check_port(ip, p, timeout), port_numbers):
             if port is not None:
                 service = ""
-                try:
+                with suppress(OSError):
                     service = socket.getservbyport(port, "tcp")
-                except OSError:
-                    pass
                 found.append({"port": port, "proto": "tcp", "service": service})
     return sorted(found, key=lambda p: p["port"])

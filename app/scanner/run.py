@@ -2,7 +2,10 @@ import ipaddress
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from contextlib import suppress
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import urlparse
 
 from .. import db
@@ -15,7 +18,7 @@ SEED_OUI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 log = logging.getLogger("fox_netmap")
 
-OVERRIDABLE = {
+OVERRIDABLE: dict[str, Callable[[str], Any]] = {
     "scan_interval": int,
     "subnets": str,
     "port_top": int,
@@ -55,10 +58,8 @@ def effective_settings(conn, base: Settings) -> Settings:
     for key, cast in OVERRIDABLE.items():
         stored = db.get_setting(conn, key)
         if stored not in (None, ""):
-            try:
+            with suppress(ValueError, TypeError):
                 data[key] = cast(stored)
-            except (ValueError, TypeError):
-                pass
     return base.model_copy(update=data)
 
 
@@ -97,33 +98,32 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
             d["mac"] = known_mac(conn, d["ip"]) or f"ip:{d['ip']}"
         by_mac[d["mac"]] = d
     for mac, h in tr064_hosts.items():
+        dev: dict | None
         if mac in by_mac:
-            d = by_mac[mac]
+            dev = by_mac[mac]
         elif h.get("ip") in by_ip:
-            d = by_ip[h["ip"]]
-            existing = d.get("mac", "")
+            dev = by_ip[h["ip"]]
+            existing = dev.get("mac", "")
             if existing.startswith("ip:") or not existing:
                 by_mac.pop(existing, None)
-                d["mac"] = mac
-                by_mac[mac] = d
+                dev["mac"] = mac
+                by_mac[mac] = dev
             else:
-                log.warning(
-                    "MAC-Konflikt bei %s: ARP %s vs TR-064 %s -> ARP gewinnt", h.get("ip"), existing, mac
-                )
-                d = by_mac[existing]
+                log.warning("MAC-Konflikt bei %s: ARP %s vs TR-064 %s -> ARP gewinnt", h.get("ip"), existing, mac)
+                dev = by_mac[existing]
         else:
-            d = None
-        if d is not None:
-            d["ip"] = d["ip"] or h["ip"]
+            dev = None
+        if dev is not None:
+            dev["ip"] = dev["ip"] or h["ip"]
             if h.get("hostname"):
-                d["hostname"] = h["hostname"]
-            add_source(d, "tr064")
-            d["tr064_type"] = h.get("type", "")
-            d["tr064_active"] = h.get("active", True)
+                dev["hostname"] = h["hostname"]
+            add_source(dev, "tr064")
+            dev["tr064_type"] = h.get("type", "")
+            dev["tr064_active"] = h.get("active", True)
             if topology.is_vpn_tr064(h.get("type", "")):
-                d["vpn"] = True
+                dev["vpn"] = True
             if h.get("endpoint"):
-                d["tr064_endpoint"] = h["endpoint"]
+                dev["tr064_endpoint"] = h["endpoint"]
         else:
             by_mac[mac] = {
                 "ip": h["ip"],
@@ -154,8 +154,10 @@ def tr064_tls_hint(exc: Exception, endpoint: str = "") -> str:
     norm = endpoint if "://" in endpoint else ("http://" + endpoint if endpoint else "")
     https_49000 = norm.startswith("https://") and urlparse(norm).netloc.endswith(":49000")
     if "wrong_version_number" in msg or "wrong version number" in msg or https_49000:
-        return (" \u2014 TLS/Port: HTTPS laeuft auf Port 49443, nicht 49000 (https://\u2026:49000 -> SSL WRONG_VERSION_NUMBER); "
-                "URL auf https://\u2026:49443 aendern oder http://\u2026:49000 verwenden; http-Fallback wurde versucht")
+        return (
+            " \u2014 TLS/Port: HTTPS laeuft auf Port 49443, nicht 49000 (https://\u2026:49000 -> SSL WRONG_VERSION_NUMBER); "
+            "URL auf https://\u2026:49443 aendern oder http://\u2026:49000 verwenden; http-Fallback wurde versucht"
+        )
     return ""
 
 
@@ -165,9 +167,22 @@ def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
         return None
     for ep in endpoints:
         try:
-            info = tr064.parse_mesh(tr064.fetch_mesh_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=not getattr(settings, "tr064_insecure_tls", False)))
+            info = tr064.parse_mesh(
+                tr064.fetch_mesh_with_fallback(
+                    ep,
+                    settings.fritz_user,
+                    settings.fritz_pass,
+                    verify=not getattr(settings, "tr064_insecure_tls", False),
+                )
+            )
         except tr064.TR064Error as exc:
-            log.warning("Mesh-Topologie nicht abrufbar (%s): %s%s%s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc, tr064_401_hint(exc), tr064_tls_hint(exc, ep))
+            log.warning(
+                "Mesh-Topologie nicht abrufbar (%s): %s%s%s",
+                urlparse(ep if "://" in ep else "http://" + ep).hostname,
+                exc,
+                tr064_401_hint(exc),
+                tr064_tls_hint(exc, ep),
+            )
             continue
         repeaters = sum(1 for n in info["nodes"].values() if n["role"] == "slave")
         log.info("Mesh: %s Knoten, %s Repeater, %s Zuordnungen", len(info["nodes"]), repeaters, len(info["parents"]))
@@ -216,7 +231,7 @@ def effective_vpn_pool(settings, endpoints: list[str]) -> str:
     return pool
 
 
-def collect_devices(settings: Settings, conn) -> list[dict]:
+def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pipeline-Zerlegung in W7 (Q-3)
     subnets = settings.subnet_list or discover.local_subnets()
     found = discover.discover(subnets, settings.scan_timeout) if subnets else []
     oui_table = load_oui_table(settings)
@@ -239,16 +254,23 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     for ep in endpoints:
         norm = ep if "://" in ep else "http://" + ep
         if norm.startswith("https://") and urlparse(norm).netloc.endswith(":49000"):
-            log.warning("TR-064: %s nutzt https auf Port 49000 \u2014 der HTTPS-Port der FRITZ!Box ist 49443; bitte URL auf https://\u2026:49443 aendern (http://\u2026:49000 geht auch)", ep)
+            log.warning(
+                "TR-064: %s nutzt https auf Port 49000 \u2014 der HTTPS-Port der FRITZ!Box ist 49443; bitte URL auf https://\u2026:49443 aendern (http://\u2026:49000 geht auch)",
+                ep,
+            )
     all_tr064: list[dict] = []
     wan_endpoints: set[str] = set()
     if endpoints and settings.fritz_user and settings.fritz_pass:
         tr064_verify = not getattr(settings, "tr064_insecure_tls", False)
         if not tr064_verify:
-            log.warning("TR-064: NETZ_TR064_INSECURE_TLS=1 - TLS-Zertifikatspruefung deaktiviert (selbstsigniertes FRITZ!Box-Zertifikat); nur im eigenen LAN verwenden (MITM-Risiko)")
+            log.warning(
+                "TR-064: NETZ_TR064_INSECURE_TLS=1 - TLS-Zertifikatspruefung deaktiviert (selbstsigniertes FRITZ!Box-Zertifikat); nur im eigenen LAN verwenden (MITM-Risiko)"
+            )
         for ep in endpoints:
             try:
-                hosts = tr064.fetch_hosts_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
+                hosts = tr064.fetch_hosts_with_fallback(
+                    ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify
+                )
                 host_part = urlparse(ep if "://" in ep else "http://" + ep).hostname or ep
                 for h in hosts:
                     h["endpoint"] = host_part
@@ -256,20 +278,30 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 log.info("TR-064: %s Hosts von %s gelesen", len(hosts), ep)
                 wan = tr064.fetch_wan_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
                 if wan:
-                    log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
+                    log.info(
+                        "TR-064 WAN %s (%s): externe IP %s, Status %s",
+                        host_part,
+                        wan["service"].split(":")[-2],
+                        wan["wan_ip"] or "-",
+                        wan["status"] or "-",
+                    )
                     db.set_setting(conn, "wan_ip", wan["wan_ip"])
                     db.set_setting(conn, "wan_status", wan["status"])
                     # Router-Endpunkt merken: darueber wird der Internet-Knoten mit dem Router verbunden
                     wan_endpoints.add(host_part)
                     conn.commit()
             except tr064.TR064Error as exc:
-                log.warning("TR-064 nicht erreichbar (%s): %s%s%s", ep, exc, tr064_401_hint(exc), tr064_tls_hint(exc, ep))
+                log.warning(
+                    "TR-064 nicht erreichbar (%s): %s%s%s", ep, exc, tr064_401_hint(exc), tr064_tls_hint(exc, ep)
+                )
     if wan_endpoints:
         db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
         conn.commit()
     vpn_pool_eff = effective_vpn_pool(settings, endpoints)
     if vpn_pool_eff != (getattr(settings, "vpn_pool", "off") or "off"):
-        log.info("VPN-Pool: NETZ_VPN_POOL=off, aber TR-064 konfiguriert -> 'auto' (FRITZ!-Konvention: letzte Oktett >= 201 im Gateway-/24)")
+        log.info(
+            "VPN-Pool: NETZ_VPN_POOL=off, aber TR-064 konfiguriert -> 'auto' (FRITZ!-Konvention: letzte Oktett >= 201 im Gateway-/24)"
+        )
     mesh_info = fetch_mesh_info(settings, endpoints)
     tr064_hosts = {h["mac"]: h for h in all_tr064 if h.get("mac")}
     tr064_parent: dict[str, str] = {}
@@ -279,7 +311,9 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
 
     devices = merge_sources(found, tr064_hosts, conn)
     # IPv6 bei grossen Netzen (/64): SLAAC/EUI-64-Kandidaten pro bekannter MAC per ping6 testen
-    v6_by_mac = discover.v6_slaac_probe(subnets, {d.get("mac", "") for d in devices}, settings.scan_timeout, base=v6_by_mac)
+    v6_by_mac = discover.v6_slaac_probe(
+        subnets, {d.get("mac", "") for d in devices}, settings.scan_timeout, base=v6_by_mac
+    )
     live = [d for d in devices if d.get("ip") and d.get("tr064_active", True)]
     port_plan = ports.port_list(settings.port_top, settings.ports)
     if not settings.ports.strip() and settings.port_top > 0:
@@ -317,10 +351,13 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
         if not d["ip6"] and d.get("hostname"):
             # Fallback: DNS-AAAA des Hostnamens (z. B. FRITZ!Box-DNS), per ping6 verifizieren
             cand = names.resolve_aaaa(d["hostname"])
-            if cand and any(discover.in_net(cand, ipaddress.ip_network(sn, strict=False)) for sn in subnets if ":" in sn):
-                if discover.ping_host(cand, settings.scan_timeout):
-                    d["ip6"] = cand
-                    v6_by_mac[d["mac"]] = cand
+            if (
+                cand
+                and any(discover.in_net(cand, ipaddress.ip_network(sn, strict=False)) for sn in subnets if ":" in sn)
+                and discover.ping_host(cand, settings.scan_timeout)
+            ):
+                d["ip6"] = cand
+                v6_by_mac[d["mac"]] = cand
         d["vendor"] = oui.lookup(d["mac"], oui_table)
         if not d["vendor"]:
             d["vendor"] = oui.lookup_online(d["mac"], settings, conn, oui_budget)
@@ -370,9 +407,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                 manual=manual,
             )
         }
-        if manual:
-            fixed.add(d["mac"])
-        elif d["mac"] in snmp_map:
+        if manual or d["mac"] in snmp_map:
             fixed.add(d["mac"])
         elif link:
             # Die Mesh-Verbindung ist die tatsaechliche Anbindung (auch fuer Geraete am Repeater)
@@ -427,14 +462,20 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
     if trimmed:
         log.info("Retention: %s Ereignisse entfernt (älter als %s Tage)", trimmed, settings.event_retention_days)
     new_online = [d for d in new_devices if d.get("status") == "online"]
-    return {"seen": len(seen), "new": len(new_devices), "new_devices": new_devices, "new_online": new_online, "removed": removed}
+    return {
+        "seen": len(seen),
+        "new": len(new_devices),
+        "new_devices": new_devices,
+        "new_online": new_online,
+        "removed": removed,
+    }
 
 
 def apply_retention(conn, settings: Settings, now: str) -> int:
     days = getattr(settings, "device_retention_days", 0)
     if days <= 0:
         return 0
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
     rows = conn.execute("SELECT mac FROM devices WHERE status = 'offline' AND last_seen < ?", (cutoff,)).fetchall()
     for r in rows:
         db.delete_device(conn, r["mac"])
@@ -456,7 +497,12 @@ def run_once(settings: Settings, conn) -> dict:
         n_only_tr = sum(1 for d in devices if d.get("source") == "tr064")
         log.info(
             "Abgleich: %s Geraete gesamt (%s Ping, %s TCP-Probe, %s davon ARP, %s TR-064, %s nur TR-064/offline)",
-            len(devices), n_ping, n_tcp, n_arp, n_tr, n_only_tr,
+            len(devices),
+            n_ping,
+            n_tcp,
+            n_arp,
+            n_tr,
+            n_only_tr,
         )
         summary = apply_scan(conn, settings, devices)
         # VPN-Clients (z. B. .201/.202 der FRITZ!Box) kommen und gehen mit dem VPN-Tunnel -> kein Alarm
@@ -501,13 +547,24 @@ def main() -> None:
         started = time.perf_counter()
         try:
             summary = run_once(eff, conn)
-            log.info("Scan fertig in %.1fs: %s Geraete gesehen, %s neu", time.perf_counter() - started, summary["seen"], summary["new"])
+            log.info(
+                "Scan fertig in %.1fs: %s Geraete gesehen, %s neu",
+                time.perf_counter() - started,
+                summary["seen"],
+                summary["new"],
+            )
             for d in summary["new_devices"]:
-                log.info("neues Geraet: %s %s %s %s", d.get("mac"), d.get("ip"), d.get("hostname") or "-", d.get("vendor") or "-")
+                log.info(
+                    "neues Geraet: %s %s %s %s",
+                    d.get("mac"),
+                    d.get("ip"),
+                    d.get("hostname") or "-",
+                    d.get("vendor") or "-",
+                )
         except Exception:
             log.exception("Scan-Fehler")
         deadline = time.time() + eff.scan_interval
-        db.set_scan_state(conn, next_scan=datetime.fromtimestamp(deadline, timezone.utc).isoformat(timespec="seconds"))
+        db.set_scan_state(conn, next_scan=datetime.fromtimestamp(deadline, UTC).isoformat(timespec="seconds"))
         conn.commit()
         while time.time() < deadline:
             if db.get_setting(conn, "scan_requested"):

@@ -1,5 +1,6 @@
 import json
 import xml.etree.ElementTree as ET
+from contextlib import suppress
 
 import httpx
 
@@ -50,22 +51,34 @@ def _parse_fields(root: ET.Element) -> dict:
     return out
 
 
-def _soap_call(base_url: str, path: str, service: str, action: str, args: dict, user: str, password: str, timeout: float = 8.0, verify: bool = True) -> dict:
+def _soap_call(
+    base_url: str,
+    path: str,
+    service: str,
+    action: str,
+    args: dict,
+    user: str,
+    password: str,
+    timeout: float = 8.0,
+    verify: bool = True,
+) -> dict:
     url = f"{base_url.rstrip('/')}{path}"
     headers = {"Content-Type": 'text/xml; charset="utf-8"', "SOAPAction": f'"{service}#{action}"'}
     auth = httpx.DigestAuth(user, password) if user else None
     try:
-        response = httpx.post(url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout, verify=verify)
+        response = httpx.post(
+            url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout, verify=verify
+        )
     except httpx.HTTPError as exc:
         raise TR064Error(f"{action} -> {url}: Verbindungsfehler: {exc}") from exc
     if response.status_code >= 400:
         try:
-            fault = _soap_fault_root(ET.fromstring(response.text))
+            fault = _soap_fault_root(ET.fromstring(response.text))  # noqa: S314 - SOAP-Antwort aus dem LAN; Groessen-/Host-Limit in W2 (S-15)
         except ET.ParseError:
             fault = ""
         raise TR064Error(f"{action} -> HTTP {response.status_code}" + (f" ({fault})" if fault else ""))
     try:
-        root = ET.fromstring(response.text)
+        root = ET.fromstring(response.text)  # noqa: S314 - SOAP-Antwort aus dem LAN; Groessen-/Host-Limit in W2 (S-15)
     except ET.ParseError as exc:
         raise TR064Error(f"{action} -> {url}: ungültige XML-Antwort") from exc
     fault = _soap_fault_root(root)
@@ -86,7 +99,16 @@ def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) ->
     n = int(count.get("NewHostNumberOfEntries", "0") or 0)
     hosts = []
     for i in range(n):
-        h = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetGenericHostEntry", {"NewIndex": str(i)}, user, password, verify=verify)
+        h = _soap_call(
+            base_url,
+            HOSTS_PATH,
+            HOSTS_SERVICE,
+            "GetGenericHostEntry",
+            {"NewIndex": str(i)},
+            user,
+            password,
+            verify=verify,
+        )
         mac = h.get("NewMACAddress", "").lower()
         if mac or h.get("NewIPAddress"):
             hosts.append(
@@ -105,7 +127,7 @@ def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) ->
 def _http_fallback_url(base_url: str) -> str | None:
     """https://… -> http://… (gleicher Host/Port), sonst None."""
     if base_url.startswith("https://"):
-        return "http://" + base_url[len("https://"):]
+        return "http://" + base_url[len("https://") :]
     return None
 
 
@@ -134,7 +156,9 @@ def fetch_wan_with_fallback(base_url: str, user: str, password: str, verify: boo
         raise
 
 
-def fetch_mesh_with_fallback(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict:
+def fetch_mesh_with_fallback(
+    base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True
+) -> dict:
     base_url = _normalize_base(base_url)
     try:
         return fetch_mesh(base_url, user, password, timeout=timeout, verify=verify)
@@ -156,10 +180,10 @@ def fetch_wan(base_url: str, user: str, password: str, verify: bool = True) -> d
             except TR064Error:
                 continue
         wan_ip = ""
-        try:
-            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password, verify=verify).get("NewExternalIPAddress", "")
-        except TR064Error:
-            pass
+        with suppress(TR064Error):
+            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password, verify=verify).get(
+                "NewExternalIPAddress", ""
+            )
         return {
             "wan_ip": wan_ip,
             "status": status.get("NewStatus", ""),
@@ -227,7 +251,7 @@ def _band(iface_name: str) -> str:
     return ""
 
 
-def parse_mesh(data: dict) -> dict:
+def parse_mesh(data: dict) -> dict:  # noqa: C901 - Zerlegung in W7 (Q-14)
     """Wertet das Mesh-JSON aus.
 
     Rueckgabe:
@@ -288,7 +312,9 @@ def parse_mesh(data: dict) -> dict:
         while queue:
             cur = queue.popleft()
             # Mesh-Knoten (Repeater) zuerst, damit Clients nicht ueber einen Nachbar-Client "verbunden" werden
-            for other, ltype, own_iface in sorted(adj[cur], key=lambda x: (role.get(x[0]) == "unknown", _LINK_PRIO.get(x[1], 9))):
+            for other, ltype, own_iface in sorted(
+                adj[cur], key=lambda x: (role.get(x[0]) == "unknown", _LINK_PRIO.get(x[1], 9))
+            ):
                 if other in visited:
                     continue
                 visited.add(other)
@@ -309,9 +335,9 @@ def parse_mesh(data: dict) -> dict:
 
     out_nodes = {}
     for n in nodes:
-        m = node_mac.get(n["uid"])
-        if m:
-            out_nodes[m] = {
+        mac = node_mac.get(n["uid"])
+        if mac:
+            out_nodes[mac] = {
                 "name": n.get("device_name") or "",
                 "role": role[n["uid"]],
                 "meshed": bool(n.get("is_meshed")),

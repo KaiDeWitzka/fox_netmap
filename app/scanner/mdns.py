@@ -90,7 +90,7 @@ def parse_packet(data: bytes) -> tuple[set[str], str]:
 
 
 def _service_type(name: str) -> str:
-    """"Wohnzimmer._airplay._tcp.local" -> "_airplay._tcp"; Meta-Name und Hostnamen -> ""."""
+    """ "Wohnzimmer._airplay._tcp.local" -> "_airplay._tcp"; Meta-Name und Hostnamen -> ""."""
     labels = [x for x in name.lower().rstrip(".").split(".") if x]
     for i in range(len(labels) - 1):
         if labels[i].startswith("_") and labels[i + 1] in ("_tcp", "_udp"):

@@ -34,7 +34,7 @@ def local_subnets() -> list[str]:
         (["ip", "-o", "-6", "addr", "show", "scope", "global"], 6),
     ):
         try:
-            text = subprocess.run(args, capture_output=True, text=True, timeout=10).stdout
+            text = subprocess.run(args, capture_output=True, text=True, timeout=10).stdout  # noqa: S603 - feste Systemprogramme (ip/ping), keine Nutzereingabe
         except (OSError, subprocess.SubprocessError):
             continue
         out += parse_ip_addr(text, ver)
@@ -73,7 +73,7 @@ def parse_neigh6(text: str) -> dict[str, str]:
 
 def neigh6_table() -> dict[str, str]:
     try:
-        out = subprocess.run(["ip", "-6", "neigh", "show"], capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run(["ip", "-6", "neigh", "show"], capture_output=True, text=True, timeout=10).stdout  # noqa: S607 - PATH des Basis-Images, kontrolliert
         return parse_neigh6(out)
     except (OSError, subprocess.SubprocessError):
         return {}
@@ -110,9 +110,11 @@ def eui64_candidates(mac: str, net) -> list[str]:
 def ping6_all_nodes(timeout: float = 2.0) -> list[str]:
     """ping6 ff02::1 (all nodes am Link): antwortende v6-Hosts, fuellt anschliessend die NDP-Tabelle."""
     try:
-        result = subprocess.run(
-            ["ping", "-6", "-c", "2", "-W", str(max(1, round(timeout))), "ff02::1"],
-            capture_output=True, text=True, timeout=timeout + 8,
+        result = subprocess.run(  # noqa: S603 - festes Systemprogramm, keine Nutzereingabe
+            ["ping", "-6", "-c", "2", "-W", str(max(1, round(timeout))), "ff02::1"],  # noqa: S607 - PATH des Basis-Images, kontrolliert
+            capture_output=True,
+            text=True,
+            timeout=timeout + 8,
         )
     except (OSError, subprocess.SubprocessError):
         return []
@@ -149,7 +151,7 @@ def v6_slaac_probe(subnets, macs, timeout: float = 1.0, base: dict | None = None
                 if fut.result() and mac not in out:
                     out[mac] = cand
                     found += 1
-            except Exception:  # noqa: BLE001 - einzelner Fehlschlag soll den Scan nicht stoppen
+            except Exception:  # noqa: BLE001, S110 - W4 (SF-8/TL-1): log.debug mit exc_info folgt
                 pass
     if found:
         log.info("IPv6: %s SLAAC/EUI-64-Adresse(n) per ping6 bestaetigt", found)
@@ -170,8 +172,8 @@ def ping_host(ip: str, timeout: float) -> bool:
         return False
     flag = "-6" if ver == 6 else "-4"
     try:
-        result = subprocess.run(
-            ["ping", flag, "-c", "1", "-W", str(max(1, int(timeout))), ip],
+        result = subprocess.run(  # noqa: S603 - festes Systemprogramm, keine Nutzereingabe
+            ["ping", flag, "-c", "1", "-W", str(max(1, int(timeout))), ip],  # noqa: S607 - PATH des Basis-Images, kontrolliert
             capture_output=True,
             timeout=timeout + 2,
         )
@@ -194,7 +196,7 @@ def ping_sweep(subnet: str, timeout: float = 1.0, max_hosts: int = MAX_SWEEP_HOS
     hosts = sweep_hosts(net, max_hosts)
     with ThreadPoolExecutor(max_workers=64) as pool:
         results = list(pool.map(lambda ip: ping_host(ip, timeout), hosts))
-    return {ip for ip, ok in zip(hosts, results) if ok}
+    return {ip for ip, ok in zip(hosts, results, strict=True) if ok}
 
 
 def tcp_probe(ip: str, timeout: float = 0.8, ports=PROBE_PORTS) -> bool:
@@ -215,10 +217,10 @@ def tcp_probe_sweep(subnet: str, skip: set, timeout: float = 0.8, max_hosts: int
     candidates = [h for h in sweep_hosts(net, max_hosts) if h not in skip]
     with ThreadPoolExecutor(max_workers=64) as pool:
         results = list(pool.map(lambda ip: tcp_probe(ip, timeout), candidates))
-    return {ip for ip, ok in zip(candidates, results) if ok}
+    return {ip for ip, ok in zip(candidates, results, strict=True) if ok}
 
 
-def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
+def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:  # noqa: C901 - Zerlegung je Sonde in W7 (Q-14)
     arp = arp_table()
     neigh6 = neigh6_table()
     live: dict[str, str] = {}
@@ -251,7 +253,10 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
                 ndp = [ip for ip in neigh6 if in_net(ip, net)]
                 log.info(
                     "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege)",
-                    subnet, net.num_addresses, len(replies), len(ndp),
+                    subnet,
+                    net.num_addresses,
+                    len(replies),
+                    len(ndp),
                 )
         else:
             pinged = ping_sweep(subnet, timeout)
@@ -260,7 +265,9 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:
                 live[ip] = "ping"
             probed = tcp_probe_sweep(subnet, set(pinged), timeout)
             if probed:
-                log.info("Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar (ICMP blockiert)", subnet, len(probed))
+                log.info(
+                    "Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar (ICMP blockiert)", subnet, len(probed)
+                )
             for ip in probed:
                 live.setdefault(ip, "tcp")
     devices: list[dict] = []

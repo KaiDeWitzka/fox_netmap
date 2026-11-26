@@ -2,7 +2,7 @@ import csv
 import io
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from . import db
 
@@ -30,9 +30,7 @@ CSV_FIELDS = [
 def devices_payload(settings, rows: list[dict], conn) -> dict:
     devices = []
     for r in rows:
-        port_rows = conn.execute(
-            "SELECT port FROM device_ports WHERE mac = ? ORDER BY port", (r["mac"],)
-        ).fetchall()
+        port_rows = conn.execute("SELECT port FROM device_ports WHERE mac = ? ORDER BY port", (r["mac"],)).fetchall()
         devices.append(
             {
                 "mac": r["mac"],
@@ -99,14 +97,14 @@ def auto_export_due(last: str | None, interval_hours: int, now=None) -> bool:
         return True
     if not last:
         return True
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     try:
         last_dt = datetime.fromisoformat(last)
     except ValueError:
         return True
     if last_dt.tzinfo is None:
-        last_dt = last_dt.replace(tzinfo=timezone.utc)
-    return (now - last_dt) >= timedelta(hours=interval_hours)
+        last_dt = last_dt.replace(tzinfo=UTC)
+    return bool((now - last_dt) >= timedelta(hours=interval_hours))
 
 
 def auto_export(settings, conn) -> list[str]:
@@ -154,7 +152,12 @@ def build_pdf(
     usable_w = page[0] - 2 * margin
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=page, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin,
+        buf,
+        pagesize=page,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=margin,
+        bottomMargin=margin,
         title=title or "fox_netmap Export",
     )
     styles = getSampleStyleSheet()
@@ -186,10 +189,22 @@ def build_pdf(
     fracs = [0.15, 0.11, 0.14, 0.13, 0.10, 0.07, 0.12, 0.10, 0.08]
     data = [[Paragraph(escape(h), head_style) for h in header]]
     for r in rows:
-        data.append([
-            Paragraph(escape(str(r.get(k) or "")), cell_style)
-            for k in ("hostname", "ip", "mac", "vendor", "category", "status", "subnet", "connected_to", "ports_str")
-        ])
+        data.append(
+            [
+                Paragraph(escape(str(r.get(k) or "")), cell_style)
+                for k in (
+                    "hostname",
+                    "ip",
+                    "mac",
+                    "vendor",
+                    "category",
+                    "status",
+                    "subnet",
+                    "connected_to",
+                    "ports_str",
+                )
+            ]
+        )
     t = Table(data, repeatRows=1, colWidths=[f * usable_w for f in fracs])
     t.setStyle(
         TableStyle(

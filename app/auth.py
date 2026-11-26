@@ -10,6 +10,7 @@ import os
 import secrets
 import threading
 import time
+from contextlib import suppress
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -119,7 +120,9 @@ def is_valid_session(token: str | None) -> bool:
     if not token:
         return False
     entry = SESSIONS.get(token)
-    return bool(entry) and entry[1] > now
+    if entry is None:
+        return False
+    return entry[1] > now
 
 
 def _cookie_secure(request: Request) -> bool:
@@ -135,7 +138,7 @@ def _cookie_secure(request: Request) -> bool:
 
 # --- Initialer Benutzer -------------------------------------------------------------------------
 
-INITIAL_PASSWORD_FILE = "initial-admin-password.txt"
+INITIAL_PASSWORD_FILE = "initial-admin-password.txt"  # noqa: S105 - Dateiname, kein Passwort
 
 
 def ensure_default_user(conn, settings) -> None:
@@ -148,7 +151,11 @@ def ensure_default_user(conn, settings) -> None:
     password = settings.auth_pass
     existing = db.get_user(conn, settings.auth_user)
     if password:
-        if existing is None or not verify_password(password, existing["pass_hash"]) or needs_rehash(existing["pass_hash"]):
+        if (
+            existing is None
+            or not verify_password(password, existing["pass_hash"])
+            or needs_rehash(existing["pass_hash"])
+        ):
             db.ensure_user(conn, settings.auth_user, hash_password(password), db.utcnow())
         _remove_initial_password_file(settings.data_dir)
     elif existing is None:
@@ -174,10 +181,8 @@ def _write_initial_password_file(data_dir: str, username: str, password: str) ->
 
 
 def _remove_initial_password_file(data_dir: str) -> None:
-    try:
+    with suppress(FileNotFoundError):
         os.remove(os.path.join(data_dir, INITIAL_PASSWORD_FILE))
-    except FileNotFoundError:
-        pass
 
 
 # --- Endpunkte ----------------------------------------------------------------------------------
@@ -215,7 +220,13 @@ def login(body: LoginRequest, request: Request, response: Response):
     log.info("Login ok: %s", body.username)
     token = create_session(body.username)
     response.set_cookie(
-        "fox_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL, secure=_cookie_secure(request), path="/"
+        "fox_session",
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_TTL,
+        secure=_cookie_secure(request),
+        path="/",
     )
     return {"ok": True, "username": body.username}
 

@@ -70,23 +70,17 @@ Herkunft prüfen: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_netm
 
 ## Lieferkette (Supply Chain)
 
-- **Abhängigkeiten hash-gepinnt:** `requirements.in` / `requirements-dev.in` enthalten die zulässigen Versionsbereiche, `requirements.txt` / `requirements-dev.txt` die exakt aufgelösten Versionen mit SHA-256 (Installation mit `--require-hashes`). Aktualisieren:
-  ```bash
-  pip install pip-tools
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements.txt requirements.in
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements-dev.txt requirements-dev.in
-  ```
+- **Abhängigkeiten hash-gepinnt:** `pyproject.toml` enthält die zulässigen Versionsbereiche (`dependencies` + `dependency-groups`), `uv.lock` die exakt aufgelösten Versionen samt Hashes (`uv sync --frozen` installiert nur daraus, Dockerfile und CI arbeiten ebenfalls mit `uv.lock`). Aktualisieren: `uv lock --upgrade`.
 - **Basis-Image und GitHub Actions per Digest/SHA gepinnt**, Trivy läuft über `scripts/trivy.sh` aus einem gepinnten Image.
 - **Trivy-Gate:** CI und Release brechen bei Schwachstellen `CRITICAL`/`HIGH` ab, für die ein Fix existiert. Ausnahmen nur begründet in `.trivyignore`. Lokal: `scripts/trivy.sh image <image>` (Docker nötig).
-- **Dependabot** (`.github/dependabot.yml`) schlägt wöchentlich Updates für pip, npm, Docker-Basis-Image und Actions vor; `image-scan.yml` prüft `latest` jeden Montag erneut.
+- **Dependabot** (`.github/dependabot.yml`) schlägt wöchentlich Updates für uv, npm, Docker-Basis-Image und Actions vor; `image-scan.yml` prüft `latest` jeden Montag erneut. Nicht sieht Dependabot: vendored Cytoscape (`app/static/vendor/`), gitleaks-Version in `gitleaks.yml`, Trivy-Pin in `scripts/trivy.sh` – siehe „Manuell zu pflegen“ in `CONTRIBUTING.md`.
 - Details und Grundschutz-Bezug: [Sicherheitskonzept, Abschnitt Lieferkette](docs/03-sicherheit.md#29-lieferkette-supply-chain-seit-v151).
 
 ## Entwicklung
 
 ```bash
-pip install --require-hashes --no-deps -r requirements-dev.txt
-ruff check .
-python -m pytest -q
-python -m app web       # Web/API lokal (NETZ_DATA_DIR=./data)
-python -m app scanner   # Scanner lokal
+uv sync                 # venv aus uv.lock (Versionen + Hashes gepinnt), Dev-Gruppe inklusive
+bash scripts/gate.sh    # ruff + format + mypy + pytest+cov + UI-DOM + eslint + pip-audit in einem Lauf
+uv run python -m app web       # Web/API lokal (NETZ_DATA_DIR=./data)
+uv run python -m app scanner   # Scanner lokal
 ```

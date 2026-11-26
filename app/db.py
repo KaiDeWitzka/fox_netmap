@@ -2,7 +2,8 @@ import hashlib
 import logging
 import os
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from contextlib import suppress
+from datetime import UTC, datetime, timedelta
 
 log = logging.getLogger("fox_netmap")
 
@@ -83,7 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_events_mac ON device_events(mac, ts);
 
 
 def utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def db_path(data_dir: str) -> str:
@@ -125,10 +126,8 @@ def _set_journal_mode(conn: sqlite3.Connection, path: str) -> None:
         return
     except (sqlite3.OperationalError, OSError) as exc:
         log.warning("WAL nicht nutzbar fuer %s (%s) - Fallback journal_mode=DELETE", path, exc)
-        try:
+        with suppress(sqlite3.Error):
             conn.execute("ROLLBACK")
-        except sqlite3.Error:
-            pass
     try:
         conn.execute("PRAGMA journal_mode=DELETE")
         _write_probe(conn)
@@ -184,7 +183,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
         log.info("Migration: Spalte devices.room ergaenzt")
 
 
-TOKEN_PREFIX = "sha256:"
+TOKEN_PREFIX = "sha256:"  # noqa: S105 - Konstantenpraefix, kein Passwort
 
 
 def token_key(token: str) -> str:
@@ -201,7 +200,8 @@ def _migrate_tokens(conn: sqlite3.Connection) -> None:
     rows = conn.execute("SELECT token FROM embed_tokens WHERE token NOT LIKE 'sha256:%'").fetchall()
     for r in rows:
         conn.execute(
-            "UPDATE embed_tokens SET token = ?, hint = ? WHERE token = ?", (token_key(r["token"]), r["token"][:6], r["token"])
+            "UPDATE embed_tokens SET token = ?, hint = ? WHERE token = ?",
+            (token_key(r["token"]), r["token"][:6], r["token"]),
         )
     if rows:
         conn.commit()
@@ -211,9 +211,7 @@ def _migrate_tokens(conn: sqlite3.Connection) -> None:
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
     _migrate(conn)
-    conn.execute(
-        "INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)"
-    )
+    conn.execute("INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)")
     try:
         removed = dedupe_devices_by_ip(conn)
     except sqlite3.OperationalError as exc:
@@ -267,9 +265,7 @@ def dedupe_devices_by_ip(conn: sqlite3.Connection) -> int:
 
 
 def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
-    row = conn.execute(
-        "SELECT first_seen, category_override FROM devices WHERE mac = ?", (dev["mac"],)
-    ).fetchone()
+    row = conn.execute("SELECT first_seen, category_override FROM devices WHERE mac = ?", (dev["mac"],)).fetchone()
     if row is None:
         conn.execute(
             "INSERT INTO devices (mac, ip, ip6, vpn, hostname, vendor, category, status, subnet, source, connection, link_port, category_reason, note, first_seen, last_seen)"
@@ -333,9 +329,7 @@ def add_history(conn: sqlite3.Connection, mac: str, status: str, now: str) -> No
 
 
 def add_event(conn: sqlite3.Connection, mac: str, type_: str, detail: str, now: str) -> None:
-    conn.execute(
-        "INSERT INTO device_events (ts, mac, type, detail) VALUES (?,?,?,?)", (now, mac, type_, detail)
-    )
+    conn.execute("INSERT INTO device_events (ts, mac, type, detail) VALUES (?,?,?,?)", (now, mac, type_, detail))
 
 
 def list_devices(
@@ -383,13 +377,13 @@ def get_device(conn: sqlite3.Connection, mac: str) -> dict | None:
             "SELECT port, proto, service, scan_ts FROM device_ports WHERE mac = ? ORDER BY port", (mac,)
         )
     ]
-    lay = conn.execute("SELECT x, y, connected_to, connected_manual FROM device_layout WHERE mac = ?", (mac,)).fetchone()
+    lay = conn.execute(
+        "SELECT x, y, connected_to, connected_manual FROM device_layout WHERE mac = ?", (mac,)
+    ).fetchone()
     out["layout"] = dict(lay) if lay else {}
     out["history"] = [
         dict(r)
-        for r in conn.execute(
-            "SELECT ts, status FROM device_history WHERE mac = ? ORDER BY ts DESC LIMIT 100", (mac,)
-        )
+        for r in conn.execute("SELECT ts, status FROM device_history WHERE mac = ? ORDER BY ts DESC LIMIT 100", (mac,))
     ]
     out["events"] = [
         dict(r)
@@ -404,10 +398,10 @@ DEVICE_TABLES = ("device_ports", "device_layout", "device_history", "device_even
 
 
 def delete_device(conn: sqlite3.Connection, mac: str) -> None:
-    """Löscht ein Gerät mit allen zugehörigen Daten (Ports, Layout, Verlauf, Ereignisse) – Art. 17 DSGVO.
+    """Löscht ein Gerät mit allen zugehörigen Daten (Ports, Layout, Verlauf, Ereignisse) - Art. 17 DSGVO.
     Manuelle Zuordnungen anderer Geräte zu diesem Gerät werden gelöst."""
     for table in DEVICE_TABLES:
-        conn.execute(f"DELETE FROM {table} WHERE mac = ?", (mac,))
+        conn.execute(f"DELETE FROM {table} WHERE mac = ?", (mac,))  # noqa: S608 - Tabellenname aus interner Konstante
     conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE connected_to = ?", (mac,))
 
 
@@ -443,7 +437,7 @@ def get_scan_state(conn: sqlite3.Connection) -> dict:
 
 def set_scan_state(conn: sqlite3.Connection, **fields) -> None:
     keys = ", ".join(f"{k} = ?" for k in fields)
-    conn.execute(f"UPDATE scan_state SET {keys} WHERE id = 1", tuple(fields.values()))
+    conn.execute(f"UPDATE scan_state SET {keys} WHERE id = 1", tuple(fields.values()))  # noqa: S608 - Spalten aus internen **fields-Schluesseln, Werte per Parameter
 
 
 def get_oui_cache(conn: sqlite3.Connection, prefix: str) -> str | None:
@@ -464,7 +458,10 @@ def get_setting(conn: sqlite3.Connection, key: str) -> str | None:
 
 
 def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
-    conn.execute("INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value),
+    )
 
 
 def get_user(conn: sqlite3.Connection, username: str) -> dict | None:
@@ -495,7 +492,7 @@ def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
         return None
     if row["expires"]:
         try:
-            if datetime.fromisoformat(row["expires"]) < datetime.now(timezone.utc):
+            if datetime.fromisoformat(row["expires"]) < datetime.now(UTC):
                 return None
         except ValueError:
             return None
@@ -504,10 +501,18 @@ def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
 
 def list_tokens(conn: sqlite3.Connection) -> list[dict]:
     """Ohne Token im Klartext: `id` ist der Hash (zum Loeschen), `hint` die ersten 6 Zeichen zur Wiedererkennung."""
-    rows = conn.execute("SELECT token, hint, expires, subnets, categories, created FROM embed_tokens ORDER BY created DESC")
+    rows = conn.execute(
+        "SELECT token, hint, expires, subnets, categories, created FROM embed_tokens ORDER BY created DESC"
+    )
     return [
-        {"id": r["token"][len(TOKEN_PREFIX) :], "hint": r["hint"], "expires": r["expires"], "subnets": r["subnets"],
-         "categories": r["categories"], "created": r["created"]}
+        {
+            "id": r["token"][len(TOKEN_PREFIX) :],
+            "hint": r["hint"],
+            "expires": r["expires"],
+            "subnets": r["subnets"],
+            "categories": r["categories"],
+            "created": r["created"],
+        }
         for r in rows
     ]
 
@@ -521,13 +526,13 @@ def trim_events(conn: sqlite3.Connection, days: int) -> int:
     """Ereignisse aelter als `days` Tage loeschen (0 = nie). Gilt auch fuer aktive Geraete (seit v1.6.0)."""
     if days <= 0:
         return 0
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
     cur = conn.execute("DELETE FROM device_events WHERE ts < ?", (cutoff,))
     conn.commit()
     return cur.rowcount or 0
 
 
 def trim_history(conn: sqlite3.Connection, hours: int, now: str) -> None:
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat(timespec="seconds")
+    cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat(timespec="seconds")
     conn.execute("DELETE FROM device_history WHERE ts < ?", (cutoff,))
     conn.commit()

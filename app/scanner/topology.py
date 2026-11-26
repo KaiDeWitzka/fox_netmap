@@ -4,7 +4,7 @@ import subprocess
 
 def _default_gateway(args: list[str]) -> str:
     try:
-        out = subprocess.run(args, capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(args, capture_output=True, text=True, timeout=5).stdout  # noqa: S603 - feste Systemprogramme (ip), keine Nutzereingabe
         parts = out.split()
         if "via" in parts:
             return parts[parts.index("via") + 1]
@@ -79,7 +79,7 @@ def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
                 ib = ipaddress.ip_address(b.strip())
             except ValueError:
                 raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}") from None
-            if ia.version != ib.version or ia > ib:
+            if ia.version != ib.version or ia.packed > ib.packed:
                 raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}")
             ranges.append((ia, ib))
         else:
@@ -96,9 +96,13 @@ def is_vpn_ip(ip: str, vpn_pool: str, gateway: str = "") -> bool:
     except ValueError:
         return False
     auto_net, auto_min, nets, ranges = vpn_pool_rules(vpn_pool, gateway)
-    if auto_net is not None and addr.version == 4 and addr in auto_net:
-        if int(addr) - int(auto_net.network_address) >= auto_min:
-            return True
+    if (
+        auto_net is not None
+        and addr.version == 4
+        and addr in auto_net
+        and int(addr) - int(auto_net.network_address) >= auto_min
+    ):
+        return True
     if any(addr in n for n in nets):
         return True
     return any(a <= addr <= b for a, b in ranges)
@@ -112,10 +116,10 @@ def is_vpn_tr064(interface_type: str) -> bool:
 def resolve_connected_to(
     mac: str,
     ip: str,
-    snmp_map: dict | None = None,
-    tr064_parent: dict | None = None,
+    snmp_map: dict[str, str] | None = None,
+    tr064_parent: dict[str, str] | None = None,
     tr064_type: str = "",
-    mesh_parent: dict | None = None,
+    mesh_parent: dict[str, str] | None = None,
     gateway: str = "",
     gateway6: str = "",
     manual: str | None = None,

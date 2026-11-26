@@ -18,7 +18,18 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-PUBLIC_PATHS = ("/api/health", "/api/login", "/api/categories", "/api/scan/status", "/api/meta", "/api/sites", "/static/", "/login", "/favicon.ico", "/embed")
+PUBLIC_PATHS = (
+    "/api/health",
+    "/api/login",
+    "/api/categories",
+    "/api/scan/status",
+    "/api/meta",
+    "/api/sites",
+    "/static/",
+    "/login",
+    "/favicon.ico",
+    "/embed",
+)
 TOKEN_PATHS = ("/api/devices", "/api/device/", "/api/export/")
 
 
@@ -26,7 +37,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     os.makedirs(settings.data_dir, exist_ok=True)
     log = get_logger(data_dir=settings.data_dir)
-    log.info("fox_netmap %s startet: http://%s:%s (Daten: %s)", settings.app_version, settings.host, settings.port, settings.data_dir)
+    log.info(
+        "fox_netmap %s startet: http://%s:%s (Daten: %s)",
+        settings.app_version,
+        settings.host,
+        settings.port,
+        settings.data_dir,
+    )
     app = FastAPI(title="fox_netmap", version=settings.app_version)
     app.state.settings = settings
     app.state.db_path = db.db_path(settings.data_dir)

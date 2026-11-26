@@ -1,7 +1,0 @@
-# Laufzeitabhängigkeiten (Versionsbereiche). Die festgelegten Versionen mit Hashes stehen in
-# requirements.txt und werden mit `pip-compile --generate-hashes requirements.in` erzeugt (siehe README).
-fastapi>=0.115,<1.0
-uvicorn[standard]>=0.30
-httpx>=0.27
-pydantic-settings>=2.4
-reportlab>=5.1.0,<6
