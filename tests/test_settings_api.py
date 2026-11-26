@@ -77,5 +77,5 @@ def test_compose_passes_every_config_field():
         compose = fh.read()
     for key in FIELDS:
         assert f"NETZ_{key.upper()}:" in compose, key
-    for extra in ("NETZ_DATA_DIR", "NETZ_HOST", "NETZ_PORT", "TZ"):
+    for extra in ("NETZ_DATA_DIR", "NETZ_HOST", "NETZ_PORT", "NETZ_SQLITE_JOURNAL", "TZ"):
         assert re.search(rf"^  {extra}:", compose, re.M), extra

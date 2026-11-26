@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0 erledigt (8079aab), W1 als naechstes",
+        "stand": "2026-11-26, W0+W1 erledigt (8079aab, 974b211), W2 als naechstes",
         "wellen": [
                 {
                         "id": "W0",
@@ -270,9 +270,9 @@
                         "titel": "GET /api/settings liefert SNMP-Community, Benachrichtigungs-URLs und Zugangsdaten in URLs im Klartext",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -280,9 +280,9 @@
                         "titel": "Wer die App bedient, kann den FRITZ!Box-Endpunkt umbiegen und so das gespeicherte Passwort abgreifen",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -290,9 +290,9 @@
                         "titel": "Ein einziger PATCH schaltet die Anmeldung für die ganze App ab",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -670,9 +670,9 @@
                         "titel": "Der Web-Prozess lädt gespeicherte Einstellungen beim Start nicht, eine in der Oberfläche eingeschaltete Anmeldung gilt nach einem Neustart nicht",
                         "welle": "W1",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": "mit K-7"
                 },
                 {
@@ -680,9 +680,9 @@
                         "titel": "Das Einstellungsschema steht handkopiert an mindestens fünf Stellen",
                         "welle": "W1",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -690,9 +690,9 @@
                         "titel": "snmp_switches lässt sich in der Oberfläche setzen, der Scanner ignoriert den Wert",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -700,9 +700,9 @@
                         "titel": "Ein in der Oberfläche geleertes Feld bleibt wirkungslos, weil der leere String als „nicht gesetzt“ gilt",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -710,19 +710,19 @@
                         "titel": "Die Oberfläche zeigt oui_online_enabled als an, obwohl es gespeichert aus ist, weil der Text „false“ als wahr gilt",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
+                        "status": "in_arbeit",
                         "nachweis": "",
                         "commit": "",
-                        "notiz": ""
+                        "notiz": "Backend erledigt (getypte Werte), Frontend-Teil (Checkbox false) folgt in W5"
                 },
                 {
                         "id": "D-2",
                         "titel": "Dokumentierte Umgebungsvariablen erreichen den Container nicht, weil docker-compose.yml nur eine feste Liste weitergibt",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -730,19 +730,19 @@
                         "titel": "validate_settings ist eine Wenn-Dann-Leiter mit Komplexität 46 im Routenmodul",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
+                        "status": "in_arbeit",
                         "nachweis": "",
                         "commit": "",
-                        "notiz": ""
+                        "notiz": "Parser zentral in validation.py, C901-Zerlegung folgt in W7 (noqa)"
                 },
                 {
                         "id": "Q-8",
                         "titel": "Meldungen von mDNS und Benachrichtigung erreichen weder netmap.log noch die Log-Ansicht",
                         "welle": "W1",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -750,9 +750,9 @@
                         "titel": "Ungültige gespeicherte Einstellungen fallen still auf Standardwerte zurück",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {
@@ -760,9 +760,9 @@
                         "titel": "Die MAC-Normalisierung gibt es mehrfach, und der Geräte-Pfad der API ist groß-/kleinschreibungsempfindlich",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": "mit C-15"
                 },
                 {
@@ -770,9 +770,9 @@
                         "titel": "Platzhalter-Schlüssel ip:<IP> werden beim Speichern zu ip:192:0:2:5 verstümmelt",
                         "welle": "W1",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
                         "notiz": ""
                 },
                 {

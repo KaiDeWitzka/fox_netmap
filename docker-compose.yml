@@ -3,6 +3,7 @@ x-netz-env: &netz-env
   NETZ_DATA_DIR: /data
   NETZ_HOST: ${NETZ_HOST:-0.0.0.0}
   NETZ_PORT: ${NETZ_PORT:-8399}
+  NETZ_SQLITE_JOURNAL: ${NETZ_SQLITE_JOURNAL:-auto}  # wird in app/db.py per os.getenv gelesen (env-only)
   NETZ_ALARM_WHITELIST: ${{NETZ_ALARM_WHITELIST:-}}
   NETZ_AUTH_ENABLED: ${{NETZ_AUTH_ENABLED:-}}
   NETZ_AUTH_PASS: ${{NETZ_AUTH_PASS:-}}
