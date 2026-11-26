@@ -1,7 +1,7 @@
 # Kampagnenstand – Produktionsreife fox_netmap
 
 - **Stand:** 2026-11-26, `main` a2ee055 (v1.6.18), Arbeitsbranch `vibe/produktionsreife-2b2bb8`
-- **Nächste Welle:** W0 (Werkzeuge: uv + `scripts/gate.sh`, zweistufiges Dockerfile, CI-Matrix 3.12/3.13, eslint) – Details in `STARTPLAN.md` Abschnitt 2 und UEBERGABE Abschnitt 8 „Welle 0 im Detail“
+- **Nächste Welle:** W0 (Werkzeuge: uv + `scripts/gate.sh`, zweistufiges Dockerfile, CI-Matrix 3.12/3.13, eslint) – in Arbeit, Details in `STARTPLAN.md` Abschnitt 2 und UEBERGABE Abschnitt 8 „Welle 0 im Detail“
 - **Grundlage:** `docs/produktionsreife/UEBERGABE.md` (Befunde Stand a63750f, vor jedem Fix gegen aktuellen Stand prüfen)
 
 ## Getroffene Entscheidungen (UEBERGABE Abschnitt 5)
@@ -11,7 +11,7 @@
 
 ## Offene Fragen
 
-- Push/PR: UEBERGABE §9.1 verbietet dem Agenten Push/Merge/Tag – Kampagne endet mit lokalen Commits auf `vibe/produktionsreife-2b2bb8`. Push/PR/Release macht Kai.
+- Push/PR: **Kampagne bleibt lokal** (Kai, 2026-11-26). UEBERGABE §9.1 gilt: Agent pusht/merged/taggt nicht; Push, PR und Release macht Kai. Commits landen lokal auf `vibe/produktionsreife-2b2bb8`.
 
 ## Fortsetzungsschritte
 
