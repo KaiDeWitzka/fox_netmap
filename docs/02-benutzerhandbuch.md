@@ -286,6 +286,8 @@ Berechtigung „App“ oder „Phone“. Abschalten mit `NETZ_FRITZ_MESH=false`.
 (nur relativer Pfad, keine Weiterleitungen, max. 5 MB); die Session-ID im Pfad wird nicht protokolliert. Im Log steht
 `Mesh: X Knoten, Y Repeater, Z Zuordnungen`. Bei `HTTP 401` im Log fehlt dem TR-064-Benutzer die Berechtigung (laut AVM „App“ oder „Phone“, am einfachsten Admin-Rechte) bzw. es fehlen die globalen Schalter „Zugriff für Anwendungen zulassen“ und „Statusinformationen über UPnP übermitteln“ (Heimnetz → Netzwerk → Netzwerkeinstellungen); manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab.
 
+**TR-064 über HTTPS (Port 49443):** Statt `http://…:49000` kann `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oder `https://fritz.box:49443`) gesetzt werden — die SOAP-Calls laufen dann verschlüsselt. Das FRITZ!Box-Zertifikat ist selbstsigniert, deshalb schlägt die Zertifikatsprüfung fehl; mit **`NETZ_TR064_INSECURE_TLS=true`** wird die TLS-Prüfung *nur für die TR-064-Calls* (Hosts, WAN, Mesh) abgeschaltet (Default `false` = Prüfung an). **Risiko bewusst in Kauf nehmen:** nur im eigenen LAN aktivieren — dort kann die Verbindung mitgeschnitten oder ein Angreifer kann sich als FRITZ!Box ausgeben (MITM). Solange die Option aktiv ist, wird bei jedem Scan eine WARN im Log ausgegeben. Ohne HTTPS bleibt TR-064 auf `http://…:49000` (laut AVM nur aus dem LAN erreichbar, Digest-Auth — Passwort nicht im Klartext).
+
 **Switch-Heuristik:** Nicht verwaltete Switches sind für die Box unsichtbar. Sieht sie an einem LAN-Port mehrere
 Geräte und ist genau eines davon als Switch kategorisiert, werden die übrigen diesem Switch zugeordnet. Hängen zwei
 Switches am selben Port, bleibt die Zuordnung beim Router; dann hilft die manuelle Zuordnung.

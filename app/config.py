@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     fritz_pass: str = ""
     # Mesh-Topologie der FRITZ!Box (TR-064 X_AVM-DE_GetMeshListPath) fuer die Karte nutzen
     fritz_mesh: bool = True
+    # TR-064 ueber HTTPS (z. B. NETZ_FRITZ_URL=https://192.168.178.1:49443): TLS-Zertifikatspruefung
+    # abschalten, damit das selbstsignierte FRITZ!Box-Zertifikat akzeptiert wird. Default aus (sicher).
+    # Risiko bei "an": nur im eigenen LAN aktivieren - dort kann die Verbindung mitgeschnitten bzw.
+    # ein Angreifer koennte sich als FRITZ!Box ausgeben (MITM). Wird beim Scan als WARN geloggt.
+    tr064_insecure_tls: bool = False
     # VPN-Adresspool zur Kennzeichnung von VPN-Clients (z. B. FRITZ!Box IPSec/WireGuard).
     # Default "off": keine Annahme ueber einen Pool. "auto" = FRITZ!-Konvention (im /24 des
     # Gateways letzte Oktett >= 201); alternativ CIDRs/Bereiche "a-b", kommagetrennt kombinierbar.

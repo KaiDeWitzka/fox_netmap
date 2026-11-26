@@ -158,7 +158,7 @@ def _patch(monkeypatch, body: bytes, status=200, calls=None):
 
     monkeypatch.setattr(tr064.httpx, "post", lambda *a, **k: _Resp(SOAP_PATH))
 
-    def fake_stream(method, url, timeout=None, follow_redirects=None):
+    def fake_stream(method, url, timeout=None, follow_redirects=None, verify=None):
         if calls is not None:
             calls.append((method, url, follow_redirects))
         return _Stream(body, status)
@@ -247,8 +247,8 @@ def test_collect_devices_mit_mesh(tmp_path, monkeypatch):
     monkeypatch.setattr(run.topology, "gateway_ip6", lambda: "")
     monkeypatch.setattr(run.oui, "lookup_online", lambda *a, **k: "")
     hosts = [{"mac": m, "ip": ips[m], "hostname": names_[m], "active": True, "type": "LAN", "source": "tr064"} for m in ips if m != BOX]
-    monkeypatch.setattr(run.tr064, "fetch_hosts_with_fallback", lambda *a: [dict(h) for h in hosts])
-    monkeypatch.setattr(run.tr064, "fetch_wan", lambda *a: None)
+    monkeypatch.setattr(run.tr064, "fetch_hosts_with_fallback", lambda *a, **k: [dict(h) for h in hosts])
+    monkeypatch.setattr(run.tr064, "fetch_wan", lambda *a, **k: None)
     monkeypatch.setattr(run.tr064, "fetch_mesh", lambda *a, **k: mesh_json())
     devices = run.collect_devices(settings, conn)
     ct = {d["mac"]: d["layout"]["connected_to"] for d in devices}

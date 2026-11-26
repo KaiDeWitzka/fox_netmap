@@ -279,6 +279,8 @@ corrispondente; solo se non esiste viene creato un nodo gateway virtuale.
 del router: quale dispositivo è collegato a quale ripetitore o porta LAN, via LAN o WLAN (banda). Il pannello
 dettagli mostra la porta, ad es. `WLAN · 5 GHz` o `LAN · LAN 1`. Secondo AVM, l'utente TR-064 richiede il diritto
 «App» o «Phone». In caso di `HTTP 401` nel log, all'utente TR-064 manca il permesso richiesto oppure mancano gli interruttori globali “Consenti accesso per le applicazioni” e “Trasmetti informazioni di stato tramite UPnP” (Rete domestica → Rete → Impostazioni di rete); alcuni modelli rifiutano singole azioni con 401 anche con credenziali corrette. Disattivare con `NETZ_FRITZ_MESH=false`. L'elenco è caricato solo dalla rete locale
+
+**TR-064 via HTTPS (porta 49443):** invece di `http://…:49000` si può impostare `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oppure `https://fritz.box:49443`) — le chiamate SOAP sono cifrate. Il certificato della FRITZ!Box è autofirmato, quindi la verifica fallisce; con **`NETZ_TR064_INSECURE_TLS=true`** la verifica TLS viene disattivata *solo per le chiamate TR-064* (host, WAN, mesh; predefinito `false` = verifica attiva). **Accetta il rischio consapevolmente:** attivala solo nella tua rete locale — lì la connessione può essere intercettata o un attaccante può fingersi la FRITZ!Box (MITM). Finché l'opzione è attiva, a ogni scansione viene registrato un WARN. Senza HTTPS, TR-064 resta su `http://…:49000` (secondo AVM raggiungibile solo dalla rete locale, autenticazione digest — password non in chiaro).
 (percorso relativo, senza reindirizzamenti, max 5 MB); l'ID di sessione non viene mai registrato.
 
 **Euristica switch:** uno switch non gestito è invisibile al router. Se su una porta LAN ci sono più dispositivi e

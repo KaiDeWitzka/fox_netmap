@@ -6,6 +6,9 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ## [Unreleased]
 
+### Hinzugefügt
+- **TR-064 über HTTPS nutzbar, TLS-Abschwächung bewusst wählbar:** Neues Setting `NETZ_TR064_INSECURE_TLS` (Default `false` = Zertifikatsprüfung an). Bei `true` wird `verify=False` nur für die TR-064-Calls (Hosts, WAN, Mesh) gesetzt, damit das selbstsignierte FRITZ!Box-Zertifikat an `NETZ_FRITZ_URL=https://…:49443` akzeptiert wird. Risiko (MITM im LAN) wird beim Scan als WARN geloggt und in der Doku benannt (Handbuch 6 Sprachen, READMEs). 5 Tests (verify-Default/-Weitergabe in Hosts/WAN/Mesh, Settings-Parsing).
+
 ## [1.6.15] – 2026-11-25
 
 VPN-Pool automatisch bei TR-064 (PR #103) + klarerer HTTP-401-Hinweis im Log (PR #104).
