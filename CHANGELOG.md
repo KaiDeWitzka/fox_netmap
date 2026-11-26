@@ -4,7 +4,9 @@ Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https:
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).
 
-## [Unreleased]
+## [1.6.16] – 2026-11-26
+
+TR-064 über HTTPS nutzbar (PR #106): TLS-Abschwächung bewusst wählbar via `NETZ_TR064_INSECURE_TLS`.
 
 ### Hinzugefügt
 - **TR-064 über HTTPS nutzbar, TLS-Abschwächung bewusst wählbar:** Neues Setting `NETZ_TR064_INSECURE_TLS` (Default `false` = Zertifikatsprüfung an). Bei `true` wird `verify=False` nur für die TR-064-Calls (Hosts, WAN, Mesh) gesetzt, damit das selbstsignierte FRITZ!Box-Zertifikat an `NETZ_FRITZ_URL=https://…:49443` akzeptiert wird. Risiko (MITM im LAN) wird beim Scan als WARN geloggt und in der Doku benannt (Handbuch 6 Sprachen, READMEs). 5 Tests (verify-Default/-Weitergabe in Hosts/WAN/Mesh, Settings-Parsing).
