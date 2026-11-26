@@ -28,6 +28,9 @@ node tests/ui_dom_check.mjs
 step "eslint"
 npx --no-install eslint app/static tests/ui_dom_check.mjs
 
+step "prettier --check (Markdown, W8/D-10)"
+npx --yes prettier@3 --check README.md README.en.md CONTRIBUTING.md SECURITY.md CHANGELOG.md THIRD_PARTY.md docs/*.md docs/entscheidungen.md docs/produktionsreife/STAND.md docs/produktionsreife/ARCHIV.md
+
 step "pip-audit (Lockfile, ohne Projekt selbst)"
 uv export --frozen --no-hashes --no-emit-project --format requirements-txt | uvx pip-audit -r /dev/stdin
 

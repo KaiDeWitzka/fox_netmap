@@ -111,7 +111,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.port,
         settings.data_dir,
     )
-    app = FastAPI(title="fox_netmap", version=settings.app_version)
+    # D-3/W8: /docs und /openapi.json werden nicht ausgeliefert (auch nicht bei
+    # NETZ_AUTH_ENABLED=false); die Doku liegt in docs/ (siehe docs/entscheidungen.md).
+    app = FastAPI(title="fox_netmap", version=settings.app_version, docs_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.db_path = db.db_path(settings.data_dir)
     app.state.login_throttle = LoginThrottle()
