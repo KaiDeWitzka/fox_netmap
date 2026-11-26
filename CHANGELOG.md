@@ -4,7 +4,10 @@
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).
 
-## [Unreleased]
+## [1.6.18] – 2026-11-26
+
+TR-064 https→http-Fallback jetzt auch für WAN und Mesh + Port-Hinweis 49443 (PR #111).
+
 
 ### Behoben
 - **TR-064 https→http-Fallback jetzt für alle Calls:** Bisher nur die Hostliste; WAN (`fetch_wan`) und Mesh (`fetch_mesh`) schlugen bei `https://…:49000` (Klartext-Port, `SSL: WRONG_VERSION_NUMBER`) fehl. Neu: `fetch_wan_with_fallback`/`fetch_mesh_with_fallback` + `tr064_tls_hint()` — Log-WARN enthält bei TLS/Port-Problemen den Hinweis „HTTPS-Port ist 49443, nicht 49000", zusätzlich Endpunkt-Warnung beim Scan-Start, wenn ein Endpunkt `https://…:49000` nutzt. 3 Tests. Doku: Handbuch 6 Sprachen (Port-Warnung im HTTPS-Absatz), READMEs.
