@@ -1,6 +1,7 @@
 import socket
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
+from typing import Any
 
 COMMON_HIGH = [1433, 3306, 3389, 5432, 5900, 6379, 8000, 8080, 8443, 8888, 9000, 9090, 9100, 11211, 27017, 50000]
 DEFAULT_PORTS = list(range(1, 1025)) + COMMON_HIGH
@@ -33,8 +34,8 @@ def check_port(ip: str, port: int, timeout: float) -> int | None:
         return None
 
 
-def scan_ports(ip: str, port_numbers: list[int], timeout: float = 0.5, workers: int = 64) -> list[dict]:
-    found: list[dict] = []
+def scan_ports(ip: str, port_numbers: list[int], timeout: float = 0.5, workers: int = 64) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for port in pool.map(lambda p: check_port(ip, p, timeout), port_numbers):
             if port is not None:

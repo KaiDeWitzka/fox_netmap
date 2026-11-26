@@ -2,8 +2,10 @@ import hashlib
 import logging
 import os
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import quote
 
 from . import dedupe
@@ -255,9 +257,34 @@ def _migrate_tokens(conn: sqlite3.Connection) -> None:
         log.info("Migration: %s Embed-Tokens auf SHA-256 umgestellt", len(rows))
 
 
+# Q-16: Alt-Aliase aus frueheren Versionen -> kanonische Schluessel (subnets, fritz_urls).
+# Die env-Felder NETZ_SUBNET/NETZ_FRITZ_URL bleiben als deprecated kompatibel.
+LEGACY_SETTING_ALIASES = (("subnet", "subnets"), ("fritz_url", "fritz_urls"))
+
+
+def _migrate_setting_aliases(conn: sqlite3.Connection) -> None:
+    for old, new in LEGACY_SETTING_ALIASES:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (old,)).fetchone()
+        if row is None:
+            continue
+        if row["value"] == "":
+            conn.execute("DELETE FROM settings WHERE key = ?", (old,))
+            continue
+        cur = conn.execute("SELECT value FROM settings WHERE key = ?", (new,)).fetchone()
+        cur_val = cur["value"] if cur else ""
+        # fritz_url wurde bisher zuerst angefragt; bei subnets gewinnt der kanonische Wert
+        merged = row["value"] + "," + cur_val if new == "fritz_urls" and cur_val else cur_val or row["value"]
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (new, merged),
+        )
+        conn.execute("DELETE FROM settings WHERE key = ?", (old,))
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
     _migrate(conn)
+    _migrate_setting_aliases(conn)  # Q-16
     # C-2: leere Altzeilen loeschen (app.js sendete frueher jedes Feld; leer darf nicht die Umgebung ueberschreiben)
     conn.execute("DELETE FROM settings WHERE value = ''")
     conn.execute("INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)")
@@ -275,7 +302,7 @@ def init_db(conn: sqlite3.Connection) -> None:
         log.info("Identitaet: %s doppelte Geraete (gleiche IP) zusammengefuehrt", removed)
 
 
-def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
+def upsert_device(conn: sqlite3.Connection, dev: dict[str, Any], now: str) -> None:
     row = conn.execute("SELECT first_seen, category_override FROM devices WHERE mac = ?", (dev["mac"],)).fetchone()
     if row is None:
         conn.execute(
@@ -333,7 +360,9 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
     dedupe.blank_stale_ip(conn, dev.get("ip", ""), dev["mac"])
 
 
-def replace_ports(conn: sqlite3.Connection, mac: str, port_list: list[dict], now: str) -> tuple[set, set]:
+def replace_ports(
+    conn: sqlite3.Connection, mac: str, port_list: list[dict[str, Any]], now: str
+) -> tuple[set[int], set[int]]:
     old = {r["port"] for r in conn.execute("SELECT port FROM device_ports WHERE mac = ?", (mac,))}
     conn.execute("DELETE FROM device_ports WHERE mac = ?", (mac,))
     for p in port_list:
@@ -361,7 +390,7 @@ def list_devices(
     subnet: str = "",
     subnets: list[str] | None = None,
     categories: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     sql = (
         "SELECT d.*, "
         "(SELECT COUNT(*) FROM device_ports p WHERE p.mac = d.mac) AS port_count, "
@@ -395,7 +424,7 @@ def list_devices(
     return [dict(r) for r in conn.execute(sql, params)]
 
 
-def get_device(conn: sqlite3.Connection, mac: str) -> dict | None:
+def get_device(conn: sqlite3.Connection, mac: str) -> dict[str, Any] | None:
     row = conn.execute("SELECT * FROM devices WHERE mac = ?", (mac,)).fetchone()
     if row is None:
         return None
@@ -434,7 +463,71 @@ def delete_device(conn: sqlite3.Connection, mac: str) -> None:
     conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE connected_to = ?", (mac,))
 
 
-def get_layout(conn: sqlite3.Connection, mac: str) -> dict | None:
+# --- HTTP-nahe Helfer (W7/Q-4): SQL gehoert nicht in die Router --------------------------------
+
+
+def device_exists(conn: sqlite3.Connection, mac: str) -> bool:
+    return conn.execute("SELECT 1 FROM devices WHERE mac = ?", (mac,)).fetchone() is not None
+
+
+def list_rooms(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute("SELECT DISTINCT room FROM devices WHERE room != '' ORDER BY room").fetchall()
+    return [r["room"] for r in rows]
+
+
+def update_device(
+    conn: sqlite3.Connection,
+    mac: str,
+    *,
+    category: str | None = None,
+    note: str | None = None,
+    room: str | None = None,
+    connected_to: str | None = None,
+    x: float | None = None,
+    y: float | None = None,
+) -> None:
+    """Schreibt die per PATCH aenderbaren Felder spaltenweise (C-6: unberuehrte Spalten bleiben)."""
+    if category is not None:
+        conn.execute(
+            "UPDATE devices SET category_override = ?, category = ? WHERE mac = ?",
+            (category, category, mac),
+        )
+    if note is not None:
+        conn.execute("UPDATE devices SET note = ? WHERE mac = ?", (note, mac))
+    if room is not None:
+        conn.execute("UPDATE devices SET room = ? WHERE mac = ?", (room.strip(), mac))
+    if connected_to is not None:
+        if connected_to == "":
+            conn.execute("UPDATE device_layout SET connected_to = NULL, connected_manual = 0 WHERE mac = ?", (mac,))
+        else:
+            set_layout(conn, mac, connected_to=connected_to, connected_manual=1)
+    if x is not None or y is not None:
+        set_layout(conn, mac, x=x, y=y)
+
+
+def reset_layout(conn: sqlite3.Connection) -> None:
+    conn.execute("UPDATE device_layout SET x = NULL, y = NULL")
+
+
+def parent_chain(conn: sqlite3.Connection, start: str, limit: int = 10000) -> list[str]:
+    """Kette der connected_to-Verweise ab `start` (MACs; IPs werden ueber devices aufgeloest).
+    Zyklussicher durch `seen` + Limit - Basis der Pruefung in services/devices.check_parent."""
+    chain: list[str] = []
+    seen: set[str] = set()
+    cur: str | None = start
+    while cur and cur not in seen and len(seen) < limit:
+        seen.add(cur)
+        chain.append(cur)
+        row = conn.execute("SELECT connected_to FROM device_layout WHERE mac = ?", (cur,)).fetchone()
+        nxt = row["connected_to"] if row else None
+        if nxt and not device_exists(conn, nxt):
+            by_ip = conn.execute("SELECT mac FROM devices WHERE ip = ?", (nxt,)).fetchone()
+            nxt = by_ip["mac"] if by_ip else None
+        cur = nxt
+    return chain
+
+
+def get_layout(conn: sqlite3.Connection, mac: str) -> dict[str, Any] | None:
     row = conn.execute("SELECT * FROM device_layout WHERE mac = ?", (mac,)).fetchone()
     return dict(row) if row else None
 
@@ -464,7 +557,7 @@ def set_layout(
 
 
 @contextmanager
-def read_snapshot(conn: sqlite3.Connection):
+def read_snapshot(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     """K-10/K-11: gemeinsamer konsistenter Schnappschuss fuer mehrteilige Lesezugriffe
     (Exporte, Detailansicht) - Daten mischen nicht vor und nach einem Scan-Commit."""
     conn.execute("BEGIN")
@@ -475,12 +568,12 @@ def read_snapshot(conn: sqlite3.Connection):
             conn.rollback()
 
 
-def get_scan_state(conn: sqlite3.Connection) -> dict:
+def get_scan_state(conn: sqlite3.Connection) -> dict[str, Any]:
     row = conn.execute("SELECT * FROM scan_state WHERE id = 1").fetchone()
     return dict(row) if row else {"last_scan": None, "next_scan": None, "scanning": 0}
 
 
-def set_scan_state(conn: sqlite3.Connection, **fields) -> None:
+def set_scan_state(conn: sqlite3.Connection, **fields: Any) -> None:
     keys = ", ".join(f"{k} = ?" for k in fields)
     conn.execute(f"UPDATE scan_state SET {keys} WHERE id = 1", tuple(fields.values()))  # noqa: S608 - Spalten aus internen **fields-Schluesseln, Werte per Parameter
 
@@ -522,7 +615,7 @@ def delete_setting(conn: sqlite3.Connection, key: str) -> None:
     conn.execute("DELETE FROM settings WHERE key = ?", (key,))
 
 
-def get_user(conn: sqlite3.Connection, username: str) -> dict | None:
+def get_user(conn: sqlite3.Connection, username: str) -> dict[str, Any] | None:
     row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
     return dict(row) if row else None
 
@@ -542,7 +635,7 @@ def create_token(conn: sqlite3.Connection, token: str, expires: str, subnets: st
     )
 
 
-def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
+def get_valid_token(conn: sqlite3.Connection, token: str) -> dict[str, Any] | None:
     if not token:
         return None
     row = conn.execute("SELECT * FROM embed_tokens WHERE token = ?", (token_key(token),)).fetchone()
@@ -557,7 +650,7 @@ def get_valid_token(conn: sqlite3.Connection, token: str) -> dict | None:
     return dict(row)
 
 
-def list_tokens(conn: sqlite3.Connection) -> list[dict]:
+def list_tokens(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """Ohne Token im Klartext: `id` ist der Hash (zum Loeschen), `hint` die ersten 6 Zeichen zur Wiedererkennung."""
     rows = conn.execute(
         "SELECT token, hint, expires, subnets, categories, created FROM embed_tokens ORDER BY created DESC"

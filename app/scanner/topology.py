@@ -1,5 +1,6 @@
 import ipaddress
 import subprocess
+from typing import Any
 
 from ..logsetup import warn_once
 
@@ -43,7 +44,9 @@ def conn_type(interface_type: str) -> str:
     return ""
 
 
-def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
+def vpn_pool_rules(
+    vpn_pool: str, gateway: str = ""
+) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network | None, int, list[Any], list[Any]]:
     """Parst das Setting vpn_pool.
 
     Rueckgabe: (auto_net, auto_min, nets, ranges)
@@ -54,8 +57,8 @@ def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
     Leer/"off"/"0" (Default) deaktiviert die Pool-Heuristik komplett - es wird kein VPN-Pool
     angenommen; dann greift nur die TR-064-Erkennung (siehe is_vpn_tr064).
     """
-    nets: list = []
-    ranges: list = []
+    nets: list[Any] = []
+    ranges: list[Any] = []
     auto_net = None
     auto_min = 0
     pool = (vpn_pool or "").strip()
@@ -141,7 +144,7 @@ def resolve_connected_to(
     return gw
 
 
-def assign_behind_switch(devices: list[dict], ports: dict[str, tuple[str, str]], fixed: set[str]) -> int:
+def assign_behind_switch(devices: list[dict[str, Any]], ports: dict[str, tuple[str, str]], fixed: set[str]) -> int:
     """Ordnet Geraete einem Switch zu, der am selben LAN-Port des Elternknotens haengt.
 
     Ein LAN-Port einer FRITZ!Box hat genau eine Leitung. Sieht die Box dort mehrere Geraete und ist genau

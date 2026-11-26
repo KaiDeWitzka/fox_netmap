@@ -3,6 +3,7 @@ import os
 import re
 from contextlib import suppress
 from logging.handlers import RotatingFileHandler
+from typing import Any
 
 _warned_once: set[str] = set()
 
@@ -12,7 +13,7 @@ def reset_run_warnings() -> None:
     _warned_once.clear()
 
 
-def warn_once(key: str, msg: str, *args) -> None:
+def warn_once(key: str, msg: str, *args: Any) -> None:
     """SF-8: Eine WARNING je Lauf und Thema - fehlende Binaerdateien/Tools duerfen nicht
     bei jedem Host/jeder Sonde erneut warnen, aber einmal pro Scan sichtbar sein."""
     if key not in _warned_once:

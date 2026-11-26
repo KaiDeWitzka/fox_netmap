@@ -10,6 +10,7 @@ Oberflaeche uebersetzt. Eine manuell gesetzte Kategorie (category_override) hat 
 """
 
 import re
+from typing import Any
 
 ROUTER = "Router"
 REPEATER = "Repeater/AP"
@@ -25,13 +26,13 @@ UNKNOWN = "Unbekannt"
 CATEGORIES = [ROUTER, REPEATER, SWITCH, SERVER, CLIENT, MOBILE, MEDIA, PRINTER, IOT, UNKNOWN]
 
 
-def _rx(*parts: str) -> re.Pattern:
+def _rx(*parts: str) -> re.Pattern[str]:
     # Treffer nur am Wortanfang: "ring" passt auf "ring-tuer", nicht auf "string"
     return re.compile(r"(?:^|[^a-z0-9])(?:" + "|".join(parts) + ")")
 
 
 # Reihenfolge = Vorrang bei gleicher Punktzahl (spezifische Muster zuerst, z. B. "nintendo switch")
-HOSTNAME_RULES: list[tuple[str, re.Pattern]] = [
+HOSTNAME_RULES: list[tuple[str, re.Pattern[str]]] = [
     (MEDIA, _rx(r"nintendo", r"playstation", r"ps[345](?![0-9])", r"xbox")),
     (
         PRINTER,
@@ -319,7 +320,7 @@ SERVICE_RULES: dict[str, str] = {
 }
 
 # Modellkennung aus TXT-Daten (_device-info, AirPlay, Cast). Apple-Kennungen sind eindeutig.
-MODEL_RULES: list[tuple[str, re.Pattern]] = [
+MODEL_RULES: list[tuple[str, re.Pattern[str]]] = [
     (MOBILE, re.compile(r"^(iphone|ipad|ipod|watch)", re.I)),
     (MEDIA, re.compile(r"^(appletv|audioaccessory|homepod|chromecast|google tv|shield)", re.I)),
     (CLIENT, re.compile(r"^(macbook|imac|macmini|macpro|mac\d|j\d{3}\w*ap)", re.I)),
@@ -361,7 +362,7 @@ WEIGHT_VENDOR = 3
 WEIGHT_RANDOM_MAC = 1
 
 
-def _port_set(ports) -> set[int]:
+def _port_set(ports: Any) -> set[int]:
     out = set()
     for p in ports or ():
         try:
@@ -379,78 +380,78 @@ def is_random_mac(mac: str) -> bool:
         return False
 
 
-def classify(  # noqa: C901 - Regeltabelle in W7 (Q-14)
-    hostname: str = "",
-    vendor: str = "",
-    ports=(),
-    *,
-    mac: str = "",
-    is_gateway: bool = False,
-    mesh_role: str = "",
-    mdns: dict | None = None,
-    connection: str = "",
-) -> tuple[str, str]:
-    """Liefert (Kategorie, Begruendung). Begruendung: "<signal>:<wert>", "" bei Unbekannt."""
-    scores: dict[str, int] = {}
-    reasons: dict[str, tuple[int, str]] = {}
+def _add(scores: dict[str, int], reasons: dict[str, tuple[int, str]], cat: str, pts: int, why: str) -> None:
+    scores[cat] = scores.get(cat, 0) + pts
+    if pts > reasons.get(cat, (0, ""))[0]:
+        reasons[cat] = (pts, why)
 
-    def add(cat: str, pts: int, why: str) -> None:
-        scores[cat] = scores.get(cat, 0) + pts
-        if pts > reasons.get(cat, (0, ""))[0]:
-            reasons[cat] = (pts, why)
 
+def _score_gateway_mesh(
+    scores: dict[str, int], reasons: dict[str, tuple[int, str]], is_gateway: bool, mesh_role: str
+) -> None:
     if is_gateway:
-        add(ROUTER, WEIGHT_GATEWAY, "gateway")
+        _add(scores, reasons, ROUTER, WEIGHT_GATEWAY, "gateway")
     if mesh_role == "master":
-        add(ROUTER, WEIGHT_MESH, "mesh:master")
+        _add(scores, reasons, ROUTER, WEIGHT_MESH, "mesh:master")
     elif mesh_role == "slave":
-        add(REPEATER, WEIGHT_MESH, "mesh:slave")
+        _add(scores, reasons, REPEATER, WEIGHT_MESH, "mesh:slave")
 
+
+def _score_mdns(scores: dict[str, int], reasons: dict[str, tuple[int, str]], mdns: dict[str, Any] | None) -> None:
     info = mdns or {}
     model = str(info.get("model") or "")
     if model:
         for cat, rx in MODEL_RULES:
             if rx.search(model):
-                add(cat, WEIGHT_MODEL, "mdns:" + model)
+                _add(scores, reasons, cat, WEIGHT_MODEL, "mdns:" + model)
                 break
     for svc in sorted(info.get("services") or ()):
         cat = SERVICE_RULES.get(svc) or ""
         if cat:
-            add(cat, WEIGHT_SERVICE, "svc:" + svc)
+            _add(scores, reasons, cat, WEIGHT_SERVICE, "svc:" + svc)
 
+
+def _score_hostname(scores: dict[str, int], reasons: dict[str, tuple[int, str]], hostname: str) -> None:
     host = (hostname or "").lower()
-    if host:
-        for cat, rx in HOSTNAME_RULES:
-            m = rx.search(host)
-            if m:
-                add(cat, WEIGHT_HOST, "host:" + m.group(0).strip("-_. "))
-                break
+    if not host:
+        return
+    for cat, rx in HOSTNAME_RULES:
+        m = rx.search(host)
+        if m:
+            _add(scores, reasons, cat, WEIGHT_HOST, "host:" + m.group(0).strip("-_. "))
+            break
 
+
+def _score_vendor(
+    scores: dict[str, int], reasons: dict[str, tuple[int, str]], vendor: str, is_gateway: bool, mesh_role: str
+) -> None:
     ven = (vendor or "").lower()
-    if ven:
-        for cat, keys in VENDOR_RULES:
-            k = next((k for k in keys if k in ven), None)
-            if k:
-                add(cat, WEIGHT_VENDOR, "vendor:" + vendor)
-                break
-        if "avm" in ven and not is_gateway and not mesh_role:
-            add(REPEATER, WEIGHT_VENDOR, "vendor:" + vendor)
+    if not ven:
+        return
+    for cat, keys in VENDOR_RULES:
+        k = next((k for k in keys if k in ven), None)
+        if k:
+            _add(scores, reasons, cat, WEIGHT_VENDOR, "vendor:" + vendor)
+            break
+    if "avm" in ven and not is_gateway and not mesh_role:
+        _add(scores, reasons, REPEATER, WEIGHT_VENDOR, "vendor:" + vendor)
 
+
+def _score_ports(scores: dict[str, int], reasons: dict[str, tuple[int, str]], ports: Any, is_gateway: bool) -> None:
     port_set = _port_set(ports)
     for port in sorted(port_set):
         rule = PORT_RULES.get(port)
         if not rule or (port == 49000 and is_gateway):
             continue
-        add(rule[0], rule[1], f"port:{port}")
+        _add(scores, reasons, rule[0], rule[1], f"port:{port}")
     if {22, 80, 443} <= port_set:
-        add(SERVER, 2, "port:22+80+443")
+        _add(scores, reasons, SERVER, 2, "port:22+80+443")
     if 445 in port_set:
         # SMB bieten Windows-PCs und Macs genauso an wie NAS; zusammen mit SSH eher ein Server
-        add(SERVER if 22 in port_set else CLIENT, 1, "port:445")
+        _add(scores, reasons, SERVER if 22 in port_set else CLIENT, 1, "port:445")
 
-    if mac and connection == "wlan" and is_random_mac(mac) and not scores:
-        add(MOBILE, WEIGHT_RANDOM_MAC, "mac:random")
 
+def _pick_best(scores: dict[str, int], reasons: dict[str, tuple[int, str]]) -> tuple[str, str]:
     if not scores:
         return UNKNOWN, ""
     order = {c: i for i, c in enumerate(CATEGORIES)}
@@ -458,6 +459,32 @@ def classify(  # noqa: C901 - Regeltabelle in W7 (Q-14)
     return best, reasons[best][1]
 
 
-def categorize(hostname: str = "", vendor: str = "", ports=(), tr064_type: str = "", **kw) -> str:
+def classify(
+    hostname: str = "",
+    vendor: str = "",
+    ports: Any = (),
+    *,
+    mac: str = "",
+    is_gateway: bool = False,
+    mesh_role: str = "",
+    mdns: dict[str, Any] | None = None,
+    connection: str = "",
+) -> tuple[str, str]:
+    """Liefert (Kategorie, Begruendung). Begruendung: "<signal>:<wert>", "" bei Unbekannt.
+    Signale als Regeltabelle (HOSTNAME_RULES, VENDOR_RULES, ...): hoechste Punktsumme gewinnt,
+    bei Gleichstand die CATEGORIES-Reihenfolge (Q-14)."""
+    scores: dict[str, int] = {}
+    reasons: dict[str, tuple[int, str]] = {}
+    _score_gateway_mesh(scores, reasons, is_gateway, mesh_role)
+    _score_mdns(scores, reasons, mdns)
+    _score_hostname(scores, reasons, hostname)
+    _score_vendor(scores, reasons, vendor, is_gateway, mesh_role)
+    _score_ports(scores, reasons, ports, is_gateway)
+    if mac and connection == "wlan" and is_random_mac(mac) and not scores:
+        _add(scores, reasons, MOBILE, WEIGHT_RANDOM_MAC, "mac:random")
+    return _pick_best(scores, reasons)
+
+
+def categorize(hostname: str = "", vendor: str = "", ports: Any = (), tr064_type: str = "", **kw: Any) -> str:
     """Kompatibel zur alten Schnittstelle: nur die Kategorie."""
     return classify(hostname, vendor, ports, **kw)[0]

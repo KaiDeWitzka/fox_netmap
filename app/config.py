@@ -1,5 +1,6 @@
 import ipaddress
 import logging
+import sqlite3
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -110,7 +111,7 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def effective_settings(conn, base: Settings) -> Settings:
+def effective_settings(conn: sqlite3.Connection, base: Settings) -> Settings:
     """Fuehrt Umgebung (base) und Datenbank zusammen. Wirft nie: ungueltige oder fuera
     den Grenzen liegende gespeicherte Werte werden mit WARNING geloggt, der Umgebungswert
     bleibt (SF-4). C-2: nur `None` heisst "nicht gesetzt" - ein gespeicherter leerer String

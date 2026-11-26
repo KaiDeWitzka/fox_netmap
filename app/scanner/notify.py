@@ -1,6 +1,9 @@
 import logging
+from typing import Any
 
 import httpx
+
+from ..config import Settings
 
 log = logging.getLogger("fox_netmap.notify")
 
@@ -12,7 +15,7 @@ def _norm_mac(mac: str) -> str:
     return normalize_mac_key(mac)
 
 
-def is_whitelisted(settings, dev: dict) -> bool:
+def is_whitelisted(settings: Settings, dev: dict[str, Any]) -> bool:
     raw = getattr(settings, "alarm_whitelist", "") or ""
     entries = [_norm_mac(e.strip()) for e in raw.split(",") if e.strip()]
     if not entries:
@@ -24,7 +27,7 @@ def is_whitelisted(settings, dev: dict) -> bool:
     return bool(ip and ip in entries)
 
 
-def notify_new_devices(settings, devices: list[dict]) -> bool:
+def notify_new_devices(settings: Settings, devices: list[dict[str, Any]]) -> bool:
     """Liefert True, wenn alle konfigurierten Kanaele zustellten. SF-5: HTTP ab 300 (auch Redirects,
     follow_redirects=False) und Verbindungsfehler gelten als Fehlschlag."""
     if not devices:
@@ -58,7 +61,7 @@ def notify_new_devices(settings, devices: list[dict]) -> bool:
     return all(results) if results else True
 
 
-def _post(name: str, url: str, **kw) -> bool:
+def _post(name: str, url: str, **kw: Any) -> bool:
     """Fehler nur mit Dienstname und Statuscode bzw. Fehlertyp protokollieren, nie mit URL oder Token.
     SF-5: Status ab 300 ist ein Fehler (Redirects werden nicht verfolgt)."""
     try:

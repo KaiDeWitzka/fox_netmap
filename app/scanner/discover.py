@@ -6,6 +6,7 @@ import socket
 import subprocess
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 from ..logsetup import reset_run_warnings, warn_once
 from . import topology
@@ -90,7 +91,7 @@ def neigh6_table() -> dict[str, str]:
         return {}
 
 
-def ip_sort_key(s: str):
+def ip_sort_key(s: str) -> tuple[int, int]:
     """Sortierschluessel, der gemischte IPv4/IPv6-Listen erlaubt (v4 vor v6, dann numerisch)."""
     a = ipaddress.ip_address(s)
     return (a.version, int(a))
@@ -105,7 +106,7 @@ def v6_by_mac(neigh6: dict[str, str]) -> dict[str, str]:
     return out
 
 
-def eui64_candidates(mac: str, net) -> list[str]:
+def eui64_candidates(mac: str, net: ipaddress.IPv6Network) -> list[str]:
     """SLAAC/EUI-64-Kandidat einer MAC in einem IPv6-Subnetz: ff:fe in die Mitte, U/L-Bit kippen."""
     try:
         m = bytes(int(x, 16) for x in mac.split(":"))
@@ -137,7 +138,9 @@ def ping6_all_nodes(timeout: float = 2.0) -> list[str]:
     return sorted({m.group(1).lower() for m in re.finditer(r"from\s+([0-9a-fA-F:]+)", result.stdout)})
 
 
-def v6_slaac_probe(subnets, macs, timeout: float = 1.0, base: dict | None = None, workers: int = 16) -> dict[str, str]:
+def v6_slaac_probe(
+    subnets: list[str], macs: Any, timeout: float = 1.0, base: dict[str, Any] | None = None, workers: int = 16
+) -> dict[str, str]:
     """MAC -> globale v6-Adresse via SLAAC/EUI-64: Kandidaten pro bekannter MAC in grossen v6-Netzen per ping6 testen."""
     out = {k.lower(): v for k, v in (base or {}).items()}
     nets6 = []
@@ -174,7 +177,7 @@ def v6_slaac_probe(subnets, macs, timeout: float = 1.0, base: dict | None = None
     return out
 
 
-def in_net(ip: str, net) -> bool:
+def in_net(ip: str, net: ipaddress.IPv4Network | ipaddress.IPv6Network) -> bool:
     try:
         return ipaddress.ip_address(ip) in net
     except ValueError:
@@ -201,7 +204,7 @@ def ping_host(ip: str, timeout: float) -> bool:
         return False
 
 
-def sweep_hosts(net, max_hosts: int = MAX_SWEEP_HOSTS) -> list[str]:
+def sweep_hosts(net: ipaddress.IPv4Network | ipaddress.IPv6Network, max_hosts: int = MAX_SWEEP_HOSTS) -> list[str]:
     if net.num_addresses > max_hosts * 2:
         return []
     return [str(h) for h in net.hosts()][:max_hosts]
@@ -218,7 +221,7 @@ def ping_sweep(subnet: str, timeout: float = 1.0, max_hosts: int = MAX_SWEEP_HOS
     return {ip for ip, ok in zip(hosts, results, strict=True) if ok}
 
 
-def tcp_probe(ip: str, timeout: float = 0.8, ports=PROBE_PORTS) -> bool:
+def tcp_probe(ip: str, timeout: float = 0.8, ports: list[int] = PROBE_PORTS) -> bool:
     for p in ports:
         try:
             with socket.create_connection((ip, p), timeout=timeout):
@@ -228,7 +231,7 @@ def tcp_probe(ip: str, timeout: float = 0.8, ports=PROBE_PORTS) -> bool:
     return False
 
 
-def tcp_probe_sweep(subnet: str, skip: set, timeout: float = 0.8, max_hosts: int = MAX_SWEEP_HOSTS) -> set[str]:
+def tcp_probe_sweep(subnet: str, skip: set[str], timeout: float = 0.8, max_hosts: int = MAX_SWEEP_HOSTS) -> set[str]:
     try:
         net = ipaddress.ip_network(subnet, strict=False)
     except ValueError:
@@ -239,61 +242,62 @@ def tcp_probe_sweep(subnet: str, skip: set, timeout: float = 0.8, max_hosts: int
     return {ip for ip, ok in zip(candidates, results, strict=True) if ok}
 
 
-def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:  # noqa: C901 - Zerlegung je Sonde in W7 (Q-14)
-    reset_run_warnings()  # SF-8: Warn-einmal-pro-Lauf ab Scanbeginn
-    arp = arp_table()
-    neigh6 = neigh6_table()
-    live: dict[str, str] = {}
-    for subnet in subnets:
-        try:
-            net = ipaddress.ip_network(subnet, strict=False)
-        except ValueError:
-            log.warning("Subnetz %s ungueltig, uebersprungen", subnet)
-            continue
-        if net.version == 6:
-            ndp = [ip for ip in neigh6 if in_net(ip, net)]
-            for ip in ndp:
-                live.setdefault(ip, "ndp")
-            gw = topology.gateway_ip6()
-            if gw and in_net(gw, net) and ping_host(gw, timeout):
-                live.setdefault(gw, "ping")
-            if net.num_addresses <= SWEEP_NET_LIMIT:
-                pinged = ping_sweep(subnet, timeout)
-                log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(pinged))
-                for ip in pinged:
-                    live.setdefault(ip, "ping")
-                probed = tcp_probe_sweep(subnet, set(pinged) | set(ndp), timeout)
-                if probed:
-                    log.info("Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar", subnet, len(probed))
-                for ip in probed:
-                    live.setdefault(ip, "tcp")
-            else:
-                replies = ping6_all_nodes(max(2.0, timeout))
-                neigh6 = neigh6_table()  # nach dem Multicast-Ping aktualisierte NDP-Tabelle
-                ndp = [ip for ip in neigh6 if in_net(ip, net)]
-                # C-8: die nach dem Multicast-Ping neu berechneten NDP-Eintraege ins Ergebnis uebernehmen
-                for ip in ndp:
-                    live.setdefault(ip, "ndp")
-                log.info(
-                    "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege uebernommen)",
-                    subnet,
-                    net.num_addresses,
-                    len(replies),
-                    len(ndp),
-                )
-        else:
-            pinged = ping_sweep(subnet, timeout)
-            log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(pinged))
-            for ip in pinged:
-                live[ip] = "ping"
-            probed = tcp_probe_sweep(subnet, set(pinged), timeout)
-            if probed:
-                log.info(
-                    "Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar (ICMP blockiert)", subnet, len(probed)
-                )
-            for ip in probed:
-                live.setdefault(ip, "tcp")
-    devices: list[dict] = []
+def _probe_subnet_v4(subnet: str, timeout: float, live: dict[str, str]) -> None:
+    """IPv4-Sonde: Ping-Sweep, dann TCP-Probe fuer Hosts ohne ICMP-Antwort (e885216)."""
+    pinged = ping_sweep(subnet, timeout)
+    log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(pinged))
+    for ip in pinged:
+        live[ip] = "ping"
+    probed = tcp_probe_sweep(subnet, set(pinged), timeout)
+    if probed:
+        log.info("Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar (ICMP blockiert)", subnet, len(probed))
+    for ip in probed:
+        live.setdefault(ip, "tcp")
+
+
+def _probe_subnet_v6(
+    net: ipaddress.IPv6Network, subnet: str, timeout: float, neigh6: dict[str, str], live: dict[str, str]
+) -> dict[str, str]:
+    """IPv6-Sonde: NDP + Gateway-Ping + Sweep (kleine Netze) bzw. ff02::1-Multicast (grosse /64).
+    Gibt die ggf. nach dem Multicast aktualisierte NDP-Tabelle zurueck."""
+    ndp = [ip for ip in neigh6 if in_net(ip, net)]
+    for ip in ndp:
+        live.setdefault(ip, "ndp")
+    gw = topology.gateway_ip6()
+    if gw and in_net(gw, net) and ping_host(gw, timeout):
+        live.setdefault(gw, "ping")
+    if net.num_addresses <= SWEEP_NET_LIMIT:
+        pinged = ping_sweep(subnet, timeout)
+        log.info("Subnetz %s: %s Hosts antworten auf Ping", subnet, len(pinged))
+        for ip in pinged:
+            live.setdefault(ip, "ping")
+        probed = tcp_probe_sweep(subnet, set(pinged) | set(ndp), timeout)
+        if probed:
+            log.info("Subnetz %s: zusaetzlich %s Hosts nur per TCP erreichbar", subnet, len(probed))
+        for ip in probed:
+            live.setdefault(ip, "tcp")
+    else:
+        replies = ping6_all_nodes(max(2.0, timeout))
+        neigh6 = neigh6_table()  # nach dem Multicast-Ping aktualisierte NDP-Tabelle
+        ndp = [ip for ip in neigh6 if in_net(ip, net)]
+        # C-8: die nach dem Multicast-Ping neu berechneten NDP-Eintraege ins Ergebnis uebernehmen
+        for ip in ndp:
+            live.setdefault(ip, "ndp")
+        log.info(
+            "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege uebernommen)",
+            subnet,
+            net.num_addresses,
+            len(replies),
+            len(ndp),
+        )
+    return neigh6
+
+
+def _devices_from_live(
+    live: dict[str, str], arp: dict[str, str], neigh6: dict[str, str], subnets: list[str]
+) -> list[dict[str, Any]]:
+    """Live-Map + ARP/NDP -> Geraete-Liste (inkl. ARP-only-Eintraege im Subnetz-Umfang)."""
+    devices: list[dict[str, Any]] = []
     for ip in sorted(live, key=ip_sort_key):
         source = live[ip]
         v6 = ":" in ip
@@ -316,3 +320,22 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:  # noqa: C
             devices.append({"ip": ip, "mac": mac, "source": "arp"})
     log.info("ARP: %s Eintraege im Subnetz-Umfang (nur gleiche L2-Schicht sichtbar)", arp_only)
     return devices
+
+
+def discover(subnets: list[str], timeout: float = 1.0) -> list[dict[str, Any]]:
+    """Erkennung je Subnetz: je Sonde eine Funktion (Q-14); Ergebnis identisch zur alten Monolith-Funktion."""
+    reset_run_warnings()  # SF-8: Warn-einmal-pro-Lauf ab Scanbeginn
+    arp = arp_table()
+    neigh6 = neigh6_table()
+    live: dict[str, str] = {}
+    for subnet in subnets:
+        try:
+            net = ipaddress.ip_network(subnet, strict=False)
+        except ValueError:
+            log.warning("Subnetz %s ungueltig, uebersprungen", subnet)
+            continue
+        if net.version == 6:
+            neigh6 = _probe_subnet_v6(net, subnet, timeout, neigh6, live)
+        else:
+            _probe_subnet_v4(subnet, timeout, live)
+    return _devices_from_live(live, arp, neigh6, subnets)

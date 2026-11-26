@@ -46,7 +46,12 @@ def test_jede_schreibende_api_route_traegt_require_auth(app):
     for route in _all_routes():
         path = getattr(route, "path", "")
         methods = set(getattr(route, "methods", set()) or set())
-        if not path.startswith("/api/") or path == "/api/login" or not (methods & {"POST", "PATCH", "PUT", "DELETE"}):
+        # /api/login und /api/logout sind bewusst ohne Sitzung nutzbar (Login obviously, Logout ist ein No-Op)
+        if (
+            not path.startswith("/api/")
+            or path in ("/api/login", "/api/logout")
+            or not (methods & {"POST", "PATCH", "PUT", "DELETE"})
+        ):
             continue
         dependant = getattr(route, "dependant", None)
         deps = [d.call for d in (dependant.dependencies if dependant else [])]

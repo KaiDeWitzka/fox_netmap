@@ -104,3 +104,30 @@ def test_settings_patch_model_matches_patchable_fields():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_legacy_alias_migrated(tmp_path):
+    """Q-16 (W7): Alt-Schluessel subnet/fritz_url in der Datenbank werden beim Start auf die
+    kanonischen subnets/fritz_urls migriert und geloescht (fritz_url bleibt als erster Endpunkt erhalten)."""
+    conn = _conn(tmp_path)
+    db.set_setting(conn, "subnet", "10.0.0.0/24")
+    db.set_setting(conn, "fritz_url", "192.168.178.1:49000")
+    db.set_setting(conn, "fritz_urls", "192.168.178.2:49000")
+    conn.commit()
+    db.init_db(conn)  # zweiter Start fuehrt die Alias-Migration aus
+    assert db.get_setting(conn, "subnet") is None
+    assert db.get_setting(conn, "fritz_url") is None
+    assert db.get_setting(conn, "subnets") == "10.0.0.0/24"
+    assert db.get_setting(conn, "fritz_urls") == "192.168.178.1:49000,192.168.178.2:49000"
+    conn.close()
+
+
+def test_legacy_alias_migrated_allein(tmp_path):
+    """Q-16: nur fritz_url gesetzt -> landet komplett in fritz_urls."""
+    conn = _conn(tmp_path)
+    db.set_setting(conn, "fritz_url", "192.168.178.1:49000")
+    conn.commit()
+    db.init_db(conn)
+    assert db.get_setting(conn, "fritz_url") is None
+    assert db.get_setting(conn, "fritz_urls") == "192.168.178.1:49000"
+    conn.close()

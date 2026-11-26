@@ -8,15 +8,18 @@ import hmac
 import logging
 import os
 import secrets
+import sqlite3
 import threading
 import time
 from contextlib import suppress
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import db
+from .config import Settings
 
 log = logging.getLogger("fox_netmap")
 
@@ -141,7 +144,7 @@ def _cookie_secure(request: Request) -> bool:
 INITIAL_PASSWORD_FILE = "initial-admin-password.txt"  # noqa: S105 - Dateiname, kein Passwort
 
 
-def ensure_default_user(conn, settings) -> None:
+def ensure_default_user(conn: sqlite3.Connection, settings: Settings) -> None:
     """Legt den Admin an bzw. setzt sein Passwort aus NETZ_AUTH_PASS.
 
     Ohne NETZ_AUTH_PASS wird nur beim allerersten Start ein Zufallspasswort erzeugt und in
@@ -194,7 +197,9 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/api/login")
-def login(body: LoginRequest, request: Request, response: Response):
+def login(
+    body: LoginRequest, request: Request, response: Response
+) -> Any:  # Any: FastAPI baut aus Union[Response, dict] kein response_model
     throttle = request.app.state.login_throttle
     client_ip = request.client.host if request.client else "unknown"
     wait = throttle.retry_after(client_ip, body.username)
@@ -248,7 +253,7 @@ def login(body: LoginRequest, request: Request, response: Response):
 
 
 @router.post("/api/logout")
-def logout(request: Request, response: Response):
+def logout(request: Request, response: Response) -> dict[str, Any]:
     with _sessions_lock:
         SESSIONS.pop(request.cookies.get("fox_session", ""), None)
     response.delete_cookie("fox_session", path="/", httponly=True, samesite="lax", secure=_cookie_secure(request))
@@ -256,7 +261,7 @@ def logout(request: Request, response: Response):
 
 
 @router.get("/api/me")
-def me(request: Request):
+def me(request: Request) -> Any:  # Any: 401 als JSONResponse, sonst dict - kein response_model
     token = request.cookies.get("fox_session")
     entry = SESSIONS.get(token or "")
     if not is_valid_session(token) or entry is None:

@@ -5,6 +5,7 @@ Fehlertexte von PATCH /api/settings woertlich gleich bleiben."""
 
 import ipaddress
 import re
+from typing import Any
 from urllib.parse import urlparse
 
 from .netutil import looks_like_endpoint
@@ -27,7 +28,7 @@ ENUM_MESSAGES = {
 }
 
 
-def check_range(key: str, value, field: SettingField) -> str | None:
+def check_range(key: str, value: Any, field: SettingField) -> str | None:
     if key in RANGE_MESSAGES and (
         (field.minimum is not None and value < field.minimum) or (field.maximum is not None and value > field.maximum)
     ):
@@ -152,3 +153,107 @@ def parse_auto_export_dir(value: str) -> str:
 
 def looks_like_url_or_endpoint(value: str) -> bool:
     return looks_like_endpoint(value)
+
+
+# --- PATCH /api/settings als reine Funktion (W7/Q-2): validate_patch(data) -> Fehlermeldung | None ---
+
+from .settings_schema import FIELDS  # noqa: E402 - unten, nahe der Verwendung
+
+
+def _check_ranges(data: dict[str, Any]) -> str | None:
+    for key, value in data.items():
+        err = check_range(key, value, FIELDS[key])
+        if err:
+            return err
+    return None
+
+
+def _check_ports(data: dict[str, Any]) -> str | None:
+    if str(data.get("ports", "")).strip():
+        try:
+            parse_ports(data["ports"])
+        except ValueError as exc:
+            return str(exc)
+    return None
+
+
+def _check_fritz(data: dict[str, Any]) -> str | None:
+    if str(data.get("fritz_url", "")).strip():
+        try:
+            parse_endpoint(data["fritz_url"])
+        except ValueError as exc:
+            return f"ungueltiges TR-064-Hauptgeraet: {exc}"
+    if str(data.get("fritz_urls", "")).strip():
+        for u in data["fritz_urls"].split(","):
+            u = u.strip()
+            if u:
+                try:
+                    parse_endpoint(u)
+                except ValueError as exc:
+                    return f"ungueltiger weiterer TR-064-Endpunkt: {exc}"
+    if data.get("fritz_pass") is not None and len(data["fritz_pass"]) > 256:
+        return "fritz_pass darf hoechstens 256 Zeichen haben"
+    return None
+
+
+def _check_notify(data: dict[str, Any]) -> str | None:
+    for key in ("notify_webhook", "notify_gotify", "notify_ntfy"):
+        val = data.get(key)
+        if val is not None and str(val).strip():
+            try:
+                parse_notify_url(key, val)
+            except ValueError as exc:
+                return str(exc)
+    if str(data.get("oui_online_url", "")).strip():
+        try:
+            parse_notify_url("oui_online_url", data["oui_online_url"])
+        except ValueError as exc:
+            return str(exc)
+    return None
+
+
+def _check_misc(data: dict[str, Any]) -> str | None:
+    if str(data.get("snmp_community", "")).strip() and re.search(r"\s", data["snmp_community"].strip()):
+        return "snmp_community darf keine Leerzeichen enthalten"
+    if "vpn_pool" in data:
+        from .scanner.topology import vpn_pool_rules
+
+        try:
+            vpn_pool_rules(data["vpn_pool"], "")
+        except ValueError as exc:
+            return f"ungueltiger vpn_pool-Eintrag: {exc}"
+    if str(data.get("subnets", "")).strip():
+        try:
+            parse_subnets(data["subnets"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("snmp_switches", "")).strip():
+        try:
+            parse_snmp_switches(data["snmp_switches"])
+        except ValueError as exc:
+            return str(exc)
+    if "auto_export_dir" in data:
+        try:
+            parse_auto_export_dir(data["auto_export_dir"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("alarm_whitelist", "")).strip():
+        try:
+            parse_whitelist(data["alarm_whitelist"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("sites", "")).strip():
+        try:
+            parse_sites(data["sites"])
+        except ValueError as exc:
+            return str(exc)
+    return None
+
+
+def validate_patch(data: dict[str, Any]) -> str | None:
+    """Prueft ein settings-PATCH (nur gesetzte Felder). None = ok, sonst Fehlermeldung (woertlich wie frueher)."""
+    for check in (_check_ranges, _check_ports, _check_fritz, _check_notify, _check_misc):
+        err = check(data)
+        if err:
+            return err
+    return None

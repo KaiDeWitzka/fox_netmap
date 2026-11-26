@@ -4,11 +4,14 @@ import logging
 import os
 import re
 import socket
+import sqlite3
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Any
 
 from .. import db as _db
+from ..config import Settings
 from ..netutil import normalize_mac as _norm_mac
 from ..netutil import oui_prefix as _oui_prefix
 
@@ -43,7 +46,7 @@ def lookup(mac: str, table: dict[str, str]) -> str:
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(self, req: Any, fp: Any, code: Any, msg: Any, headers: Any, newurl: Any) -> Any:
         return None  # S-14: keine Weiterleitungen folgen
 
 
@@ -100,7 +103,7 @@ def parse_vendor(body: str) -> str:
     return _PRINTABLE_RE.sub("", vendor)[:128]
 
 
-def lookup_online(mac: str, settings, conn, budget: dict) -> str:
+def lookup_online(mac: str, settings: Settings, conn: sqlite3.Connection, budget: dict[str, Any]) -> str:
     """Online-OUI-Fallback: nur bei leerem lokalem Treffer, gecacht in oui_cache, mit Budget pro Scan."""
     if not getattr(settings, "oui_online_enabled", False):
         return ""

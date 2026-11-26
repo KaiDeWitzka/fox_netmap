@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Any
 
 
 def main() -> None:
@@ -25,7 +26,7 @@ def main() -> None:
     uvicorn.run(create_app(settings), host=settings.host, port=settings.port, **_uvicorn_kwargs())
 
 
-def _uvicorn_kwargs() -> dict:
+def _uvicorn_kwargs() -> dict[str, Any]:
     # S-13: proxy_headers nur, wenn ausdruecklich konfiguriert (NETZ_FORWARDED_ALLOW_IPS);
     # sonst wertet uvicorn X-Forwarded-For nicht aus und die Doku stimmt.
     forwarded = os.environ.get("NETZ_FORWARDED_ALLOW_IPS", "").strip()

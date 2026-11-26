@@ -15,6 +15,9 @@ uv run ruff format --check .
 step "mypy app"
 uv run mypy app
 
+step "mypy --strict app (W7/TL-5)"
+uv run mypy --strict app
+
 step "pytest + coverage (fail_under in pyproject.toml)"
 uv run pytest -q -p no:cacheprovider --cov=app --cov-branch --cov-report=term
 

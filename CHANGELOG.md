@@ -59,6 +59,16 @@ Produktionsreife Welle 6 (Testluecken + Mutanten, siehe docs/produktionsreife/UE
 - T-12/T-13: `tests/test_load.py::test_500_devices_list_under_budget` (500 Geraete: Liste/Export/Detail je unter 10 s), `tests/test_api_contract.py` (Schluessel-Snapshots von /api/devices, /api/meta, /api/settings; Secrets nur als `{"configured": bool}`); jsdom-Fixture aus der echten API erzeugt und committet (`tests/fixtures/api_devices_sample.json`), DEVS liegt in `tests/ui/devs_fixture.mjs`, Paritaets-Test `tests/ui/fixture_parity.mjs`
 - Stand nach W6: 385 pytest (Coverage 90,1%, Schwelle 84%), ALL UI CHECKS PASSED (15 tests/ui-Module), `scripts/gate.sh` 10x aufeinanderfolgend gruen
 
+Produktionsreife Welle 7 (Struktur + Typen, siehe docs/produktionsreife/UEBERGABE.md) - Verhalten bleibt identisch (Charakterisierungstests pinnen alte Ausgaben):
+- Q-3: Scanner-Pipeline neu in `app/scanner/pipeline.py` - reine Stufen (`gather_raw`, `endpoints_for`, `fetch_tr064_stage`, `port_plan_for`, `scan_ports_stage`, `names_mdns_stage`, `snmp_stage`, `finalize`); `run.py` haelt nur noch `run_once`/`apply_scan`/`apply_retention`/`main` und re-exportiert die Pipeline-Namen (bestehende Imports/Patches greifen weiter). Charakterisierung: `tests/test_pipeline.py::test_collect_devices_output_unchanged`
+- Q-14: `discover` je Sonde zerlegt (`_probe_subnet_v4`/`_probe_subnet_v6`/`_devices_from_live`), `classify` in Score-Helfer mit den bestehenden Regeltabellen (`_score_gateway_mesh`/`_score_mdns`/`_score_hostname`/`_score_vendor`/`_score_ports`/`_pick_best`), `tr064.parse_mesh` in `_parse_nodes`/`_parse_links`/`_resolve_attachment`/`_node_summary`; Charakterisierung: `tests/test_categorize.py::test_rule_order_unchanged` + Snapshot-Parametrisierung. Alle `noqa: C901` entfernt - keine Funktion ueber Komplexitaet 15 (ruff C90)
+- Q-4: `api.py` ist nur noch Compat-Re-Export; Routen liegen in `app/routers/` (devices, scan, export, settings, tokens, meta), Registrierung in `app/web.py`; Fachlogik in `app/services/` (`authz.py` Token-Scope, `devices.py` Listenfilter + `check_parent`); neue db-Helfer `device_exists`, `list_rooms`, `update_device`, `reset_layout`, `parent_chain`; `web.py::create_app` in `_register_middleware`/`_register_pages` zerlegt. Routentabelle gepinnt: `tests/test_routes_inventory.py::test_route_table_unchanged` + `test_no_unreferenced_routes` (`/api/health` Healthcheck, `/api/rooms` bewusst gehalten - siehe docs/entscheidungen.md)
+- Q-2: `validate_settings` als `validation.validate_patch(data)` mit einzelnen Check-Helfern; Meldungen woertlich gleich
+- TL-5: `app/types.py` mit `DeviceRow`/`Device`/`DeviceDetail` (TypedDict) + `response_model=` an devices/device/meta/health/categories/sites/scan-status/tokens/rooms; `uv run mypy --strict app` gruen (war 162 Fehler), neuer Gate-Schritt
+- Q-16: DB-Alt-Aliase `subnet`/`fritz_url` werden beim Start auf `subnets`/`fritz_urls` migriert (`db._migrate_setting_aliases`, Tests `test_legacy_alias_migrated*`); env-Aliase bleiben deprecated (docs/entscheidungen.md)
+- Q-13: nur als Entscheidungsvermerk in `docs/entscheidungen.md` (Kategorienamen, Logger, NETZ_-Praefix bleiben in dieser Kampagne)
+- Stand nach W7: 416 pytest, `mypy --strict app` 0 Fehler, ruff C90 ohne Ausnahmen, gate gruen
+
 ## [1.6.17] – 2026-11-26
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).

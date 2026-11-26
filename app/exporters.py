@@ -2,9 +2,12 @@ import csv
 import io
 import json
 import os
+import sqlite3
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from . import db
+from .config import Settings
 
 CSV_FIELDS = [
     "mac",
@@ -27,7 +30,7 @@ CSV_FIELDS = [
 ]
 
 
-def devices_payload(settings, rows: list[dict], conn) -> dict:
+def devices_payload(settings: Settings, rows: list[dict[str, Any]], conn: sqlite3.Connection) -> dict[str, Any]:
     devices = []
     for r in rows:
         port_rows = conn.execute("SELECT port FROM device_ports WHERE mac = ? ORDER BY port", (r["mac"],)).fetchall()
@@ -63,7 +66,7 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
     }
 
 
-def _csv_cell(value, formula: bool = False) -> str:
+def _csv_cell(value: Any, formula: bool = False) -> str:
     # S-3: Freitextfelder mit fuehrendem =,+,-,@,Tab,CR werden in Tabellenkalkulationen als Formel
     # ausgewertet - ein ' wird vorangestellt. Gilt nicht fuer MAC/IP/Ports/Zeitstempel und nicht fuer JSON.
     s = "" if value is None else str(value)
@@ -72,7 +75,7 @@ def _csv_cell(value, formula: bool = False) -> str:
     return s
 
 
-def to_csv(rows: list[dict], delimiter: str = ";") -> str:
+def to_csv(rows: list[dict[str, Any]], delimiter: str = ";") -> str:
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=delimiter, lineterminator="\n")
     writer.writerow(CSV_FIELDS)
@@ -101,7 +104,7 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
     return buf.getvalue()
 
 
-def auto_export_due(last: str | None, interval_hours: int, now=None) -> bool:
+def auto_export_due(last: str | None, interval_hours: int, now: datetime | None = None) -> bool:
     if interval_hours <= 0:
         return True
     if not last:
@@ -124,7 +127,7 @@ def _write_atomic(path: str, data: str) -> None:
     os.replace(tmp, path)
 
 
-def auto_export(settings, conn) -> list[str]:
+def auto_export(settings: Settings, conn: sqlite3.Connection) -> list[str]:
     # T-6: Exportziel muss im Datenverzeichnis bleiben (auto_export_dir darf nicht mit ../ entkommen)
     data_real = os.path.realpath(settings.data_dir)
     out_dir = os.path.realpath(os.path.join(data_real, settings.auto_export_dir))
@@ -149,9 +152,9 @@ def auto_export(settings, conn) -> list[str]:
 
 
 def build_pdf(
-    settings,
-    rows: list[dict],
-    conn,
+    settings: Settings,
+    rows: list[dict[str, Any]],
+    conn: sqlite3.Connection,
     image_bytes: bytes | None = None,
     title: str = "",
     orientation: str = "portrait",
