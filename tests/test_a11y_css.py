@@ -38,6 +38,7 @@ def test_druck_feedback_nur_ohne_reduced_motion():
 
 
 def test_live_region_nur_bei_aenderung():
+    # T-8 (W6): billiger Wachposten - Literal im Quelltext, kein Verhaltenstest
     assert "if (el.textContent !== text) el.textContent = text;" in JS
 
 

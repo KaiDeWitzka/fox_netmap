@@ -46,6 +46,7 @@ def test_apply_scan_wendet_frist_an(tmp_path):
 
 
 def test_standard_frist_90_tage():
+    # T-8 (W6): billiger Wachposten - Konstanten-Check, kein Verhaltenstest
     assert Settings().event_retention_days == 90
 
 
@@ -166,5 +167,6 @@ def test_snmp_ohne_community_wird_uebersprungen(tmp_path, monkeypatch, caplog):
 def test_compose_ohne_public_default():
     import pathlib
 
+    # T-8 (W6): billiger Wachposten - Literal-Vergleich gegen docker-compose.yml
     text = (pathlib.Path(__file__).parent.parent / "docker-compose.yml").read_text()
     assert ":-public" not in text

@@ -21,6 +21,20 @@ def fast_password_hashing(monkeypatch):
     monkeypatch.setattr(auth, "_DUMMY_HASH", None)
 
 
+@pytest.fixture(autouse=True)
+def clean_auth_state():
+    """T-15 (W6): globaler Auth-Zustand zwischen Tests isolieren. auth.SESSIONS und der
+    Prune-Zeitpunkt sind modul-global und wuerden sonst von einem frueheren Test ueberleben.
+    Die Login-Drossel lebt in app.state je App-Instanz und ist damit pro Test frisch."""
+    from app import auth
+
+    auth.SESSIONS.clear()
+    auth._last_prune = 0.0
+    yield
+    auth.SESSIONS.clear()
+    auth._last_prune = 0.0
+
+
 @pytest.fixture()
 def settings(tmp_path):
     return Settings(

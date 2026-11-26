@@ -1,0 +1,4 @@
+2001:db8::1 dev eth0 lladdr aa:bb:cc:00:11:22 REACHABLE
+fe80::202:1 dev eth0 lladdr 02:00:00:8e:ee:06 STALE
+2001:db8::99 dev eth0 lladdr 00:00:00:00:00:00 FAILED
+2001:db8::98 dev eth0 lladdr 11:22:33:44:55:66 INCOMPLETE

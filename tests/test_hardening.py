@@ -1,6 +1,7 @@
 """Tests für die Härtung v1.5.0: Passwort-Hash, Sessions, Cookie, Startpasswort, Privacy by Default, Healthcheck."""
 
 import os
+import socket
 import stat
 import subprocess
 from datetime import UTC, datetime, timedelta
@@ -16,6 +17,7 @@ from app.web import create_app
 
 def test_production_iterations_meet_owasp(monkeypatch):
     monkeypatch.undo()  # Produktionswert, nicht den schnellen Testwert
+    # T-8 (W6): billiger Wachposten - Konstanten-Check, kein Verhaltenstest
     assert auth.PBKDF2_ITERATIONS >= 600_000
 
 
@@ -150,8 +152,12 @@ def test_health_role_from_env(monkeypatch):
 
 
 def test_health_web_unreachable():
-    ok, _ = healthcheck.check_web(1)
-    assert not ok
+    # T-14 (W6): frei gewaehlter, gerade geschlossener Port statt fest verdrahtetem Port 1
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        closed_port = s.getsockname()[1]
+    ok, msg = healthcheck.check_web(closed_port)
+    assert not ok and "erreichbar" in msg
 
 
 def test_entrypoint_shell_syntax():
