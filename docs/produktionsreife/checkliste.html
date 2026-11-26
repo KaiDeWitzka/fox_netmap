@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0-W5 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178), W6 als naechstes",
+        "stand": "2026-11-26, W0-W6 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b), W7 als naechstes",
         "wellen": [
                 {
                         "id": "W0",
@@ -990,9 +990,9 @@
                         "titel": "Das Ablaufen einer Sitzung in is_valid_session ist nicht getestet",
                         "welle": "W6",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_session_expiry.py::test_expired_session_rejected_without_prune + test_sessions_isolated_between_tests (autouse clean_auth_state in conftest.py, T-15)",
+                        "commit": "3f67b1b",
                         "notiz": ""
                 },
                 {
@@ -1000,9 +1000,9 @@
                         "titel": "Mehrere Fix-Commits haben keinen Test, der beim Zurücksetzen fehlschlägt",
                         "welle": "W6",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/scan_indicator.mjs + tests/ui/hidden_css.mjs, tests/test_network_paths.py::test_tcp_probe_sweep_against_local_socket, tests/test_pdf_errors.py::test_pdf_long_text_is_wrapped_not_overlapping",
+                        "commit": "3f67b1b",
                         "notiz": ""
                 },
                 {
@@ -1010,9 +1010,9 @@
                         "titel": "Es gibt keinen End-to-End-Test vom Scanner bis zur API in pytest",
                         "welle": "W6",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_e2e_scan_api.py::test_scan_result_visible_via_api",
+                        "commit": "3f67b1b",
                         "notiz": ""
                 },
                 {
@@ -1020,9 +1020,9 @@
                         "titel": "Die Scanner-Tests ersetzen Netzwerk und Unterprozesse fast überall durch Fakes",
                         "welle": "W6",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_network_paths.py (echte 127.0.0.1-Sockets + tests/fixtures/net/), ports.py/snmp.py je 96% Coverage",
+                        "commit": "3f67b1b",
                         "notiz": ""
                 },
                 {
@@ -1040,9 +1040,9 @@
                         "titel": "Parser für Daten aus dem LAN haben keine Property- oder Fuzz-Tests",
                         "welle": "W6",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_parsers_property.py (hypothesis)::test_parse_packet_never_raises u.a.",
+                        "commit": "3f67b1b",
                         "notiz": ""
                 },
                 {
@@ -1050,9 +1050,9 @@
                         "titel": "Kleine Testschwächen: Quelltext-Vergleiche, feste Wartezeit im jsdom-Test und globaler Zustand zwischen Tests",
                         "welle": "W6",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "ui_dom_check.mjs wartet auf Bereitschaft statt festem sleep; check_web mit frei gewaehltem geschlossenen Port (test_hardening.py); Literal-Tests als Wachposten markiert (T-14/T-15 siehe Notiz)",
+                        "commit": "3f67b1b",
                         "notiz": "mit T-14, T-15"
                 },
                 {
@@ -1060,9 +1060,9 @@
                         "titel": "Es gibt keinen Lasttest für 200 Geräte und keinen Schematest der API-Antworten",
                         "welle": "W6",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_load.py::test_500_devices_list_under_budget + tests/test_api_contract.py Snapshot-Tests (T-13: tests/fixtures/api_devices_sample.json + tests/ui/fixture_parity.mjs)",
+                        "commit": "3f67b1b",
                         "notiz": "mit T-13"
                 },
                 {
