@@ -4,6 +4,9 @@
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).
 
+### Dokumentiert
+- **TR-064 HTTP 401 trotz korrektem Passwort — Ursache Sperre nach Fehlversuchen + Lösung dokumentiert:** `tr064_401_hint()` im Log ergänzt um den Hinweis, dass die FRITZ!Box den Benutzer nach mehreren Fehlversuchen kurzzeitig sperrt (Brute-Force-Schutz) und eine erfolgreiche Anmeldung als TR-064-Benutzer im Web-UI die Sperre aufhebt (alternativ einige Minuten warten; System → Ereignisse). Handbuch (6 Sprachen: Mesh-Absatz + Troubleshooting-Tabelle) und READMEs ergänzt. 1 Test-Assertion erweitert.
+
 ### Hinzugefügt
 - **TR-064 TLS-Option jetzt auch in der Web-UI:** Häkchen „TLS-Zertifikatsprüfung abschalten“ (`NETZ_TR064_INSECURE_TLS`) in den Einstellungen, Gruppe TR-064, mit MITM-Warnhinweis (i18n 6 Sprachen); serverseitig in `SAFE_SETTINGS`/`SettingsPatch`/`OVERRIDABLE` (runtime ohne Neustart). Tests: API-Roundtrip + UI-DOM. Doku: Handbuch-Tabelle 6 Sprachen, READMEs.
 

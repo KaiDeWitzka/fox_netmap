@@ -278,6 +278,8 @@ port, e.g. `WLAN · 5 GHz` or `LAN · LAN 1`. According to AVM, the TR-064 user 
 Disable with `NETZ_FRITZ_MESH=false`. The mesh list is loaded only from the local network (relative path only, no
 redirects, max. 5 MB); the session ID in the path is never logged. The log shows `Mesh: X Knoten, Y Repeater, Z Zuordnungen`. On `HTTP 401` in the log, the TR-064 user lacks the permission (per AVM "App" or "Phone", easiest: admin rights) or the global switches "Allow access for applications" and "Transmit status information via UPnP" are missing (Home network → Network → Network settings); some models reject individual actions with 401 even with correct credentials.
 
+**HTTP 401 despite the correct password:** After several failed login attempts the FRITZ!Box temporarily locks the user (brute-force protection) — even TR-064 calls with the correct password then fail with 401. Fix: log in once successfully as the TR-064 user in the FRITZ!Box web UI (clears the lock), or wait a few minutes; **System → Events** shows the failed attempts. Then scan again.
+
 **TR-064 over HTTPS (port 49443):** Instead of `http://…:49000` you can set `NETZ_FRITZ_URL=https://192.168.178.1:49443` (or `https://fritz.box:49443`) — the SOAP calls then run encrypted. The FRITZ!Box certificate is self-signed, so certificate verification fails; with **`NETZ_TR064_INSECURE_TLS=true`** the TLS check is disabled *only for TR-064 calls* (hosts, WAN, mesh; default `false` = check on). **Consciously accept the risk:** enable it only in your own LAN — there the connection can be sniffed or an attacker can impersonate the FRITZ!Box (MITM). While the option is active, a WARN is logged on every scan. Without HTTPS, TR-064 stays on `http://…:49000` (per AVM reachable only from the LAN, digest auth — password not in cleartext).
 
 **Switch heuristic:** Unmanaged switches are invisible to the box. If it sees several devices on one LAN port and
@@ -381,7 +383,7 @@ Auth: session cookie after `POST /api/login`; embed token instead of session for
 | “Too many failed attempts” at login | Login lockout active (HTTP 429). Wait 15 minutes or restart the container (`docker compose restart netmap`). |
 | Embed not shown in iframe | `NETZ_EMBED_ANCESTORS` does not include the embedding site. Add the domain and run `docker compose up -d`. |
 | Device missing in the VPN subnet | ICMP blocked → TCP probe kicks in automatically; visible in the log (`WARN … TCP probe ok`). Add the subnet in Settings. |
-| TR-064 errors in the log | https→http fallback is automatic; check URL/user/password in Settings (password write-only). SOAP faults are logged as plain text. |
+| TR-064 errors in the log | https→http fallback is automatic; check URL/user/password in Settings (password write-only). SOAP faults are logged as plain text. On HTTP 401 despite the correct password: after several failed attempts the FRITZ!Box briefly locks the user (brute-force protection) — log in once successfully as the TR-064 user in the web UI (clears the lock) or wait a few minutes; System → Events shows the failed attempts; then scan again. |
 | Switch without neighbours | TL-SG108E etc. without SNMP → port 80 only; set topology manually in the detail panel. |
 | "Duplicate" device | same IP with two MACs → ARP MAC wins, the rest is deduplicated at startup. |
 | Old devices disappearing | retention active (default 30 days offline) — set to `0` = never in Settings. |

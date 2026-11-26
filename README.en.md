@@ -43,6 +43,7 @@ The scanner container runs in host network mode (`network_mode: host`) so MAC ad
 
 **Container hardening (since v1.5.0):** Both containers run as UID/GID `10001` instead of root, with a read-only root filesystem and a Docker healthcheck. The web UI has no capabilities (`no-new-privileges`), the scanner only `NET_RAW` for ping. Existing data in `./data` is adopted automatically on first start. Without `NETZ_AUTH_PASS`, the initial password is in `./data/initial-admin-password.txt` (`sudo cat ./data/initial-admin-password.txt`). Details: [security concept](docs/03-sicherheit.md) (German).
 On `sqlite3.OperationalError: disk I/O error` (typical for Docker Desktop/virtiofs or NAS as data volume: WAL shm not usable): set `NETZ_SQLITE_JOURNAL=delete` — since v1.6.10 automatic fallback, since v1.6.11 additionally a write probe at startup and non-fatal dedupe.
+On TR-064 `HTTP 401` despite the correct password: the FRITZ!Box briefly locks the user after several failed attempts (brute-force protection) — log in once successfully as the TR-064 user in the web UI (clears the lock) or wait a few minutes; `System → Events` shows the failed attempts. Then scan again.
 
 **Topology ("Connected to"), priority:** manual mapping in the map (detail panel → "Connected to") > SNMP CAM table + LLDP MIB of managed switches > TR-064 endpoint (e.g. repeater the client is attached to) > TR-064 WLAN/LAN (WLAN devices hang on a virtual WLAN node) > gateway. Unmanaged switches (e.g. TL-SG108E without SNMP) are not visible automatically — assign them manually.
 

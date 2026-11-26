@@ -843,6 +843,7 @@ def test_tr064_401_hint():
     from app.scanner.tr064 import TR064Error
 
     hint = run.tr064_401_hint(TR064Error("X_AVM-DE_GetMeshListPath -> HTTP 401"))
+    assert "Brute-Force" in hint and "Web-UI" in hint
     assert "HTTP 401" in hint and "'App'" in hint and "UPnP" in hint
     assert run.tr064_401_hint(TR064Error("GetInfo -> HTTP 500")) == ""
     assert run.tr064_401_hint(TR064Error("Verbindungsfehler")) == ""
