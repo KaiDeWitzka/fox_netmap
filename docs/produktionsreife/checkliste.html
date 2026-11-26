@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0-W2 erledigt (8079aab, 974b211, bed6eed), W3 als naechstes",
+        "stand": "2026-11-26, W0-W3 erledigt (8079aab, 974b211, bed6eed, 88f99df), W4 als naechstes",
         "wellen": [
                 {
                         "id": "W0",
@@ -440,9 +440,9 @@
                         "titel": "Der Start löscht ein echtes Gerät samt Notiz und Layout, wenn eine neue MAC dieselbe IP bekommt",
                         "welle": "W3",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": "mit C-14"
                 },
                 {
@@ -450,9 +450,9 @@
                         "titel": "Jeder Datenbankzugriff nimmt den Schreib-Lock, auch reine Lesezugriffe und der Healthcheck",
                         "welle": "W3",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -460,9 +460,9 @@
                         "titel": "Der Scanner hält eine Schreibtransaktion offen, während er auf Netzwerkantworten wartet",
                         "welle": "W3",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -470,9 +470,9 @@
                         "titel": "Die alte IP bleibt an einem Offline-Gerät stehen, und ein Treffer ohne MAC wird diesem Gerät zugeordnet",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -480,9 +480,9 @@
                         "titel": "Eine unvollständige Erkennung überschreibt Hostname, Hersteller und IP mit leeren Werten",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -490,9 +490,9 @@
                         "titel": "Nach einem Fehler mitten im Scan speichert run_once einen halben Scan",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -500,9 +500,9 @@
                         "titel": "Web und Scanner können beim ersten Start die Schemamigration gegeneinander laufen lassen",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -510,9 +510,9 @@
                         "titel": "Der Scanner ignoriert SIGTERM, und der Auto-Export schreibt Dateien nicht atomar",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -520,9 +520,9 @@
                         "titel": "Ein Fehler beim Zusammenführen beim Start wird geloggt, danach committet init_db die halbe Zusammenführung",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -530,9 +530,9 @@
                         "titel": "set_layout liest und schreibt in getrennten Schritten, eine gleichzeitige Änderung kann verloren gehen",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
@@ -540,9 +540,9 @@
                         "titel": "Lesen und erstes Schreiben laufen ohne gemeinsamen Schnappschuss, Exporte mischen Daten vor und nach einem Scan",
                         "welle": "W3",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": "mit K-11"
                 },
                 {
@@ -1030,9 +1030,9 @@
                         "titel": "Datenbankmigrationen sind nur für drei Spalten aus einem handgeschriebenen Mini-Schema getestet",
                         "welle": "W3",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
                         "notiz": ""
                 },
                 {
