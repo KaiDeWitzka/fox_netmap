@@ -50,12 +50,12 @@ def _parse_fields(root: ET.Element) -> dict:
     return out
 
 
-def _soap_call(base_url: str, path: str, service: str, action: str, args: dict, user: str, password: str, timeout: float = 8.0) -> dict:
+def _soap_call(base_url: str, path: str, service: str, action: str, args: dict, user: str, password: str, timeout: float = 8.0, verify: bool = True) -> dict:
     url = f"{base_url.rstrip('/')}{path}"
     headers = {"Content-Type": 'text/xml; charset="utf-8"', "SOAPAction": f'"{service}#{action}"'}
     auth = httpx.DigestAuth(user, password) if user else None
     try:
-        response = httpx.post(url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout)
+        response = httpx.post(url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout, verify=verify)
     except httpx.HTTPError as exc:
         raise TR064Error(f"{action} -> {url}: Verbindungsfehler: {exc}") from exc
     if response.status_code >= 400:
@@ -80,13 +80,13 @@ def _normalize_base(base_url: str) -> str:
     return base_url.rstrip("/")
 
 
-def fetch_hosts(base_url: str, user: str, password: str) -> list[dict]:
+def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
     base_url = _normalize_base(base_url)
-    count = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetHostNumberOfEntries", {}, user, password)
+    count = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetHostNumberOfEntries", {}, user, password, verify=verify)
     n = int(count.get("NewHostNumberOfEntries", "0") or 0)
     hosts = []
     for i in range(n):
-        h = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetGenericHostEntry", {"NewIndex": str(i)}, user, password)
+        h = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetGenericHostEntry", {"NewIndex": str(i)}, user, password, verify=verify)
         mac = h.get("NewMACAddress", "").lower()
         if mac or h.get("NewIPAddress"):
             hosts.append(
@@ -102,29 +102,29 @@ def fetch_hosts(base_url: str, user: str, password: str) -> list[dict]:
     return hosts
 
 
-def fetch_hosts_with_fallback(base_url: str, user: str, password: str) -> list[dict]:
+def fetch_hosts_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
     base_url = _normalize_base(base_url)
     try:
-        return fetch_hosts(base_url, user, password)
+        return fetch_hosts(base_url, user, password, verify=verify)
     except TR064Error:
         if base_url.startswith("https://"):
-            return fetch_hosts("http://" + base_url[len("https://"):], user, password)
+            return fetch_hosts("http://" + base_url[len("https://"):], user, password, verify=verify)
         raise
 
 
-def fetch_wan(base_url: str, user: str, password: str) -> dict | None:
+def fetch_wan(base_url: str, user: str, password: str, verify: bool = True) -> dict | None:
     base_url = _normalize_base(base_url)
     for service, path in WAN_SERVICES:
         try:
-            status = _soap_call(base_url, path, service, "GetStatusInfo", {}, user, password)
+            status = _soap_call(base_url, path, service, "GetStatusInfo", {}, user, password, verify=verify)
         except TR064Error:
             try:
-                status = _soap_call(base_url, path, service, "GetInfo", {}, user, password)
+                status = _soap_call(base_url, path, service, "GetInfo", {}, user, password, verify=verify)
             except TR064Error:
                 continue
         wan_ip = ""
         try:
-            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password).get("NewExternalIPAddress", "")
+            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password, verify=verify).get("NewExternalIPAddress", "")
         except TR064Error:
             pass
         return {
@@ -156,12 +156,12 @@ def _mesh_url(base_url: str, path: str) -> str:
     return base_url.rstrip("/") + path
 
 
-def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0) -> dict:
+def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict:
     base_url = _normalize_base(base_url)
-    res = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "X_AVM-DE_GetMeshListPath", {}, user, password)
+    res = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "X_AVM-DE_GetMeshListPath", {}, user, password, verify=verify)
     url = _mesh_url(base_url, res.get("NewX_AVM-DE_MeshListPath", ""))
     try:
-        with httpx.stream("GET", url, timeout=timeout, follow_redirects=False) as response:
+        with httpx.stream("GET", url, timeout=timeout, follow_redirects=False, verify=verify) as response:
             if response.status_code >= 400:
                 # Die URL enthaelt eine Session-ID; sie wird nicht protokolliert.
                 raise TR064Error(f"Mesh: HTTP {response.status_code}")

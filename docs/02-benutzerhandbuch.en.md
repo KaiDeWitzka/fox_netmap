@@ -277,6 +277,8 @@ port, e.g. `WLAN · 5 GHz` or `LAN · LAN 1`. According to AVM, the TR-064 user 
 Disable with `NETZ_FRITZ_MESH=false`. The mesh list is loaded only from the local network (relative path only, no
 redirects, max. 5 MB); the session ID in the path is never logged. The log shows `Mesh: X Knoten, Y Repeater, Z Zuordnungen`. On `HTTP 401` in the log, the TR-064 user lacks the permission (per AVM "App" or "Phone", easiest: admin rights) or the global switches "Allow access for applications" and "Transmit status information via UPnP" are missing (Home network → Network → Network settings); some models reject individual actions with 401 even with correct credentials.
 
+**TR-064 over HTTPS (port 49443):** Instead of `http://…:49000` you can set `NETZ_FRITZ_URL=https://192.168.178.1:49443` (or `https://fritz.box:49443`) — the SOAP calls then run encrypted. The FRITZ!Box certificate is self-signed, so certificate verification fails; with **`NETZ_TR064_INSECURE_TLS=true`** the TLS check is disabled *only for TR-064 calls* (hosts, WAN, mesh; default `false` = check on). **Consciously accept the risk:** enable it only in your own LAN — there the connection can be sniffed or an attacker can impersonate the FRITZ!Box (MITM). While the option is active, a WARN is logged on every scan. Without HTTPS, TR-064 stays on `http://…:49000` (per AVM reachable only from the LAN, digest auth — password not in cleartext).
+
 **Switch heuristic:** Unmanaged switches are invisible to the box. If it sees several devices on one LAN port and
 exactly one of them is categorised as a switch, the others are assigned to that switch. With two switches on the
 same port, the assignment stays with the router; use manual assignment then.

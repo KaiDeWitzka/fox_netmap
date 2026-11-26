@@ -152,7 +152,7 @@ def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
         return None
     for ep in endpoints:
         try:
-            info = tr064.parse_mesh(tr064.fetch_mesh(ep, settings.fritz_user, settings.fritz_pass))
+            info = tr064.parse_mesh(tr064.fetch_mesh(ep, settings.fritz_user, settings.fritz_pass, verify=not getattr(settings, "tr064_insecure_tls", False)))
         except tr064.TR064Error as exc:
             log.warning("Mesh-Topologie nicht abrufbar (%s): %s%s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc, tr064_401_hint(exc))
             continue
@@ -226,15 +226,18 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     all_tr064: list[dict] = []
     wan_endpoints: set[str] = set()
     if endpoints and settings.fritz_user and settings.fritz_pass:
+        tr064_verify = not getattr(settings, "tr064_insecure_tls", False)
+        if not tr064_verify:
+            log.warning("TR-064: NETZ_TR064_INSECURE_TLS=1 - TLS-Zertifikatspruefung deaktiviert (selbstsigniertes FRITZ!Box-Zertifikat); nur im eigenen LAN verwenden (MITM-Risiko)")
         for ep in endpoints:
             try:
-                hosts = tr064.fetch_hosts_with_fallback(ep, settings.fritz_user, settings.fritz_pass)
+                hosts = tr064.fetch_hosts_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
                 host_part = urlparse(ep if "://" in ep else "http://" + ep).hostname or ep
                 for h in hosts:
                     h["endpoint"] = host_part
                 all_tr064.extend(hosts)
                 log.info("TR-064: %s Hosts von %s gelesen", len(hosts), ep)
-                wan = tr064.fetch_wan(ep, settings.fritz_user, settings.fritz_pass)
+                wan = tr064.fetch_wan(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
                 if wan:
                     log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
                     db.set_setting(conn, "wan_ip", wan["wan_ip"])

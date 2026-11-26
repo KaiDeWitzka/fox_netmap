@@ -276,6 +276,8 @@ correspondente; só se não existir é criado um nó gateway virtual.
 mesh do router: que dispositivo está ligado a que repetidor ou porta LAN, por LAN ou WLAN (banda). O painel de
 detalhes mostra a porta, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Segundo a AVM, o utilizador TR-064 precisa do direito
 «App» ou «Phone». Com `HTTP 401` no registo, falta ao utilizador TR-064 a permissão exigida ou faltam os interruptores globais “Permitir acesso para aplicações” e “Transmitir informações de estado via UPnP” (Rede doméstica → Rede → Definições de rede); alguns modelos rejeitam ações individuais com 401 mesmo com credenciais corretas. Desativar com `NETZ_FRITZ_MESH=false`. A lista só é carregada da rede local (caminho
+
+**TR-064 por HTTPS (porta 49443):** em vez de `http://…:49000` pode definir-se `NETZ_FRITZ_URL=https://192.168.178.1:49443` (ou `https://fritz.box:49443`) — as chamadas SOAP passam a ser cifradas. O certificado da FRITZ!Box é autoassinado, pelo que a verificação falha; com **`NETZ_TR064_INSECURE_TLS=true`** a verificação TLS é desativada *apenas para as chamadas TR-064* (hosts, WAN, mesh; predefinição `false` = verificação ativa). **Assume o risco conscientemente:** ativa apenas na tua rede local — aí a ligação pode ser intercetada ou um atacante pode fazer-se passar pela FRITZ!Box (MITM). Enquanto a opção estiver ativa, é registado um WARN em cada varredura. Sem HTTPS, o TR-064 permanece em `http://…:49000` (segundo a AVM, acessível apenas da rede local, autenticação digest — palavra-passe não em texto claro).
 relativo, sem redirecionamentos, máx. 5 MB); o ID de sessão nunca é registado.
 
 **Heurística de switch:** um switch não gerível é invisível para o router. Se numa porta LAN houver vários

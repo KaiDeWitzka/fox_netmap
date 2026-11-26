@@ -304,7 +304,7 @@ def _body_str(content):
 
 
 def _fake_post_factory(mapping):
-    def fake_post(url, content=None, headers=None, auth=None, timeout=None):
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
         body = _body_str(content)
         for key, resp in mapping.items():
             if key in body:
@@ -341,7 +341,7 @@ def test_tr064_soap_fault_wird_gelesen(monkeypatch):
 def test_tr064_https_fallback_auf_http(monkeypatch):
     urls = []
 
-    def fake_post(url, content=None, headers=None, auth=None, timeout=None):
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
         urls.append(url)
         body = _body_str(content)
         if url.startswith("https://"):
@@ -354,6 +354,115 @@ def test_tr064_https_fallback_auf_http(monkeypatch):
     hosts = tr064.fetch_hosts_with_fallback("https://192.168.178.1:49000", "user", "pass")
     assert len(hosts) == 1
     assert urls[0].startswith("https://") and urls[1].startswith("http://")
+
+
+def test_tr064_verify_default_true(monkeypatch):
+    seen = {}
+
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
+        seen["verify"] = verify
+        body = _body_str(content)
+        if "GetHostNumberOfEntries" in body:
+            return _FakeResponse(HOSTS_COUNT)
+        return _FakeResponse(HOST_ENTRY)
+
+    monkeypatch.setattr(tr064.httpx, "post", fake_post)
+    tr064.fetch_hosts("https://192.168.178.1:49443", "user", "pass")
+    assert seen["verify"] is True
+
+
+def test_tr064_verify_false_wird_durchgereicht(monkeypatch):
+    seen = []
+    wan_status = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<u:GetStatusInfoResponse xmlns:u="urn:dslforum-org:service:WANIPConnection:1">'
+        "<NewStatus>Connected</NewStatus></u:GetStatusInfoResponse></s:Body></s:Envelope>"
+    )
+    wan_ip = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<u:GetExternalIPAddressResponse xmlns:u="urn:dslforum-org:service:WANIPConnection:1">'
+        "<NewExternalIPAddress>203.0.113.10</NewExternalIPAddress></u:GetExternalIPAddressResponse></s:Body></s:Envelope>"
+    )
+
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
+        seen.append(verify)
+        body = _body_str(content)
+        if "GetHostNumberOfEntries" in body:
+            return _FakeResponse(HOSTS_COUNT)
+        if "GetExternalIPAddress" in body:
+            return _FakeResponse(wan_ip)
+        if "GetStatusInfo" in body:
+            return _FakeResponse(wan_status)
+        return _FakeResponse(HOST_ENTRY)
+
+    monkeypatch.setattr(tr064.httpx, "post", fake_post)
+    hosts = tr064.fetch_hosts("https://192.168.178.1:49443", "user", "pass", verify=False)
+    assert len(hosts) == 1
+    wan = tr064.fetch_wan("https://192.168.178.1:49443", "user", "pass", verify=False)
+    assert wan["wan_ip"] == "203.0.113.10"
+    assert seen and all(v is False for v in seen)
+
+
+def test_tr064_fetch_mesh_stream_verify(monkeypatch):
+    seen = {}
+    mesh_soap = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<u:X_AVM-DE_GetMeshListPathResponse xmlns:u="urn:dslforum-org:service:Hosts:1">'
+        "<NewX_AVM-DE_MeshListPath>/mesh.json</NewX_AVM-DE_MeshListPath>"
+        "</u:X_AVM-DE_GetMeshListPathResponse></s:Body></s:Envelope>"
+    )
+    monkeypatch.setattr(tr064.httpx, "post", _fake_post_factory({"X_AVM-DE_GetMeshListPath": _FakeResponse(mesh_soap)}))
+
+    class _Stream:
+        def __init__(self, *a, **kw):
+            seen["verify"] = kw.get("verify")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        @property
+        def status_code(self):
+            return 200
+
+        def iter_bytes(self):
+            return [b'{"nodes": []}']
+
+    monkeypatch.setattr(tr064.httpx, "stream", lambda *a, **kw: _Stream(*a, **kw))
+    data = tr064.fetch_mesh("https://192.168.178.1:49443", "user", "pass", verify=False)
+    assert data == {"nodes": []}
+    assert seen["verify"] is False
+
+
+def test_fetch_mesh_info_gibt_verify_weiter(monkeypatch):
+    from app.scanner import run
+
+    calls = {}
+
+    class S:
+        fritz_mesh = True
+        fritz_user = "u"
+        fritz_pass = "p"
+        tr064_insecure_tls = True
+
+    def fake_fetch_mesh(base_url, user, password, timeout=10.0, verify=True):
+        calls["verify"] = verify
+        raise run.tr064.TR064Error("boom")
+
+    monkeypatch.setattr(run.tr064, "fetch_mesh", fake_fetch_mesh)
+    assert run.fetch_mesh_info(S(), ["http://192.168.178.1:49000"]) is None
+    assert calls["verify"] is False
+
+
+def test_settings_tr064_insecure_tls_default_false(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.delenv("NETZ_TR064_INSECURE_TLS", raising=False)
+    assert Settings().tr064_insecure_tls is False
+    monkeypatch.setenv("NETZ_TR064_INSECURE_TLS", "true")
+    assert Settings().tr064_insecure_tls is True
 
 
 def test_notify_whitelist():
