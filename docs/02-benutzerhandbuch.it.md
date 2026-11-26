@@ -281,6 +281,8 @@ del router: quale dispositivo è collegato a quale ripetitore o porta LAN, via L
 dettagli mostra la porta, ad es. `WLAN · 5 GHz` o `LAN · LAN 1`. Secondo AVM, l'utente TR-064 richiede il diritto
 «App» o «Phone». In caso di `HTTP 401` nel log, all'utente TR-064 manca il permesso richiesto oppure mancano gli interruttori globali “Consenti accesso per le applicazioni” e “Trasmetti informazioni di stato tramite UPnP” (Rete domestica → Rete → Impostazioni di rete); alcuni modelli rifiutano singole azioni con 401 anche con credenziali corrette. Disattivare con `NETZ_FRITZ_MESH=false`. L'elenco è caricato solo dalla rete locale
 
+**HTTP 401 nonostante la password corretta:** dopo diversi tentativi di accesso falliti, la FRITZ!Box blocca temporaneamente l'utente (protezione brute-force) — anche le chiamate TR-064 con la password corretta falliscono allora con 401. Soluzione: accedi una volta con successo come utente TR-064 nell'interfaccia web della FRITZ!Box (rimuove il blocco), oppure attendi qualche minuto; **Sistema → Eventi** mostra i tentativi falliti. Poi riesegui la scansione.
+
 **TR-064 via HTTPS (porta 49443):** invece di `http://…:49000` si può impostare `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oppure `https://fritz.box:49443`) — le chiamate SOAP sono cifrate. Il certificato della FRITZ!Box è autofirmato, quindi la verifica fallisce; con **`NETZ_TR064_INSECURE_TLS=true`** la verifica TLS viene disattivata *solo per le chiamate TR-064* (host, WAN, mesh; predefinito `false` = verifica attiva). **Accetta il rischio consapevolmente:** attivala solo nella tua rete locale — lì la connessione può essere intercettata o un attaccante può fingersi la FRITZ!Box (MITM). Finché l'opzione è attiva, a ogni scansione viene registrato un WARN. Senza HTTPS, TR-064 resta su `http://…:49000` (secondo AVM raggiungibile solo dalla rete locale, autenticazione digest — password non in chiaro).
 (percorso relativo, senza reindirizzamenti, max 5 MB); l'ID di sessione non viene mai registrato.
 
@@ -387,7 +389,7 @@ percorsi a token.
 | «Troppi tentativi falliti» al login | Blocco attivo (HTTP 429). Attendere 15 minuti o riavviare il container (`docker compose restart netmap`). |
 | L'embed non appare nell'iframe | `NETZ_EMBED_ANCESTORS` non contiene il sito che incorpora. Aggiungere il dominio ed eseguire `docker compose up -d`. |
 | Dispositivo mancante nella sottorete VPN | ICMP bloccato → la sonda TCP interviene automaticamente; visibile nel log (`WARN … TCP probe ok`). Aggiungi la sottorete nelle Impostazioni. |
-| Errori TR-064 nel log | il fallback https→http è automatico; controlla URL/utente/password nelle Impostazioni. I fault SOAP sono registrados in chiaro. |
+| Errori TR-064 nel log | il fallback https→http è automatico; controlla URL/utente/password nelle Impostazioni. I fault SOAP sono registrados in chiaro. Con HTTP 401 nonostante la password corretta: dopo diversi tentativi falliti la FRITZ!Box blocca brevemente l'utente (protezione brute-force) — accedi una volta con successo come utente TR-064 nell'interfaccia web (rimuove il blocco) o attendi qualche minuto; Sistema → Eventi mostra i tentativi falliti; poi riesegui la scansione. |
 | Switch senza vicini | TL-SG108E ecc. senza SNMP → solo porta 80; imposta la topologia manualmente nel pannello dettagli. |
 | Dispositivo «duplicato» | stesso IP con due MAC → vince la MAC ARP, il resto è deduplicato all'avvio. |
 | I vecchi dispositivi scompaiono | retention attiva (30 giorni offline predefiniti) — impostare `0` = mai nelle Impostazioni. |

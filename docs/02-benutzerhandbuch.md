@@ -287,6 +287,8 @@ Berechtigung „App“ oder „Phone“. Abschalten mit `NETZ_FRITZ_MESH=false`.
 (nur relativer Pfad, keine Weiterleitungen, max. 5 MB); die Session-ID im Pfad wird nicht protokolliert. Im Log steht
 `Mesh: X Knoten, Y Repeater, Z Zuordnungen`. Bei `HTTP 401` im Log fehlt dem TR-064-Benutzer die Berechtigung (laut AVM „App“ oder „Phone“, am einfachsten Admin-Rechte) bzw. es fehlen die globalen Schalter „Zugriff für Anwendungen zulassen“ und „Statusinformationen über UPnP übermitteln“ (Heimnetz → Netzwerk → Netzwerkeinstellungen); manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab.
 
+**HTTP 401 trotz korrektem Passwort:** Nach mehreren fehlgeschlagenen Anmeldeversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) — auch TR-064-Calls mit korrektem Passwort schlagen dann mit 401 fehl. Lösung: einmal erfolgreich als TR-064-Benutzer im Web-UI der FRITZ!Box anmelden (hebt die Sperre auf), alternativ einige Minuten warten; **System → Ereignisse** zeigt die Fehlversuche. Danach erneut scannen.
+
 **TR-064 über HTTPS (Port 49443):** Statt `http://…:49000` kann `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oder `https://fritz.box:49443`) gesetzt werden — die SOAP-Calls laufen dann verschlüsselt. Das FRITZ!Box-Zertifikat ist selbstsigniert, deshalb schlägt die Zertifikatsprüfung fehl; mit **`NETZ_TR064_INSECURE_TLS=true`** wird die TLS-Prüfung *nur für die TR-064-Calls* (Hosts, WAN, Mesh) abgeschaltet (Default `false` = Prüfung an). **Risiko bewusst in Kauf nehmen:** nur im eigenen LAN aktivieren — dort kann die Verbindung mitgeschnitten oder ein Angreifer kann sich als FRITZ!Box ausgeben (MITM). Solange die Option aktiv ist, wird bei jedem Scan eine WARN im Log ausgegeben. Ohne HTTPS bleibt TR-064 auf `http://…:49000` (laut AVM nur aus dem LAN erreichbar, Digest-Auth — Passwort nicht im Klartext).
 
 **Switch-Heuristik:** Nicht verwaltete Switches sind für die Box unsichtbar. Sieht sie an einem LAN-Port mehrere
@@ -391,7 +393,7 @@ Auth: Session-Cookie nach `POST /api/login`; Embed-Token statt Session für die 
 | „Zu viele Fehlversuche“ beim Login | Login-Sperre aktiv (HTTP 429). 15 Minuten warten oder Container neu starten (`docker compose restart netmap`). |
 | Embed wird im iframe nicht angezeigt | `NETZ_EMBED_ANCESTORS` enthält die einbettende Seite nicht. Domain ergänzen und `docker compose up -d`. |
 | Gerät fehlt im VPN-Subnetz | ICMP blockiert → TCP-Probe greift automatisch; im Log (`WARN … TCP-Probe ok`) sichtbar. Subnetz in den Settings eintragen. |
-| TR-064-Fehler im Log | https→http-Fallback automatisch; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. |
+| TR-064-Fehler im Log | https→http-Fallback automatisch; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. HTTP 401 trotz korrektem Passwort: Nach mehreren Fehlversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) — einmal erfolgreich als TR-064-Benutzer im Web-UI anmelden (hebt die Sperre auf) oder einige Minuten warten; System → Ereignisse zeigt die Fehlversuche; dann erneut scannen. |
 | Switch ohne Nachbarn | TL-SG108E o. Ä. ohne SNMP → Port 80 only; Topologie dann manuell im Detail-Panel setzen. |
 | „Doppeltes“ Gerät | Gleiche IP mit zwei MACs → ARP-MAC gewinnt, Rest wird beim Start dedupliziert. |
 | Alte Geräte verschwinden | Retention aktiv (Default 30 Tage offline) — in den Settings auf `0` = nie stellen. |

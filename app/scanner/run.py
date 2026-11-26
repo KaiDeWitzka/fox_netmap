@@ -143,7 +143,7 @@ def tr064_401_hint(exc: Exception) -> str:
     'Statusinformationen ueber UPnP uebermitteln' (Heimnetz > Netzwerk > Netzwerkeinstellungen).
     Manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab."""
     if "HTTP 401" in str(exc):
-        return " — HTTP 401: TR-064-Benutzer in der FRITZ!Box pruefen (laut AVM braucht er die Berechtigung 'App' oder 'Phone', am einfachsten Admin-Rechte; zusaetzlich 'Zugriff fuer Anwendungen zulassen' + 'Statusinformationen ueber UPnP uebermitteln' in Heimnetz > Netzwerk > Netzwerkeinstellungen; manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab)"
+        return " — HTTP 401: TR-064-Benutzer in der FRITZ!Box pruefen (laut AVM braucht er die Berechtigung 'App' oder 'Phone', am einfachsten Admin-Rechte; zusaetzlich 'Zugriff fuer Anwendungen zulassen' + 'Statusinformationen ueber UPnP uebermitteln' in Heimnetz > Netzwerk > Netzwerkeinstellungen; manche Modelle lehnen einzelne Actions trotz korrekter Zugangsdaten mit 401 ab; nach mehreren Fehlversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) - einmal erfolgreich als TR-064-Benutzer im Web-UI anmelden (hebt die Sperre auf) oder einige Minuten warten; System > Ereignisse zeigt die Fehlversuche; danach erneut scannen)"
     return ""
 
 
