@@ -147,15 +147,27 @@ def tr064_401_hint(exc: Exception) -> str:
     return ""
 
 
+def tr064_tls_hint(exc: Exception, endpoint: str = "") -> str:
+    """TLS-/Port-Hinweis: https auf Klartext-Port 49000 -> SSL WRONG_VERSION_NUMBER;
+    der HTTPS-Port der FRITZ!Box ist 49443. Fallback auf http wurde versucht."""
+    msg = str(exc).lower()
+    norm = endpoint if "://" in endpoint else ("http://" + endpoint if endpoint else "")
+    https_49000 = norm.startswith("https://") and urlparse(norm).netloc.endswith(":49000")
+    if "wrong_version_number" in msg or "wrong version number" in msg or https_49000:
+        return (" \u2014 TLS/Port: HTTPS laeuft auf Port 49443, nicht 49000 (https://\u2026:49000 -> SSL WRONG_VERSION_NUMBER); "
+                "URL auf https://\u2026:49443 aendern oder http://\u2026:49000 verwenden; http-Fallback wurde versucht")
+    return ""
+
+
 def fetch_mesh_info(settings: Settings, endpoints: list[str]) -> dict | None:
     """Mesh-Topologie vom ersten erreichbaren FRITZ!-Endpunkt (in der Regel der Mesh-Master)."""
     if not (settings.fritz_mesh and settings.fritz_user and settings.fritz_pass):
         return None
     for ep in endpoints:
         try:
-            info = tr064.parse_mesh(tr064.fetch_mesh(ep, settings.fritz_user, settings.fritz_pass, verify=not getattr(settings, "tr064_insecure_tls", False)))
+            info = tr064.parse_mesh(tr064.fetch_mesh_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=not getattr(settings, "tr064_insecure_tls", False)))
         except tr064.TR064Error as exc:
-            log.warning("Mesh-Topologie nicht abrufbar (%s): %s%s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc, tr064_401_hint(exc))
+            log.warning("Mesh-Topologie nicht abrufbar (%s): %s%s%s", urlparse(ep if "://" in ep else "http://" + ep).hostname, exc, tr064_401_hint(exc), tr064_tls_hint(exc, ep))
             continue
         repeaters = sum(1 for n in info["nodes"].values() if n["role"] == "slave")
         log.info("Mesh: %s Knoten, %s Repeater, %s Zuordnungen", len(info["nodes"]), repeaters, len(info["parents"]))
@@ -224,6 +236,10 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
     elif gateway:
         endpoints.append(f"http://{gateway}:49000")
     endpoints += [u.strip() for u in settings.fritz_urls.split(",") if u.strip()]
+    for ep in endpoints:
+        norm = ep if "://" in ep else "http://" + ep
+        if norm.startswith("https://") and urlparse(norm).netloc.endswith(":49000"):
+            log.warning("TR-064: %s nutzt https auf Port 49000 \u2014 der HTTPS-Port der FRITZ!Box ist 49443; bitte URL auf https://\u2026:49443 aendern (http://\u2026:49000 geht auch)", ep)
     all_tr064: list[dict] = []
     wan_endpoints: set[str] = set()
     if endpoints and settings.fritz_user and settings.fritz_pass:
@@ -238,7 +254,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                     h["endpoint"] = host_part
                 all_tr064.extend(hosts)
                 log.info("TR-064: %s Hosts von %s gelesen", len(hosts), ep)
-                wan = tr064.fetch_wan(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
+                wan = tr064.fetch_wan_with_fallback(ep, settings.fritz_user, settings.fritz_pass, verify=tr064_verify)
                 if wan:
                     log.info("TR-064 WAN %s (%s): externe IP %s, Status %s", host_part, wan["service"].split(":")[-2], wan["wan_ip"] or "-", wan["status"] or "-")
                     db.set_setting(conn, "wan_ip", wan["wan_ip"])
@@ -247,7 +263,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:
                     wan_endpoints.add(host_part)
                     conn.commit()
             except tr064.TR064Error as exc:
-                log.warning("TR-064 nicht erreichbar (%s): %s%s", ep, exc, tr064_401_hint(exc))
+                log.warning("TR-064 nicht erreichbar (%s): %s%s%s", ep, exc, tr064_401_hint(exc), tr064_tls_hint(exc, ep))
     if wan_endpoints:
         db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
         conn.commit()

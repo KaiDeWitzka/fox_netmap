@@ -4,6 +4,12 @@
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).
 
+## [Unreleased]
+
+### Behoben
+- **TR-064 https→http-Fallback jetzt für alle Calls:** Bisher nur die Hostliste; WAN (`fetch_wan`) und Mesh (`fetch_mesh`) schlugen bei `https://…:49000` (Klartext-Port, `SSL: WRONG_VERSION_NUMBER`) fehl. Neu: `fetch_wan_with_fallback`/`fetch_mesh_with_fallback` + `tr064_tls_hint()` — Log-WARN enthält bei TLS/Port-Problemen den Hinweis „HTTPS-Port ist 49443, nicht 49000", zusätzlich Endpunkt-Warnung beim Scan-Start, wenn ein Endpunkt `https://…:49000` nutzt. 3 Tests. Doku: Handbuch 6 Sprachen (Port-Warnung im HTTPS-Absatz), READMEs.
+
+
 ### Dokumentiert
 - **TR-064 HTTP 401 trotz korrektem Passwort — Ursache Sperre nach Fehlversuchen + Lösung dokumentiert:** `tr064_401_hint()` im Log ergänzt um den Hinweis, dass die FRITZ!Box den Benutzer nach mehreren Fehlversuchen kurzzeitig sperrt (Brute-Force-Schutz) und eine erfolgreiche Anmeldung als TR-064-Benutzer im Web-UI die Sperre aufhebt (alternativ einige Minuten warten; System → Ereignisse). Handbuch (6 Sprachen: Mesh-Absatz + Troubleshooting-Tabelle) und READMEs ergänzt. 1 Test-Assertion erweitert.
 

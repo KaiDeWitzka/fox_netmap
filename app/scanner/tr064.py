@@ -102,13 +102,46 @@ def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) ->
     return hosts
 
 
+def _http_fallback_url(base_url: str) -> str | None:
+    """https://… -> http://… (gleicher Host/Port), sonst None."""
+    if base_url.startswith("https://"):
+        return "http://" + base_url[len("https://"):]
+    return None
+
+
 def fetch_hosts_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
     base_url = _normalize_base(base_url)
     try:
         return fetch_hosts(base_url, user, password, verify=verify)
     except TR064Error:
-        if base_url.startswith("https://"):
-            return fetch_hosts("http://" + base_url[len("https://"):], user, password, verify=verify)
+        fb = _http_fallback_url(base_url)
+        if fb:
+            return fetch_hosts(fb, user, password, verify=verify)
+        raise
+
+
+def fetch_wan_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> dict | None:
+    base_url = _normalize_base(base_url)
+    try:
+        wan = fetch_wan(base_url, user, password, verify=verify)
+        if wan is not None:
+            return wan
+        raise TR064Error("kein WAN-Service erreichbar")
+    except TR064Error:
+        fb = _http_fallback_url(base_url)
+        if fb:
+            return fetch_wan(fb, user, password, verify=verify)
+        raise
+
+
+def fetch_mesh_with_fallback(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict:
+    base_url = _normalize_base(base_url)
+    try:
+        return fetch_mesh(base_url, user, password, timeout=timeout, verify=verify)
+    except TR064Error:
+        fb = _http_fallback_url(base_url)
+        if fb:
+            return fetch_mesh(fb, user, password, timeout=timeout, verify=verify)
         raise
 
 
