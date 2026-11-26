@@ -8,6 +8,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen sie
 
 ### Verbessert
 - **VPN-Erkennung ohne manuelle Konfiguration:** Bei konfiguriertem TR-064 (FRITZ!Box mit User/Pass) und `NETZ_VPN_POOL=off` wird automatisch `auto` angenommen (FRITZ!-Konvention: letzte Oktett ≥ 201 im Gateway-/24). WireGuard-Peers (.201+), die nicht in TR-064 auftauchen, bekommen so ohne extra Einstellung das VPN-Badge, den gestrichelten Rand, keinen „neues Gerät“-Alarm und werden nicht als Ziel der Internet-Kante verwendet (Kategorie „Router“ bei Hostname fritz.box @ .201). Explizit konfigurierter Pool gewinnt weiterhin. Log-Hinweis im Scanner. 1 Test + Doku (Handbuch 6 Sprachen, READMEs).
+- **TR-064 HTTP 401 im Log verstaendlicher:** `tr064_401_hint()` haengt an die WARN-Meldungen (Mesh + allgemein) einen konkreten Hinweis an: TR-064-Benutzer braucht laut AVM die Berechtigung „App“/„Phone“ (am einfachsten Admin-Rechte) plus die globalen Schalter „Zugriff fuer Anwendungen zulassen“ und „Statusinformationen ueber UPnP uebermitteln“ (Heimnetz → Netzwerk → Netzwerkeinstellungen); manche Modelle lehnen einzelne Actions mit 401 ab. 1 Test. Doku: Mesh-Absatz im Handbuch (6 Sprachen).
 
 ## [1.6.14] – 2026-11-25
 

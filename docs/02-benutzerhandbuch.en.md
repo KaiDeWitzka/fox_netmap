@@ -275,7 +275,7 @@ if none exists, a virtual gateway node is created.
 topology: which device hangs off which repeater or LAN port, via LAN or WLAN (band). The detail panel shows the
 port, e.g. `WLAN · 5 GHz` or `LAN · LAN 1`. According to AVM, the TR-064 user needs the "App" or "Phone" right.
 Disable with `NETZ_FRITZ_MESH=false`. The mesh list is loaded only from the local network (relative path only, no
-redirects, max. 5 MB); the session ID in the path is never logged. The log shows `Mesh: X Knoten, Y Repeater, Z Zuordnungen`.
+redirects, max. 5 MB); the session ID in the path is never logged. The log shows `Mesh: X Knoten, Y Repeater, Z Zuordnungen`. On `HTTP 401` in the log, the TR-064 user lacks the permission (per AVM "App" or "Phone", easiest: admin rights) or the global switches "Allow access for applications" and "Transmit status information via UPnP" are missing (Home network → Network → Network settings); some models reject individual actions with 401 even with correct credentials.
 
 **Switch heuristic:** Unmanaged switches are invisible to the box. If it sees several devices on one LAN port and
 exactly one of them is categorised as a switch, the others are assigned to that switch. With two switches on the

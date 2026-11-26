@@ -278,7 +278,7 @@ corrispondente; solo se non esiste viene creato un nodo gateway virtuale.
 **Mesh FRITZ!Box (da v1.6.0):** tramite TR-064 (`X_AVM-DE_GetMeshListPath`) fox_netmap legge la topologia mesh
 del router: quale dispositivo è collegato a quale ripetitore o porta LAN, via LAN o WLAN (banda). Il pannello
 dettagli mostra la porta, ad es. `WLAN · 5 GHz` o `LAN · LAN 1`. Secondo AVM, l'utente TR-064 richiede il diritto
-«App» o «Phone». Disattivare con `NETZ_FRITZ_MESH=false`. L'elenco è caricato solo dalla rete locale
+«App» o «Phone». In caso di `HTTP 401` nel log, all'utente TR-064 manca il permesso richiesto oppure mancano gli interruttori globali “Consenti accesso per le applicazioni” e “Trasmetti informazioni di stato tramite UPnP” (Rete domestica → Rete → Impostazioni di rete); alcuni modelli rifiutano singole azioni con 401 anche con credenziali corrette. Disattivare con `NETZ_FRITZ_MESH=false`. L'elenco è caricato solo dalla rete locale
 (percorso relativo, senza reindirizzamenti, max 5 MB); l'ID di sessione non viene mai registrato.
 
 **Euristica switch:** uno switch non gestito è invisibile al router. Se su una porta LAN ci sono più dispositivi e

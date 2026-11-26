@@ -279,7 +279,7 @@ correspondant ; un nœud passerelle virtuel n'est créé que si aucun n'existe.
 **Mesh FRITZ!Box (depuis v1.6.0) :** via TR-064 (`X_AVM-DE_GetMeshListPath`), fox_netmap lit la topologie mesh de
 la box : quel appareil est relié à quel répéteur ou port LAN, en LAN ou WLAN (bande). Le panneau de détails affiche
 le port, p. ex. `WLAN · 5 GHz` ou `LAN · LAN 1`. Selon AVM, l'utilisateur TR-064 a besoin du droit
-« App » ou « Phone ». Désactivation : `NETZ_FRITZ_MESH=false`. La liste n'est chargée que depuis le réseau local (chemin
+« App » ou « Phone ». En cas de `HTTP 401` dans le journal, l'utilisateur TR-064 n'a pas la permission requise ou il manque les commutateurs globaux « Autoriser l'accès pour les applications » et « Transmettre les informations d'état via UPnP » (Réseau domestique → Réseau → Paramètres réseau) ; certains modèles rejettent certaines actions avec 401 même avec des identifiants corrects. Désactivation : `NETZ_FRITZ_MESH=false`. La liste n'est chargée que depuis le réseau local (chemin
 relatif, sans redirection, 5 Mo max.) ; l'ID de session n'est jamais journalisé.
 **Heuristique switch :** un switch non administrable est invisible pour la box. Si plusieurs appareils sont vus sur
 un port LAN et qu'un seul est un switch, les autres lui sont rattachés. Avec deux switches sur le même port, tout
