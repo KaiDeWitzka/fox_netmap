@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Hinzugefügt
+- **TR-064 TLS-Option jetzt auch in der Web-UI:** Häkchen „TLS-Zertifikatsprüfung abschalten“ (`NETZ_TR064_INSECURE_TLS`) in den Einstellungen, Gruppe TR-064, mit MITM-Warnhinweis (i18n 6 Sprachen); serverseitig in `SAFE_SETTINGS`/`SettingsPatch`/`OVERRIDABLE` (runtime ohne Neustart). Tests: API-Roundtrip + UI-DOM. Doku: Handbuch-Tabelle 6 Sprachen, READMEs.
+
 Alle relevanten Änderungen an fox_netmap. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/). Frühere Versionen siehe
 [GitHub-Releases](https://github.com/KaiDeWitzka/fox_netmap/releases).

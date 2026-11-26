@@ -190,6 +190,7 @@ predefinito env).
 | Ambito porte / porte proprie | `NETZ_PORT_TOP` / `NETZ_PORTS` | top N (0 = tutte) o elenco proprio `80,443,…` |
 | SNMP attivo / switch / community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | tabella CAM + LLDP degli switch (161/udp). Community senza valore predefinito (da v1.6.0); senza community niente SNMP |
 | TR-064 dispositivo principale / altri endpoint / utente / password | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL o `host:porta`; ripetitori come endpoint extra; la password è **write-only** (GET non la restituisce mai, vuoto = invariato) |
+| Disattiva la verifica del certificato TLS TR-064 (casella) | `NETZ_TR064_INSECURE_TLS` | necessaria solo per `https://…:49443` (certificato autofirmato) — **solo rete locale** (rischio MITM); disattivata di default; WARN nel log |
 | URL allarme (webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; i token restano solo env (`NETZ_NOTIFY_*_TOKEN`) |
 | Whitelist | `NETZ_ALARM_WHITELIST` | MAC/IP che non attivano l'allarme «nuovo dispositivo» |
 | Siti | `NETZ_SITES` | `Nome:sottorete; …` p. es. `Casa:192.0.2.0/24; Remoto:198.51.100.0/24` |

@@ -113,6 +113,8 @@
               <label><span data-i18n="st.fritzUrls">Weitere TR-064-Endpunkte (kommagetrennt, z. B. Repeater)</span> <input id="st-fritzurls" type="text" placeholder="192.168.178.14:49000"></label>
               <label><span data-i18n="st.fritzUser">TR-064 Benutzer</span> <input id="st-fritzuser" type="text"></label>
               <label><span data-i18n="st.fritzPass">TR-064 Passwort</span> <input id="st-fritzpass" type="password" autocomplete="new-password" data-i18n-ph="st.fritzPassPh" placeholder="unverändert, wenn leer"></label>
+              <label><input id="st-tr064insecuretls" type="checkbox"> <span data-i18n="st.tr064InsecureTls">TR-064: TLS-Zertifikatsprüfung abschalten (nur bei https://…:49443)</span></label>
+              <p class="muted" data-i18n="st.tr064InsecureTlsHint">Nur im eigenen LAN aktivieren — ohne Prüfung kann die TR-064-Verbindung mitgeschnitten/gefälscht werden (MITM). Default: aus (sichere Prüfung). WARN im Log beim Scan.</p>
             </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.snmp">SNMP</legend>
               <label><input id="st-snmp" type="checkbox"> <span data-i18n="st.snmp">SNMP-Scan aktiv</span></label>

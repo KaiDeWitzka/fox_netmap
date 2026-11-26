@@ -1314,6 +1314,7 @@ function bindSidebar() {
       fritz_url: document.getElementById("st-fritzurl").value,
       fritz_urls: document.getElementById("st-fritzurls").value,
       fritz_user: document.getElementById("st-fritzuser").value,
+      tr064_insecure_tls: document.getElementById("st-tr064insecuretls").checked,
       notify_webhook: document.getElementById("st-notifywebhook").value,
       notify_gotify: document.getElementById("st-notifygotify").value,
       notify_ntfy: document.getElementById("st-notifyntfy").value,
@@ -1530,6 +1531,7 @@ async function loadSettings() {
   document.getElementById("st-fritzurl").value = s.fritz_url || "";
   document.getElementById("st-fritzurls").value = s.fritz_urls || "";
   document.getElementById("st-fritzuser").value = s.fritz_user || "";
+  document.getElementById("st-tr064insecuretls").checked = String(s.tr064_insecure_tls) === "true" || s.tr064_insecure_tls === true;
   document.getElementById("st-notifywebhook").value = s.notify_webhook || "";
   document.getElementById("st-notifygotify").value = s.notify_gotify || "";
   document.getElementById("st-notifyntfy").value = s.notify_ntfy || "";

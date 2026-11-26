@@ -48,6 +48,7 @@ SAFE_SETTINGS = [
     "fritz_url",
     "fritz_urls",
     "fritz_user",
+    "tr064_insecure_tls",
     "snmp_community",
     "notify_webhook",
     "notify_gotify",
@@ -382,6 +383,7 @@ class SettingsPatch(BaseModel):
     fritz_urls: str | None = None
     fritz_user: str | None = None
     fritz_pass: str | None = None
+    tr064_insecure_tls: bool | None = None
     snmp_community: str | None = None
     notify_webhook: str | None = None
     notify_gotify: str | None = None
