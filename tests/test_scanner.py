@@ -465,6 +465,76 @@ def test_settings_tr064_insecure_tls_default_false(monkeypatch):
     assert Settings().tr064_insecure_tls is True
 
 
+def test_tr064_fetch_wan_fallback_https_auf_http(monkeypatch):
+    urls = []
+    wan_status = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<u:GetStatusInfoResponse xmlns:u="urn:dslforum-org:service:WANIPConnection:1">'
+        "<NewStatus>Connected</NewStatus></u:GetStatusInfoResponse></s:Body></s:Envelope>"
+    )
+
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
+        urls.append(url)
+        if url.startswith("https://"):
+            raise tr064.httpx.ConnectError("SSL: WRONG_VERSION_NUMBER")
+        return _FakeResponse(wan_status)
+
+    monkeypatch.setattr(tr064.httpx, "post", fake_post)
+    wan = tr064.fetch_wan_with_fallback("https://192.168.178.1:49000", "u", "p")
+    assert wan["status"] == "Connected"
+    assert urls[0].startswith("https://") and any(u.startswith("http://192.168.178.1:49000") for u in urls)
+
+
+def test_tr064_fetch_mesh_fallback_https_auf_http(monkeypatch):
+    urls = []
+    mesh_soap = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<u:X_AVM-DE_GetMeshListPathResponse xmlns:u="urn:dslforum-org:service:Hosts:1">'
+        "<NewX_AVM-DE_MeshListPath>/mesh.json</NewX_AVM-DE_MeshListPath>"
+        "</u:X_AVM-DE_GetMeshListPathResponse></s:Body></s:Envelope>"
+    )
+
+    def fake_post(url, content=None, headers=None, auth=None, timeout=None, verify=None):
+        urls.append(url)
+        if url.startswith("https://"):
+            raise tr064.httpx.ConnectError("SSL: WRONG_VERSION_NUMBER")
+        return _FakeResponse(mesh_soap)
+
+    class _Stream:
+        def __init__(self, *a, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        @property
+        def status_code(self):
+            return 200
+
+        def iter_bytes(self):
+            return [b'{"nodes": []}']
+
+    monkeypatch.setattr(tr064.httpx, "post", fake_post)
+    monkeypatch.setattr(tr064.httpx, "stream", lambda *a, **kw: _Stream(*a, **kw))
+    data = tr064.fetch_mesh_with_fallback("https://192.168.178.1:49000", "u", "p")
+    assert data == {"nodes": []}
+    assert any(u.startswith("http://192.168.178.1:49000") for u in urls)
+
+
+def test_tr064_tls_hint():
+    from app.scanner.run import tr064_tls_hint
+    from app.scanner.tr064 import TR064Error
+
+    hint = tr064_tls_hint(TR064Error("Verbindungsfehler: [SSL: WRONG_VERSION_NUMBER] wrong version number"), "https://192.168.178.1:49000")
+    assert "49443" in hint
+    assert tr064_tls_hint(TR064Error("X -> HTTP 401"), "http://192.168.178.1:49000") == ""
+    assert "49443" in tr064_tls_hint(TR064Error("egal"), "https://192.168.178.1:49000")
+    assert tr064_tls_hint(TR064Error("egal"), "https://192.168.178.1:49443") == ""
+
+
 def test_notify_whitelist():
     from app.scanner import notify
 
