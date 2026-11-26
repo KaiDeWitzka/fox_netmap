@@ -63,8 +63,10 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    mem_limit: 256m
     security_opt:
       - no-new-privileges:true
+    mem_limit: 512m  # S-6: Deckel fuer PDF-Export und Bilder
 
   netmap-scanner:
     build: .

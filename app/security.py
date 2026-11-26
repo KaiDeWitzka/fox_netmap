@@ -67,6 +67,7 @@ class LoginThrottle:
         self.lockout = lockout
         self._fails: dict[tuple[str, str], list[float]] = {}
         self._locked: dict[tuple[str, str], float] = {}
+        self._pending: dict[tuple[str, str], int] = {}  # S-4: laufende Hash-Laeufe zaehlen mit
         self._lock = threading.Lock()
 
     def _prune(self, now: float) -> None:
@@ -88,22 +89,71 @@ class LoginThrottle:
             until = max(self._locked.get(("ip", ip), 0), self._locked.get((ip, username.lower()), 0))
         return max(0, int(until - now + 0.999))
 
-    def register_failure(self, ip: str, username: str, now: float | None = None) -> None:
+    def try_acquire(self, ip: str, username: str, now: float | None = None) -> bool:
+        """S-4: reserviert einen Versuch VOR dem teuren Hash-Lauf unter dem Lock.
+
+        Fehlversuche plus laufende Versuche duerfen das Limit nicht ueberschreiten,
+        sonst umgehen parallele Anfragen die Drossel. False = gesperrt/limit erreicht.
+        """
         now = now or time.time()
         user_key = (ip, username.lower())
         ip_key = ("ip", ip)
         with self._lock:
             self._prune(now)
             for key, limit in ((user_key, self.max_per_user), (ip_key, self.max_per_ip)):
-                attempts = self._fails.setdefault(key, [])
-                attempts.append(now)
-                if len(attempts) >= limit:
+                if self._locked.get(key, 0) > now:
+                    return False
+                if len(self._fails.get(key, [])) + self._pending.get(key, 0) >= limit:
                     self._locked[key] = now + self.lockout
                     self._fails.pop(key, None)
+                    return False
+            for key in (user_key, ip_key):
+                self._pending[key] = self._pending.get(key, 0) + 1
+            return True
+
+    def try_acquire_unlocked(self, ip: str, username: str, now: float | None = None) -> bool:
+        """S-5: wie try_acquire, aber eine bereits aktive Sperre wird nicht als Ablehngrund genutzt -
+        das Passwort wird geprueft; nur das Limit (fails + pending) zaehlt."""
+        now = now or time.time()
+        user_key = (ip, username.lower())
+        ip_key = ("ip", ip)
+        with self._lock:
+            self._prune(now)
+            for key, limit in ((user_key, self.max_per_user), (ip_key, self.max_per_ip)):
+                if len(self._fails.get(key, [])) + self._pending.get(key, 0) >= limit:
+                    self._locked[key] = now + self.lockout
+                    self._fails.pop(key, None)
+                    return False
+            for key in (user_key, ip_key):
+                self._pending[key] = self._pending.get(key, 0) + 1
+            return True
+
+    def release(self, ip: str, username: str, success: bool, now: float | None = None) -> None:
+        """Gibt die Reservierung frei; bei Fehlversuch zaehlt der Versuch und ggf. Sperre."""
+        now = now or time.time()
+        user_key = (ip, username.lower())
+        ip_key = ("ip", ip)
+        with self._lock:
+            self._prune(now)
+            for key in (user_key, ip_key):
+                self._pending[key] = max(0, self._pending.get(key, 0) - 1)
+            if success:
+                self._fails.pop(user_key, None)
+                self._locked.pop(user_key, None)
+                self._locked.pop(ip_key, None)  # S-5: richtiges Passwort hebt die Sperre auf
+            else:
+                for key, limit in ((user_key, self.max_per_user), (ip_key, self.max_per_ip)):
+                    attempts = self._fails.setdefault(key, [])
+                    attempts.append(now)
+                    if len(attempts) >= limit:
+                        self._locked[key] = now + self.lockout
+                        self._fails.pop(key, None)
+
+    def register_failure(self, ip: str, username: str, now: float | None = None) -> None:
+        self.release(ip, username, success=False, now=now)
 
     def register_success(self, ip: str, username: str) -> None:
-        with self._lock:
-            self._fails.pop((ip, username.lower()), None)
+        self.release(ip, username, success=True)
 
     def reset(self) -> None:
         with self._lock:

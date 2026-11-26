@@ -199,8 +199,18 @@ def login(body: LoginRequest, request: Request, response: Response):
     client_ip = request.client.host if request.client else "unknown"
     wait = throttle.retry_after(client_ip, body.username)
     if wait:
-        log.warning("Login gesperrt (zu viele Fehlversuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
-        return JSONResponse({"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)})
+        # S-5: bei aktiver Sperre wird das Passwort trotzdem geprueft - ein richtiges kommt durch
+        # (sonst sperrt ein Angreifer hinter einem gemeinsamen Proxy alle aus). Die Kosten begrenzen
+        # die Drossel: ohne Reservierung laeuft kein Hash.
+        if not throttle.try_acquire_unlocked(client_ip, body.username):
+            log.warning("Login gesperrt (zu viele Fehlversuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
+            return JSONResponse(
+                {"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)}
+            )
+    elif not throttle.try_acquire(client_ip, body.username):
+        # S-4: Limit (inkl. laufender Versuche) erreicht - ohne Hash ablehnen
+        log.warning("Login gedrosselt (zu viele Versuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
+        return JSONResponse({"detail": "too many failed attempts"}, status_code=429)
     conn = db.connect(request.app.state.db_path)
     try:
         user = db.get_user(conn, body.username)
@@ -213,10 +223,16 @@ def login(body: LoginRequest, request: Request, response: Response):
     finally:
         conn.close()
     if not ok:
-        throttle.register_failure(client_ip, body.username)
+        throttle.release(client_ip, body.username, success=False)
         log.warning("Login fehlgeschlagen fuer Benutzer '%s' von IP %s", body.username, client_ip)
+        if wait:
+            return JSONResponse(
+                {"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)}
+            )
         return JSONResponse({"detail": "invalid credentials"}, status_code=401)
-    throttle.register_success(client_ip, body.username)
+    # S-5: richtiges Passwort ist auch waehrend einer Sperre gueltig (sonst sperrt ein Angreifer
+    # hinter einem gemeinsamen Proxy alle aus); register_success hebt die Sperre auf
+    throttle.release(client_ip, body.username, success=True)
     log.info("Login ok: %s", body.username)
     token = create_session(body.username)
     response.set_cookie(

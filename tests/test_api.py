@@ -27,15 +27,13 @@ def insert_device(app, mac="aa:bb:cc:dd:ee:ff"):
 
 
 def test_health(client):
+    # S-10: oeffentlicher Healthcheck liefert nur noch den Status, keine Metadaten
     r = client.get("/api/health")
     assert r.status_code == 200
-    body = r.json()
-    assert body["status"] == "ok"
-    assert body["devices"] == 0
-    assert body["version"] == "1.6.18"
+    assert r.json() == {"status": "ok"}
 
 
-def test_meta_public(client, app):
+def test_meta_public(client, auth_client, app):
     conn = db.connect(app.state.db_path)
     db.set_setting(conn, "gateway", "192.168.178.1")
     db.set_setting(conn, "wan_ip", "203.0.113.10")
@@ -43,9 +41,12 @@ def test_meta_public(client, app):
     db.set_setting(conn, "wan_endpoint", "fritz.box")
     conn.commit()
     conn.close()
-    r = client.get("/api/meta")
-    assert r.status_code == 200
+    r = auth_client.get("/api/meta")
+    assert r.status_code == 200  # mit Sitzung sichtbar
     body = r.json()
+    client.cookies.clear()  # auth_client-Fixture teilt den Client - ohne Cookie kein Zugriff
+    r = client.get("/api/meta")
+    assert r.status_code == 401  # S-10: /api/meta braucht Sitzung oder gueltigen Token
     assert body["gateway"] == "192.168.178.1" and body["wan_ip"] == "203.0.113.10"
     assert body["wan_endpoint"] == "fritz.box"  # TR-064-Router-Endpunkt wird mitgeliefert
     assert body["version"]  # Version wird mitgeliefert
@@ -391,7 +392,7 @@ def test_export_pdf(auth_client, client, app):
     # kaputtes PNG (Magic ok, Daten Muell)
     bad = b64.b64encode(b"\x89PNG\r\n\x1a\n" + b"garbage").decode()
     assert auth_client.post("/api/export/pdf", json={"image": "data:image/png;base64," + bad}).status_code == 422
-    # ohne Session -> 401; mit gueltigem Token -> 200 (TOKEN_PATHS deckt /api/export/ ab)
+    # ohne Session -> 401; mit gueltigem Token -> 200 ohne Bild, 422 mit Bild (S-6)
     from fastapi.testclient import TestClient
 
     anon0 = TestClient(app)
@@ -400,6 +401,8 @@ def test_export_pdf(auth_client, client, app):
     tok = auth_client.post("/api/tokens", json={"expires_hours": 24}).json()["token"]
     r3 = anon0.post(f"/api/export/pdf?token={tok}", json={})
     assert r3.status_code == 200 and r3.content.startswith(b"%PDF")
+    r4 = anon0.post(f"/api/export/pdf?token={tok}", json={"image": "data:image/png;base64," + png_b64})
+    assert r4.status_code == 422  # S-6: mit Token kein Bild
 
 
 def _pdf_mediabox(pdf: bytes):

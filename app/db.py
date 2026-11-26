@@ -150,6 +150,7 @@ def connect(path: str) -> sqlite3.Connection:
     # genutzt wird; konkurrierende Zugriffe (Web-Requests + Scanner-Prozess) regelt
     # SQLite ueber Datei-Locking + busy timeout (timeout=30). Daher ist das sicher.
     conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
+    _harden_file(path)  # S-17: 0600
     conn.row_factory = sqlite3.Row
     _set_journal_mode(conn, path)
     conn.execute("PRAGMA foreign_keys=ON")
@@ -340,6 +341,8 @@ def list_devices(
     category: str = "",
     status: str = "",
     subnet: str = "",
+    subnets: list[str] | None = None,
+    categories: list[str] | None = None,
 ) -> list[dict]:
     sql = (
         "SELECT d.*, "
@@ -353,13 +356,19 @@ def list_devices(
         conds.append("(d.ip LIKE ? OR d.hostname LIKE ? OR d.mac LIKE ? OR d.vendor LIKE ? OR d.note LIKE ?)")
         like = f"%{q}%"
         params += [like] * 5
-    if category:
+    if categories is not None:
+        conds.append(f"d.category IN ({','.join('?' * len(categories))})" if categories else "1=0")
+        params += categories
+    elif category:
         conds.append("d.category = ?")
         params.append(category)
     if status:
         conds.append("d.status = ?")
         params.append(status)
-    if subnet:
+    if subnets is not None:
+        conds.append(f"d.subnet IN ({','.join('?' * len(subnets))})" if subnets else "1=0")
+        params += subnets
+    elif subnet:
         conds.append("d.subnet = ?")
         params.append(subnet)
     if conds:
@@ -452,6 +461,12 @@ def set_oui_cache(conn: sqlite3.Connection, prefix: str, vendor: str) -> None:
         "INSERT OR REPLACE INTO oui_cache (prefix, vendor, fetched_at) VALUES (?, ?, ?)",
         (prefix, vendor, utcnow()),
     )
+
+
+def _harden_file(path: str) -> None:
+    """S-17: DB und Log nur fuer den Besitzer lesbar (Bestandsschutz beim Start)."""
+    with suppress(OSError):
+        os.chmod(path, 0o600)
 
 
 def get_setting(conn: sqlite3.Connection, key: str) -> str | None:

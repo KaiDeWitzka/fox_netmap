@@ -1,4 +1,5 @@
 import ipaddress
+import re
 import socket
 import struct
 import time
@@ -76,7 +77,8 @@ def _decode_name(data: bytes, offset: int) -> tuple[str, int]:
     return ".".join(labels), end
 
 
-def parse_mdns_answers(data: bytes) -> list[str]:
+def parse_mdns_answers(data: bytes) -> list[tuple[str, str]]:
+    """Liefert (owner, ptr-name)-Paare. S-11: der Aufrufer prueft, dass der Eigentuemer zur Frage passt."""
     if len(data) < 12:
         return []
     _, _, qd, an, _, _ = struct.unpack(">HHHHHH", data[:12])
@@ -84,19 +86,27 @@ def parse_mdns_answers(data: bytes) -> list[str]:
     for _ in range(qd):
         _, offset = _decode_name(data, offset)
         offset += 4
-    names: list[str] = []
+    answers: list[tuple[str, str]] = []
     for _ in range(an):
         if offset + 10 > len(data):
             break
-        _, offset = _decode_name(data, offset)
+        owner, offset = _decode_name(data, offset)
         rtype, _rclass, _ttl, rdlen = struct.unpack(">HHIH", data[offset : offset + 10])
         offset += 10
         if rtype == 12 and offset + rdlen <= len(data):
             name, _ = _decode_name(data, offset)
             if name:
-                names.append(name)
+                answers.append((owner, name))
         offset += rdlen
-    return names
+    return answers
+
+
+_MDNS_NAME_RE = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def _sanitize_mdns_name(name: str) -> str:
+    # S-11: nur druckbare Zeichen aus [A-Za-z0-9._-], begrenzte Laenge
+    return _MDNS_NAME_RE.sub("", name)[:63]
 
 
 def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
@@ -122,11 +132,18 @@ def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                data, _ = sock.recvfrom(9000)
+                data, src = sock.recvfrom(9000)
             except (TimeoutError, OSError):
                 break
-            for hostname in parse_mdns_answers(data):
-                host = hostname.rstrip(".")
+            # S-11: nur Antworten, deren Eigentuemer zur PTR-Frage passt; bei IPv4 muss die Quelle das Ziel sein
+            if addr.version == 4 and src[0] != ip:
+                continue
+            for owner, ptr in parse_mdns_answers(data):
+                if owner.rstrip(".").lower() != name.rstrip(".").lower():
+                    continue
+                host = _sanitize_mdns_name(ptr.rstrip("."))
+                if not host:
+                    continue
                 if host.endswith(".local"):
                     return host[: -len(".local")]
                 return host.split(".")[0]

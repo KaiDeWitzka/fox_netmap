@@ -18,22 +18,21 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
+# S-10: oeffentlich ohne Anmeldung nur Health/Login/Categories/Static/Embed.
+# /api/meta, /api/sites, /api/scan/status stehen in TOKEN_PATHS und brauchen Sitzung oder gueltigen Token.
 PUBLIC_PATHS = (
     "/api/health",
     "/api/login",
     "/api/categories",
-    "/api/scan/status",
-    "/api/meta",
-    "/api/sites",
     "/static/",
     "/login",
     "/favicon.ico",
     "/embed",
 )
-TOKEN_PATHS = ("/api/devices", "/api/device/", "/api/export/")
+TOKEN_PATHS = ("/api/devices", "/api/device/", "/api/export/", "/api/meta", "/api/sites", "/api/scan/status")
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:  # noqa: C901 - Middleware-Bloecke; Zerlegung in W7
     settings = settings or get_settings()
     os.makedirs(settings.data_dir, exist_ok=True)
     log = get_logger(data_dir=settings.data_dir)
@@ -71,6 +70,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if path.startswith("/api/"):
             return JSONResponse({"detail": "unauthorized"}, status_code=401)
         return RedirectResponse("/login", status_code=303)
+
+    @app.middleware("http")
+    async def csrf_origin_middleware(request: Request, call_next):
+        # S-16: unsichere Methoden mit Sitzungscookie brauchen passenden Origin/Referer
+        # (Schutz gegen same-origin-CSRF; ohne Origin/Referer bleiben Skripte/Clients erlaubt)
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.cookies.get("fox_session"):
+            origin = request.headers.get("origin") or request.headers.get("referer")
+            if origin:
+                host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+                from urllib.parse import urlparse
+
+                if urlparse(origin).netloc and urlparse(origin).netloc != host:
+                    return JSONResponse({"detail": "forbidden origin"}, status_code=403)
+        return await call_next(request)
 
     @app.middleware("http")
     async def security_headers_middleware(request: Request, call_next):

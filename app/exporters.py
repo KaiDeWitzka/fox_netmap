@@ -63,6 +63,15 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
     }
 
 
+def _csv_cell(value, formula: bool = False) -> str:
+    # S-3: Freitextfelder mit fuehrendem =,+,-,@,Tab,CR werden in Tabellenkalkulationen als Formel
+    # ausgewertet - ein ' wird vorangestellt. Gilt nicht fuer MAC/IP/Ports/Zeitstempel und nicht fuer JSON.
+    s = "" if value is None else str(value)
+    if formula and s[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + s
+    return s
+
+
 def to_csv(rows: list[dict], delimiter: str = ";") -> str:
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=delimiter, lineterminator="\n")
@@ -74,17 +83,17 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
                 r["ip"],
                 r.get("ip6", ""),
                 "ja" if r.get("vpn") else "nein",
-                r["hostname"],
-                r["vendor"],
+                _csv_cell(r["hostname"], formula=True),
+                _csv_cell(r["vendor"], formula=True),
                 r["category"],
                 r["status"],
                 r["subnet"],
-                r.get("site", ""),
-                r.get("connected_to") or "",
-                r.get("link_port") or "",
+                _csv_cell(r.get("site", ""), formula=True),
+                _csv_cell(r.get("connected_to") or "", formula=True),
+                _csv_cell(r.get("link_port") or "", formula=True),
                 r.get("ports_str") or "",
-                r["note"],
-                r.get("room", ""),
+                _csv_cell(r["note"], formula=True),
+                _csv_cell(r.get("room", ""), formula=True),
                 r["first_seen"],
                 r["last_seen"],
             ]
@@ -174,6 +183,12 @@ def build_pdf(
     story.append(Spacer(1, 6 * mm))
 
     if image_bytes:
+        # S-6: Pixelzahl vor reportlab pruefen - ein 9000x9000-Bild belegt sonst >1 GB RAM
+        from reportlab.lib.utils import ImageReader
+
+        _w, _h = ImageReader(io.BytesIO(image_bytes)).getSize()
+        if _w * _h > 16_000_000:
+            raise ValueError("image zu gross (max 16 Megapixel)")
         img = Image(io.BytesIO(image_bytes))
         ratio = img.imageHeight / float(img.imageWidth or 1)
         img.drawWidth = usable_w

@@ -10,6 +10,13 @@ Produktionsreife Welle 1 (Bausteine, siehe docs/produktionsreife/UEBERGABE.md):
 - `docker-compose.yml` reicht alle `NETZ_*`-Variablen durch, `.env.example` neu (D-2); `snmp_switches` wirkt jetzt auch im Scanner (N-2)
 - Eine MAC-Normalisierung in `app/netutil.py`; API-Pfad `/api/device/{mac}` case-insensitive, `ip:`-Platzhalter unveraemmelt (Q-9, C-15, N-3)
 - Logger `fox_netmap.notify`/`fox_netmap.mdns` landen in `netmap.log` und im Log-Reiter (Q-8)
+- Welle 2 (Sicherheit): Embed-Token-Scope gilt ueberall - `/api/device/{mac}?token=` antwortet bei fremden Geraeten mit 404, Multi-Subnetz-Tokens zeigen alle erlaubten Subnetze, angefragte Werte ausserhalb erweitern den Scope nie (S-1/C-7/T-5)
+- `/api/meta`, `/api/sites`, `/api/scan/status` und `/api/health` ohne Login nicht mehr erreichbar bzw. auf `{"status": "ok"}` gekuerzt (S-10); `POST /api/export/pdf` hatte keinen Login-Schutz (T-1)
+- CSV-Export schuetzt Freitextfelder vor Formelinjection (`'`-Praefix bei =,+,-,@,Tab,CR) (S-3); PDF-Export deckelt Bilder auf 16 Megapixel und akzeptiert mit Embed-Token kein Bild, `mem_limit` in Compose (S-6)
+- Login-Drossel zaehlt parallele Versuche mit (pending unter Lock), richtiges Passwort hebt eine Sperre auf (S-4/S-5); Embed-Tokens werden im uvicorn-Accesslog geschwaerzt (S-12); `X-Forwarded-For` wird ohne `NETZ_FORWARDED_ALLOW_IPS` nicht ausgewertet (S-13)
+- mDNS-Rueckwaertsaufloesung akzeptiert nur passende Eigentuemer/Quellen und bereinigt Namen (S-11); Online-OUI ohne Redirects, 4-KB-Lesecap, 128 Zeichen, keine Loopback/Link-Local-Ziele, Protokollfehler brechen den Scan nicht mehr ab (S-14/N-5); TR-064 deckelt Host-Anzahl (4096) und Antwortgroesse (1 MB), kaputte Zahlen -> TR064Error (S-15)
+- CSRF: unsichere Methoden mit Sitzungscookie brauchen passenden Origin/Referer (S-16); `umask 077` + DB/Log 0600 (S-17); `expires_hours` fuer Embed-Tokens validiert (C-10)
+- E-3 (Kais Wahl C): TR-064-HTTPS-zu-HTTP-Fallback bleibt bestehen (WARN je Lauf); Restrisiko wird in W8 in `docs/03-sicherheit.md` Abschnitt 4 dokumentiert - kein Code-Eingriff in W2
 
 ## [1.6.17] – 2026-11-26
 

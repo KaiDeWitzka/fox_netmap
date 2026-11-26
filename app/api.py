@@ -38,19 +38,51 @@ def require_auth(request: Request) -> None:
     raise HTTPException(status_code=401, detail="unauthorized")
 
 
-def _token_filters(conn, token: str | None, subnet: str, category: str) -> tuple[str, str]:
+def _token_row(conn, token: str | None):
     if not token:
-        return subnet, category
+        return None
     row = db.get_valid_token(conn, token)
     if row is None:
         raise HTTPException(status_code=403, detail="invalid or expired token")
-    allowed_subnets = [s.strip() for s in row["subnets"].split(",") if s.strip()]
-    allowed_categories = [c.strip() for c in row["categories"].split(",") if c.strip()]
-    if allowed_subnets:
-        subnet = subnet if subnet in allowed_subnets else allowed_subnets[0]
-    if allowed_categories:
-        category = category if category in allowed_categories else allowed_categories[0]
-    return subnet, category
+    return row
+
+
+def token_allows(row, dev: dict) -> bool:
+    """S-1: Token-Scope gegen ein einzelnes Geraet pruefen. Leer = alles erlaubt."""
+    if row is None:
+        return True
+    subs = [s.strip() for s in (row["subnets"] or "").split(",") if s.strip()]
+    cats = [c.strip() for c in (row["categories"] or "").split(",") if c.strip()]
+    if subs and dev.get("subnet", "") not in subs:
+        return False
+    return not (cats and dev.get("category", "") not in cats)
+
+
+def _token_filters(
+    conn, token: str | None, subnet: str, category: str
+) -> tuple[list[str] | None, list[str] | None, object]:
+    row = _token_row(conn, token)
+    if row is None:
+        return ([subnet] if subnet else None), ([category] if category else None), None
+    subs = [s.strip() for s in (row["subnets"] or "").split(",") if s.strip()] or None
+    cats = [c.strip() for c in (row["categories"] or "").split(",") if c.strip()] or None
+    # S-1: ein angefragter Wert ausserhalb des Token-Scopes erweitert den Bereich nie (leere Liste = keine Treffer)
+    if subs is not None:
+        subs = [subnet] if subnet and subnet in subs else ([] if subnet else subs)
+    if cats is not None:
+        cats = [category] if category and category in cats else ([] if category else cats)
+    return subs, cats, row
+
+
+def require_auth_or_token(request: Request, conn=Depends(get_conn)) -> None:
+    """S-10: Oeffentliche Pfade schrumpfen; diese Routen brauchen Sitzung oder gueltigen Embed-Token."""
+    settings = request.app.state.settings
+    if not settings.auth_enabled or is_valid_session(request.cookies.get("fox_session")):
+        return
+    token = request.query_params.get("token", "")
+    if token and db.get_valid_token(conn, token):
+        return
+    raise HTTPException(status_code=401, detail="unauthorized")
 
 
 def _site_of(subnet: str, settings: Settings) -> str:
@@ -63,8 +95,8 @@ def _site_of(subnet: str, settings: Settings) -> str:
 def _filtered_devices(
     request: Request, conn, q: str, category: str, status: str, subnet: str, site: str, room: str, token: str | None
 ):
-    subnet, category = _token_filters(conn, token, subnet, category)
-    rows = db.list_devices(conn, q=q, category=category, status=status, subnet=subnet)
+    subs, cats, _row = _token_filters(conn, token, subnet, category)
+    rows = db.list_devices(conn, q=q, categories=cats, status=status, subnets=subs)
     settings = request.app.state.settings
     for r in rows:
         r["site"] = _site_of(r.get("subnet", ""), settings)
@@ -76,18 +108,9 @@ def _filtered_devices(
 
 
 @router.get("/api/health")
-def health(request: Request, conn=Depends(get_conn)):
-    settings = request.app.state.settings
-    state = db.get_scan_state(conn)
-    count = conn.execute("SELECT COUNT(*) AS c FROM devices").fetchone()["c"]
-    return {
-        "status": "ok",
-        "version": settings.app_version,
-        "devices": count,
-        "scanning": bool(state["scanning"]),
-        "last_scan": state["last_scan"],
-        "next_scan": state["next_scan"],
-    }
+def health():
+    # S-10: oeffentlicher Healthcheck liefert keine Metadaten mehr (Version, WAN-IP, Geraetezahl, Scanzeiten)
+    return {"status": "ok"}
 
 
 @router.get("/api/categories")
@@ -119,10 +142,9 @@ def list_rooms(conn=Depends(get_conn), _=Depends(require_auth)):
 @router.get("/api/device/{mac}")
 def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_conn)):
     mac = normalize_mac_key(mac)  # C-15/Q-9: Pfad-MAC case-insensitive, ip:-Platzhalter unveraendert
-    if token and not db.get_valid_token(conn, token):
-        raise HTTPException(status_code=403, detail="invalid or expired token")
+    row = _token_row(conn, token or None)
     dev = db.get_device(conn, mac)
-    if dev is None:
+    if dev is None or not token_allows(row, dev):
         raise HTTPException(status_code=404, detail="device not found")
     dev["site"] = _site_of(dev.get("subnet", ""), request.app.state.settings)
     return dev
@@ -236,7 +258,7 @@ def trigger_scan(request: Request, conn=Depends(get_conn), _=Depends(require_aut
 
 
 @router.get("/api/scan/status")
-def scan_status(conn=Depends(get_conn)):
+def scan_status(request: Request, conn=Depends(get_conn), _=Depends(require_auth_or_token)):
     return db.get_scan_state(conn)
 
 
@@ -266,6 +288,7 @@ class PdfExport(BaseModel):
 def export_pdf(
     request: Request,
     payload: PdfExport,
+    _=Depends(require_auth_or_token),  # Token erlaubt read-only Export, aber S-6: nie mit Bild
     q: str = "",
     category: str = "",
     status: str = "",
@@ -291,6 +314,8 @@ def export_pdf(
             raise HTTPException(422, "image zu gross (max 12 MB)")
         if not (image_bytes.startswith(b"\x89PNG") or image_bytes.startswith(b"\xff\xd8")):
             raise HTTPException(422, "image muss PNG oder JPEG sein")
+        if request.query_params.get("token"):
+            raise HTTPException(422, "image bei Token-Export nicht erlaubt")  # S-6
     title = (payload.title or "").strip()[:120]
     orientation = (payload.orientation or "portrait").strip().lower()
     if orientation not in ("portrait", "landscape"):
@@ -301,6 +326,8 @@ def export_pdf(
         )
     except HTTPException:
         raise
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     except Exception:
         if image_bytes:
             raise HTTPException(422, "image konnte nicht gelesen werden (PNG/JPEG erwartet)") from None
@@ -493,7 +520,9 @@ def patch_settings(body: SettingsPatch, request: Request, conn=Depends(get_conn)
 
 
 class TokenCreate(BaseModel):
-    expires_hours: int | None = None
+    expires_hours: int | None = Field(
+        default=None, ge=1, le=8760
+    )  # C-10: 0/unbegrenzt und abgelaufen-in-Vergangenheit raus
     subnets: str = ""
     categories: str = ""
 
@@ -522,13 +551,13 @@ def delete_token(ident: str, conn=Depends(get_conn), _=Depends(require_auth)):
 
 
 @router.get("/api/sites")
-def sites_api(request: Request):
+def sites_api(request: Request, _=Depends(require_auth_or_token)):
     s = request.app.state.settings
     return {"names": s.site_names, "map": s.site_map}
 
 
 @router.get("/api/meta")
-def meta(request: Request, conn=Depends(get_conn)):
+def meta(request: Request, conn=Depends(get_conn), _=Depends(require_auth_or_token)):
     return {
         "version": request.app.state.settings.app_version,
         "gateway": db.get_setting(conn, "gateway") or "",

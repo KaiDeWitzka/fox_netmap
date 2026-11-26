@@ -1,10 +1,13 @@
 import json
+import logging
 import xml.etree.ElementTree as ET
 from contextlib import suppress
 
 import httpx
 
 from .. import netutil
+
+log = logging.getLogger("fox_netmap.tr064")
 
 HOSTS_SERVICE = "urn:dslforum-org:service:Hosts:1"
 HOSTS_PATH = "/upnp/control/hosts"
@@ -73,6 +76,12 @@ def _soap_call(
         )
     except httpx.HTTPError as exc:
         raise TR064Error(f"{action} -> {url}: Verbindungsfehler: {exc}") from exc
+    # S-15: Antwortgroesse auf ~1 MB deckeln (declared + gelesen) - ein boeser Gegenueber darf nicht unbegrenzt liefern
+    headers = getattr(response, "headers", None) or {}
+    cl = headers.get("content-length")
+    content = getattr(response, "content", b"") or b""
+    if (cl and int(cl) > 1_000_000) or len(content) > 1_000_000:
+        raise TR064Error(f"{action} -> {url}: Antwort zu gross (>1 MB)")
     if response.status_code >= 400:
         try:
             fault = _soap_fault_root(ET.fromstring(response.text))  # noqa: S314 - SOAP-Antwort aus dem LAN; Groessen-/Host-Limit in W2 (S-15)
@@ -98,7 +107,14 @@ def _normalize_base(base_url: str) -> str:
 def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
     base_url = _normalize_base(base_url)
     count = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetHostNumberOfEntries", {}, user, password, verify=verify)
-    n = int(count.get("NewHostNumberOfEntries", "0") or 0)
+    try:
+        n = int(count.get("NewHostNumberOfEntries", "0") or 0)
+    except ValueError as exc:
+        # S-15: kaputte Zahl darf den Scan nicht abbrechen
+        raise TR064Error(f"GetHostNumberOfEntries: ungueltige Zahl {count.get('NewHostNumberOfEntries')!r}") from exc
+    if n > 4096:
+        log.warning("TR-064 meldet %s Hosts - auf 4096 begrenzt", n)
+        n = 4096
     hosts = []
     for i in range(n):
         h = _soap_call(

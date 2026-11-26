@@ -9,6 +9,8 @@
 # Läuft der Container bereits als Nicht-root (z. B. `user:` in Compose/Runtipi), wird direkt gestartet.
 set -eu
 
+umask 077  # S-17: neue Dateien im Daten-Volume nur fuer den App-Benutzer
+
 APP_UID="${APP_UID:-10001}"
 APP_GID="${APP_GID:-10001}"
 DATA_DIR="${NETZ_DATA_DIR:-/data}"

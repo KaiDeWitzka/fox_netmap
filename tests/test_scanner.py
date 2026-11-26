@@ -649,7 +649,8 @@ def test_names_parse_mdns_answers():
     rname = names._encode_name("drucker.local")
     answer = b"\xc0\x0c" + struct.pack(">HHIH", 12, 1, 120, len(rname)) + rname
     packet = header + question + answer
-    assert names.parse_mdns_answers(packet) == ["drucker.local"]
+    # S-11: parse_mdns_answers liefert (owner, ptr)-Paare
+    assert names.parse_mdns_answers(packet) == [(qname, "drucker.local")]
     assert names.parse_mdns_answers(b"\x00" * 5) == []
 
 
