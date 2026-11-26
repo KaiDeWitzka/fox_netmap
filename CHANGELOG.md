@@ -25,6 +25,17 @@ Produktionsreife Welle 3 (Datenbank + Nebenlaeufigkeit, siehe docs/produktionsre
 - Upsert: leere Felder ueberschreiben Hostname/Hersteller/IPv6/IP nicht mehr (COALESCE, C-6), und eine MAC mit gemeldeter IP leert die IP anderer (stale) Zeilen (N-1); `set_layout` schreibt spaltengenau per UPSERT, gleichzeitige Aenderungen anderer Spalten gehen nicht verloren (K-6)
 - `scan_state` um Fehler-Spalten erweitert (`last_error`, `last_error_at`, `consecutive_failures`, `scan_started_at`) - Basis fuer die Scan-Fehleranzeige (SF-2) in W4
 
+Produktionsreife Welle 4 (Scanner + stille Fehler, siehe docs/produktionsreife/UEBERGABE.md):
+- Dual-Stack: IPv4 gewinnt bei `merge_sources` fuer `ip`, die IPv6-Adresse landet in `ip6` (vorher verlor ein Geraet mit v4+v6 seine IPv4); TR-064-IPv4 schlaegt erkannte IPv6 ebenfalls (C-4)
+- Leere/gescheiterte Erkennung setzt bei online Bestand nichts mehr offline und loescht nichts mehr (SF-1): ERROR + Sperre nur wenn keine Subnetze bekannt oder Sonden-Binaerdateien fehlen, sonst WARNING und normaler Offline-Uebergang (ein wirklich leeres Netz zeigt weiter offline)
+- Scanfehler landen in `scan_state` (`last_error`, `last_error_at`, `consecutive_failures`, bei Erfolg zurueckgesetzt) und in `/api/scan/status`; Docker-Healthcheck (nur lesende DB-Verbindung) ist ab 3 Fehlern unhealthy (SF-2); haengende Scans (`scanning=1` laenger als max(30 Min, 3x Intervall)) sind unhealthy und in `/api/scan/status` als `stale_scanning` markiert (SF-3/K-9)
+- `last_seen` wird nur noch bei online gesetzt (C-5); die Aufbewahrung nutzt bei leerem `last_seen` das `first_seen`, sonst wuerden offline gemeldete TR-064-Hosts nie geloescht
+- Benachrichtigungen: HTTP ab 300 (inkl. Redirects) und Verbindungsfehler gelten als Fehlschlag, `notify_new_devices` liefert bool, Zustellstatus liegt persistent in `last_notify_status`/`last_notify_at` (Anzeige in der UI folgt in W5) (SF-5)
+- Grosse IPv6-Netze: die nach dem ff02::1-Multicast neu berechnete NDP-Tabelle geht ins Ergebnis ein (C-8); SNMP-CAM ignoriert Uplink-Ports (mehrere MACs) sowie MACs anderer Switches und des Gateways (C-9); eigene Portliste wird auf 1-65535 validiert, Maximum fuer `port_top` (1040) dokumentiert (C-13)
+- Stille Fehler im Scanner loggen jetzt: fehlende Binaerdateien (ping/ip/snmpwalk/arp) einmal je Lauf als WARNING (`logsetup.warn_once`), erwartbare DNS/mDNS-Fehlschlaege und Sondenfehler als DEBUG mit exc_info (SF-8/TL-1); WAN-Werte werden bei TR-064-Ausfall geleert statt vom letzten Lauf zu stehen
+- PDF-Export: nur Bild-Lesefehler (`UnidentifiedImageError`/OSError mit Bild) werden als 422 gemeldet, echte Serverfehler landen mit `log.exception` als 500 (N-4); Entrypoint meldet eine fehlgeschlagene chown-Rechtepruefung als WARN statt sie still zu uebergehen (SF-7); Auto-Exportziel bleibt per realpath-Pruefung im Datenverzeichnis (T-6)
+- Tests: `run_once`/Hauptschleife abgedeckt (Notify nur fuer neue Nicht-VPN-Nicht-Whitelist, `scanning=0` nach Fehler, Schleife ruft `run_once`) (T-2), Retention-Grenzen 29/31 Tage + online bleibt + Ereignis-Grenze (T-3), Auto-Export-Dateien/Inhalt/Pfad (T-6)
+
 ## [1.6.17] – 2026-11-26
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).

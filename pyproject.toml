@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "httpx>=0.27",
     "pydantic-settings>=2.4",
+    "pillow>=10",  # api.py importiert PIL.UnidentifiedImageError direkt (N-4); vorher nur transitiv via reportlab
     "reportlab>=5.1.0,<6",
 ]
 

@@ -455,6 +455,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "pillow" },
     { name = "pydantic-settings" },
     { name = "reportlab" },
     { name = "uvicorn", extra = ["standard"] },
@@ -474,6 +475,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1.0" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "pillow", specifier = ">=10" },
     { name = "pydantic-settings", specifier = ">=2.4" },
     { name = "reportlab", specifier = ">=5.1.0,<6" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },

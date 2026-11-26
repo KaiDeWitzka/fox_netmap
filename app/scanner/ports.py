@@ -4,11 +4,22 @@ from contextlib import suppress
 
 COMMON_HIGH = [1433, 3306, 3389, 5432, 5900, 6379, 8000, 8080, 8443, 8888, 9000, 9090, 9100, 11211, 27017, 50000]
 DEFAULT_PORTS = list(range(1, 1025)) + COMMON_HIGH
+# C-13: dokumentiertes Maximum fuer port_top - DEFAULT_PORTS enthaelt 1040 Ports, ein hoeherer
+# port_top wird auf dieses Maximum gedeckelt (statt still zu kappen)
+MAX_PORT_TOP = len(DEFAULT_PORTS)
 
 
 def port_list(top: int, custom: str = "") -> list[int]:
     if custom.strip():
-        return sorted({int(p) for p in custom.split(",") if p.strip().isdigit()})
+        out = []
+        for p in custom.split(","):
+            p = p.strip()
+            if not p:
+                continue
+            if not p.isdigit() or not 1 <= int(p) <= 65535:
+                raise ValueError(f"ungueltiger Port in eigener Portliste: {p!r} (erlaubt: 1-65535)")
+            out.append(int(p))
+        return sorted(set(out))
     if top <= 0:
         return list(range(1, 65536))
     return DEFAULT_PORTS[:top]

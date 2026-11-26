@@ -1,5 +1,10 @@
+import logging
 import re
 import subprocess
+
+from ..logsetup import warn_once
+
+log = logging.getLogger("fox_netmap")
 
 QBRIDGE_FDB = "1.3.6.1.2.1.17.7.1.2.2.1.2"
 BRIDGE_FDB = "1.3.6.1.2.1.17.4.3.1.2"
@@ -18,7 +23,8 @@ def snmp_walk(ip: str, community: str, oid: str, timeout: int = 5) -> str:
             timeout=timeout + 5,
         )
         return result.stdout if result.returncode == 0 else ""
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        warn_once("bin:snmpwalk", "snmpwalk nicht ausfuehrbar (%s) - SNMP-Topologie fehlt", type(exc).__name__)
         return ""
 
 
@@ -32,11 +38,26 @@ def parse_cam(output: str) -> dict[str, int]:
     return result
 
 
-def cam_map(switch_ips: list[str], community: str) -> dict[str, str]:
+def cam_map(switch_ips: list[str], community: str, exclude_macs: set[str] | None = None) -> dict[str, str]:
+    """MAC -> Switch-IP aus der CAM-Tabelle.
+
+    C-9: Ports mit mehr als einer gelernten MAC (Uplink) sowie MACs anderer Switches und des
+    Gateways werden ignoriert - sonst wuerde z. B. das Gateway selbst als "am Switch haengend"
+    gefuehrt und ein Zyklus entstehen.
+    """
+    exclude = {m.lower() for m in (exclude_macs or set()) if m}
     mapping = {}
     for ip in switch_ips:
         output = snmp_walk(ip, community, QBRIDGE_FDB) or snmp_walk(ip, community, BRIDGE_FDB)
-        for mac, _port in parse_cam(output).items():
+        cam = parse_cam(output)
+        by_port: dict[int, list[str]] = {}
+        for mac, port in cam.items():
+            by_port.setdefault(port, []).append(mac)
+        for mac, port in cam.items():
+            if len(by_port[port]) > 1:
+                continue
+            if mac in exclude:
+                continue
             mapping[mac] = ip
     return mapping
 

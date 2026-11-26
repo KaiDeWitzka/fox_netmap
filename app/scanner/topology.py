@@ -1,6 +1,8 @@
 import ipaddress
 import subprocess
 
+from ..logsetup import warn_once
+
 
 def _default_gateway(args: list[str]) -> str:
     try:
@@ -8,8 +10,8 @@ def _default_gateway(args: list[str]) -> str:
         parts = out.split()
         if "via" in parts:
             return parts[parts.index("via") + 1]
-    except (OSError, subprocess.SubprocessError):
-        pass
+    except (OSError, subprocess.SubprocessError) as exc:
+        warn_once("bin:ip-route", "ip route nicht ausfuehrbar (%s) - Gateway unbekannt", type(exc).__name__)
     return ""
 
 

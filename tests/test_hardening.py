@@ -134,14 +134,14 @@ def _state(tmp_path, **fields):
 
 def test_health_scanner_states(tmp_path):
     now = datetime(2026, 11, 21, 12, 0, tzinfo=UTC)
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]  # noch keine DB
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]  # noch keine DB
     _state(tmp_path, scanning=0, next_scan=(now + timedelta(minutes=10)).isoformat())
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]
     _state(tmp_path, scanning=0, next_scan=(now - timedelta(minutes=30)).isoformat())
-    ok, msg = healthcheck.check_scanner(str(tmp_path), now)
+    ok, msg = healthcheck.check_scanner(str(tmp_path), now=now)
     assert not ok and "ueberfaellig" in msg
     _state(tmp_path, scanning=1)
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]
 
 
 def test_health_role_from_env(monkeypatch):
@@ -157,3 +157,32 @@ def test_health_web_unreachable():
 def test_entrypoint_shell_syntax():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     assert subprocess.run(["sh", "-n", os.path.join(root, "docker", "entrypoint.sh")]).returncode == 0
+
+
+def test_entrypoint_reports_chown_probe_failure(tmp_path):
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    entrypoint = os.path.join(root, "docker", "entrypoint.sh")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fakes = {
+        "id": "#!/bin/sh\necho 0\n",
+        "find": "#!/bin/sh\necho 'find: simulated I/O error' >&2\nexit 1\n",
+        "setpriv": "#!/bin/sh\nexit 0\n",
+    }
+    for name, body in fakes.items():
+        p = bin_dir / name
+        p.write_text(body)
+        os.chmod(p, 0o700)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "APP_UID": "10001",
+        "APP_GID": "10001",
+        "NETZ_DATA_DIR": str(data_dir),
+    }
+    r = subprocess.run(["sh", entrypoint, "scanner"], env=env, capture_output=True, text=True, timeout=15)
+    assert r.returncode == 0
+    assert "WARN" in r.stderr
+    assert "simulated I/O error" in r.stderr

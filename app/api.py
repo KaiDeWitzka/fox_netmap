@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
+from PIL import UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import db, exporters, validation
@@ -259,7 +260,21 @@ def trigger_scan(request: Request, conn=Depends(get_conn), _=Depends(require_aut
 
 @router.get("/api/scan/status")
 def scan_status(request: Request, conn=Depends(get_conn), _=Depends(require_auth_or_token)):
-    return db.get_scan_state(conn)
+    state = db.get_scan_state(conn)
+    # SF-2/SF-3 (Leseseite): Fehlerfelder liegen in state; SF-3 markiert haengende Laeufe als veraltet
+    settings = request.app.state.settings
+    limit = max(1800, 3 * settings.scan_interval)
+    stale = False
+    started = state.get("scan_started_at")
+    if state.get("scanning") and started:
+        try:
+            age = (datetime.now(UTC) - datetime.fromisoformat(started)).total_seconds()
+            stale = age > limit
+        except ValueError:
+            stale = False
+    state["scan_age_limit_s"] = limit
+    state["stale_scanning"] = stale
+    return state
 
 
 @router.get("/api/export/json")
@@ -328,10 +343,16 @@ def export_pdf(
         raise
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
-    except Exception:
+    except (UnidentifiedImageError, OSError) as exc:
+        # N-4: nur echte Bild-Lesefehler werden als 422 gemeldet
         if image_bytes:
             raise HTTPException(422, "image konnte nicht gelesen werden (PNG/JPEG erwartet)") from None
-        raise
+        log.exception("PDF-Export fehlgeschlagen")
+        raise HTTPException(500, "PDF-Export fehlgeschlagen") from exc
+    except Exception as exc:
+        # N-4: Serverfehler (DB, reportlab) landen mit Logzeile als 500, nicht als Eingabefehler 422
+        log.exception("PDF-Export fehlgeschlagen")
+        raise HTTPException(500, "PDF-Export fehlgeschlagen") from exc
     return Response(
         content=pdf,
         media_type="application/pdf",

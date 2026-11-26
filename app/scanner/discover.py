@@ -1,11 +1,13 @@
 import ipaddress
 import logging
 import re
+import shutil
 import socket
 import subprocess
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
+from ..logsetup import reset_run_warnings, warn_once
 from . import topology
 
 log = logging.getLogger("fox_netmap")
@@ -27,6 +29,12 @@ def parse_ip_addr(text: str, version: int = 4) -> list[str]:
     return nets
 
 
+def binaries_available() -> bool:
+    """SF-1: Sind die noetigen Systemprogramme vorhanden? Fehlt z. B. ping, ist eine leere
+    Erkennung ein Werkzeugfehler und kein leeres Netz."""
+    return bool(shutil.which("ping")) and bool(shutil.which("ip"))
+
+
 def local_subnets() -> list[str]:
     out: list[str] = []
     for args, ver in (
@@ -35,7 +43,8 @@ def local_subnets() -> list[str]:
     ):
         try:
             text = subprocess.run(args, capture_output=True, text=True, timeout=10).stdout  # noqa: S603 - feste Systemprogramme (ip/ping), keine Nutzereingabe
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError) as exc:
+            warn_once("bin:ip", "ip-Kommando nicht ausfuehrbar (%s) - lokale Subnetze unbekannt", type(exc).__name__)
             continue
         out += parse_ip_addr(text, ver)
     return out
@@ -54,7 +63,8 @@ def arp_table() -> dict[str, str]:
     try:
         with open("/proc/net/arp", encoding="utf-8") as fh:
             return parse_arp(fh.read())
-    except OSError:
+    except OSError as exc:
+        warn_once("proc:arp", "/proc/net/arp nicht lesbar (%s) - ARP-MACs fehlen", type(exc).__name__)
         return {}
 
 
@@ -75,7 +85,8 @@ def neigh6_table() -> dict[str, str]:
     try:
         out = subprocess.run(["ip", "-6", "neigh", "show"], capture_output=True, text=True, timeout=10).stdout  # noqa: S607 - PATH des Basis-Images, kontrolliert
         return parse_neigh6(out)
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        warn_once("bin:ip-neigh", "ip -6 neigh nicht ausfuehrbar (%s) - NDP-Tabelle leer", type(exc).__name__)
         return {}
 
 
@@ -116,7 +127,12 @@ def ping6_all_nodes(timeout: float = 2.0) -> list[str]:
             text=True,
             timeout=timeout + 8,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        warn_once(
+            "bin:ping6",
+            "ping -6 nicht ausfuehrbar (%s) - ff02::1-Multicast liefert keine Antworten",
+            type(exc).__name__,
+        )
         return []
     return sorted({m.group(1).lower() for m in re.finditer(r"from\s+([0-9a-fA-F:]+)", result.stdout)})
 
@@ -151,8 +167,8 @@ def v6_slaac_probe(subnets, macs, timeout: float = 1.0, base: dict | None = None
                 if fut.result() and mac not in out:
                     out[mac] = cand
                     found += 1
-            except Exception:  # noqa: BLE001, S110 - W4 (SF-8/TL-1): log.debug mit exc_info folgt
-                pass
+            except Exception:  # TL-1: erwartbarer Sondenfehler, nur DEBUG mit Stack
+                log.debug("ping6-SLAAC-Probe fehlgeschlagen", exc_info=True)
     if found:
         log.info("IPv6: %s SLAAC/EUI-64-Adresse(n) per ping6 bestaetigt", found)
     return out
@@ -178,7 +194,10 @@ def ping_host(ip: str, timeout: float) -> bool:
             timeout=timeout + 2,
         )
         return result.returncode == 0
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        # SF-1/SF-8/TL-1: fehlendes ping-Binaer einmal je Lauf als WARNING, Details nur DEBUG
+        warn_once("bin:ping", "ping nicht ausfuehrbar (%s) - Ping-Sweeps liefern keine Ergebnisse", type(exc).__name__)
+        log.debug("ping_host(%s) fehlgeschlagen", ip, exc_info=True)
         return False
 
 
@@ -221,6 +240,7 @@ def tcp_probe_sweep(subnet: str, skip: set, timeout: float = 0.8, max_hosts: int
 
 
 def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:  # noqa: C901 - Zerlegung je Sonde in W7 (Q-14)
+    reset_run_warnings()  # SF-8: Warn-einmal-pro-Lauf ab Scanbeginn
     arp = arp_table()
     neigh6 = neigh6_table()
     live: dict[str, str] = {}
@@ -251,8 +271,11 @@ def discover(subnets: list[str], timeout: float = 1.0) -> list[dict]:  # noqa: C
                 replies = ping6_all_nodes(max(2.0, timeout))
                 neigh6 = neigh6_table()  # nach dem Multicast-Ping aktualisierte NDP-Tabelle
                 ndp = [ip for ip in neigh6 if in_net(ip, net)]
+                # C-8: die nach dem Multicast-Ping neu berechneten NDP-Eintraege ins Ergebnis uebernehmen
+                for ip in ndp:
+                    live.setdefault(ip, "ndp")
                 log.info(
-                    "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege)",
+                    "Subnetz %s: zu gross fuer Sweep (%s Adressen) -> ff02::1-Multicast + NDP + Gateway (%s Multicast-Antworten, %s NDP-Eintraege uebernommen)",
                     subnet,
                     net.num_addresses,
                     len(replies),

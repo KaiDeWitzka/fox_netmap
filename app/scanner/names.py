@@ -1,9 +1,12 @@
 import ipaddress
+import logging
 import re
 import socket
 import struct
 import time
 from concurrent.futures import ThreadPoolExecutor
+
+log = logging.getLogger("fox_netmap")
 
 MDNS_V4 = ("224.0.0.251", 5353)
 MDNS_V6 = ("ff02::fb", 5353, 0, 0)
@@ -14,6 +17,7 @@ def resolve_hostname(ip: str) -> str:
         name, _, _ = socket.gethostbyaddr(ip)
         return name.split(".")[0]
     except (socket.herror, socket.gaierror, OSError, TimeoutError):
+        log.debug("Reverse-DNS fuer %s ohne Treffer", ip)  # SF-8: erwartbar, nur DEBUG
         return ""
 
 
@@ -24,6 +28,7 @@ def resolve_aaaa(hostname: str) -> str:
     try:
         infos = socket.getaddrinfo(hostname, None, socket.AF_INET6)
     except (socket.herror, socket.gaierror, OSError, TimeoutError):
+        log.debug("AAAA fuer %s ohne Treffer", hostname)  # SF-8: erwartbar, nur DEBUG
         return ""
     for info in infos:
         addr = str(info[4][0])
@@ -123,6 +128,7 @@ def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
     try:
         sock = socket.socket(family, socket.SOCK_DGRAM)
     except OSError:
+        log.debug("mDNS-PTR-Socket fuer %s nicht verfuegbar", ip, exc_info=True)  # SF-8: nur DEBUG
         return ""
     sock.settimeout(timeout)
     try:
@@ -148,6 +154,7 @@ def resolve_hostname_mdns(ip: str, timeout: float = 1.0) -> str:
                     return host[: -len(".local")]
                 return host.split(".")[0]
     except OSError:
+        log.debug("mDNS-PTR-Abfrage fuer %s fehlgeschlagen", ip, exc_info=True)  # SF-8: nur DEBUG
         return ""
     finally:
         sock.close()

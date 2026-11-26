@@ -105,6 +105,7 @@ def browse(timeout: float = 2.0) -> dict[str, dict]:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except OSError:
+        log.debug("mDNS-Socket nicht verfuegbar - Dienstsuche uebersprungen", exc_info=True)
         return result
     try:
         sock.settimeout(0.3)

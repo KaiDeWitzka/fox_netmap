@@ -4,6 +4,21 @@ import re
 from contextlib import suppress
 from logging.handlers import RotatingFileHandler
 
+_warned_once: set[str] = set()
+
+
+def reset_run_warnings() -> None:
+    """SF-8: Warn-einmal-pro-Lauf-Meldungen zuruecksetzen (zu Beginn jedes Scans)."""
+    _warned_once.clear()
+
+
+def warn_once(key: str, msg: str, *args) -> None:
+    """SF-8: Eine WARNING je Lauf und Thema - fehlende Binaerdateien/Tools duerfen nicht
+    bei jedem Host/jeder Sonde erneut warnen, aber einmal pro Scan sichtbar sein."""
+    if key not in _warned_once:
+        _warned_once.add(key)
+        logging.getLogger("fox_netmap").warning(msg, *args)
+
 
 class TokenRedactFilter(logging.Filter):
     """S-12: Embed-Tokens duerfen nicht im Klartext im uvicorn-Accesslog landen."""

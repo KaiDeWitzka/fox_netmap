@@ -4,6 +4,7 @@ import os
 import sqlite3
 from contextlib import contextmanager, suppress
 from datetime import UTC, datetime, timedelta
+from urllib.parse import quote
 
 from . import dedupe
 
@@ -171,6 +172,14 @@ def connect(path: str) -> sqlite3.Connection:
 _journal_probed: set[str] = set()
 
 
+def connect_readonly(path: str) -> sqlite3.Connection:
+    """Nur lesende Verbindung (z. B. Healthcheck): ohne Journal-Probe, nimmt keinen Schreib-Lock."""
+    conn = sqlite3.connect(f"file:{quote(path)}?mode=ro", uri=True, timeout=30, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
     # K-4: Web und Scanner koennen beim ersten Start dieselbe Migration fahren - "duplicate column
     # name" ist dann harmlos (der andere Prozess war schneller)
@@ -288,7 +297,8 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
                 dev.get("category_reason", ""),
                 "",
                 now,
-                now,
+                # C-5: last_seen nur setzen, wenn das Geraet online ist (sonst greift die Aufbewahrung nie)
+                now if dev.get("status", "online") == "online" else "",
             ),
         )
     else:
@@ -298,7 +308,9 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
         conn.execute(
             "UPDATE devices SET ip=COALESCE(NULLIF(?, ''), ip), ip6=COALESCE(NULLIF(?, ''), ip6), vpn=?, "
             "hostname=COALESCE(NULLIF(?, ''), hostname), vendor=COALESCE(NULLIF(?, ''), vendor), category=?, status=?, "
-            "subnet=?, source=?, connection=?, link_port=?, category_reason=?, last_seen=? WHERE mac=?",
+            "subnet=?, source=?, connection=?, link_port=?, category_reason=?, "
+            # C-5: last_seen nur bei online aktualisieren, sonst Aufbewahrungsfrist nie erreicht
+            "last_seen=CASE WHEN ? = 'online' THEN ? ELSE last_seen END WHERE mac=?",
             (
                 dev.get("ip", ""),
                 dev.get("ip6", ""),
@@ -312,6 +324,7 @@ def upsert_device(conn: sqlite3.Connection, dev: dict, now: str) -> None:
                 dev.get("connection", ""),
                 dev.get("link_port", ""),
                 dev.get("category_reason", ""),
+                dev.get("status", "online"),
                 now,
                 dev["mac"],
             ),

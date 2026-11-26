@@ -125,7 +125,11 @@ def _write_atomic(path: str, data: str) -> None:
 
 
 def auto_export(settings, conn) -> list[str]:
-    out_dir = os.path.join(settings.data_dir, settings.auto_export_dir)
+    # T-6: Exportziel muss im Datenverzeichnis bleiben (auto_export_dir darf nicht mit ../ entkommen)
+    data_real = os.path.realpath(settings.data_dir)
+    out_dir = os.path.realpath(os.path.join(data_real, settings.auto_export_dir))
+    if out_dir != data_real and not out_dir.startswith(data_real + os.sep):
+        raise ValueError(f"auto_export_dir zeigt aus dem Datenverzeichnis: {settings.auto_export_dir!r}")
     os.makedirs(out_dir, exist_ok=True)
     with db.read_snapshot(conn):  # K-11: konsistenter Schnappschuss statt Daten vor/nach Scan
         rows = db.list_devices(conn)

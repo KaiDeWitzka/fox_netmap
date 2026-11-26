@@ -41,15 +41,39 @@ def known_mac(conn, ip: str) -> str | None:
     return row["mac"] if row else None
 
 
+def _is_v6(ip: str) -> bool:
+    return ":" in (ip or "")
+
+
+def _merge_addr(target: dict, ip: str) -> None:
+    """C-4: IPv4 gewinnt fuer `ip`; eine reine IPv6-Adresse landet in `ip6` (Dual-Stack-Geraet
+    mit v4+ping+arp und v6+ndp bleibt sonst nur die IPv6 stehen)."""
+    if not ip:
+        return
+    cur = target.get("ip", "")
+    if not cur:
+        target["ip"] = ip
+    elif _is_v6(cur) and not _is_v6(ip):
+        target["ip6"] = cur
+        target["ip"] = ip
+    elif _is_v6(ip) and not _is_v6(cur):
+        target["ip6"] = ip
+
+
 def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) -> list[dict]:
-    by_ip = {d["ip"]: d for d in found if d.get("ip")}
     by_mac: dict[str, dict] = {}
     for d in found:
         if not d.get("ip"):
             continue
         if not d.get("mac"):
             d["mac"] = known_mac(conn, d["ip"]) or f"ip:{d['ip']}"
-        by_mac[d["mac"]] = d
+        existing = by_mac.get(d["mac"])
+        if existing is None:
+            by_mac[d["mac"]] = d
+        else:
+            _merge_addr(existing, d["ip"])
+            add_source(existing, d.get("source", ""))
+    by_ip = {d["ip"]: d for d in by_mac.values() if d.get("ip")}
     for mac, h in tr064_hosts.items():
         dev: dict | None
         if mac in by_mac:
@@ -67,7 +91,7 @@ def merge_sources(found: list[dict], tr064_hosts: dict[str, dict], conn=None) ->
         else:
             dev = None
         if dev is not None:
-            dev["ip"] = dev["ip"] or h["ip"]
+            _merge_addr(dev, h.get("ip", ""))  # C-4: IPv4 aus TR-064 gewinnt gegen IPv6
             if h.get("hostname"):
                 dev["hostname"] = h["hostname"]
             add_source(dev, "tr064")
@@ -250,6 +274,12 @@ def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pip
     if wan_endpoints:
         db.set_setting(conn, "wan_endpoint", ",".join(sorted(wan_endpoints)))
         conn.commit()
+    elif endpoints and settings.fritz_user and settings.fritz_pass:
+        # SF-8: WAN-Abruf fehlgeschlagen -> Werte vom letzten Lauf nicht stehenlassen
+        db.set_setting(conn, "wan_ip", "")
+        db.set_setting(conn, "wan_status", "")
+        db.set_setting(conn, "wan_endpoint", "")
+        conn.commit()
     vpn_pool_eff = effective_vpn_pool(settings, endpoints)
     if vpn_pool_eff != (getattr(settings, "vpn_pool", "off") or "off"):
         log.info(
@@ -286,7 +316,13 @@ def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pip
         custom = [s.strip() for s in settings.snmp_switches.split(",") if s.strip()]
         targets = custom or [d["ip"] for d in live if any(p["port"] == 161 for p in d.get("ports", []))]
         if targets:
-            cam = snmp.cam_map(targets, settings.snmp_community)
+            # C-9: MACs der Switches selbst und des Gateways duerfen nicht als "am Switch haengend" gelten
+            arp_now = discover.arp_table()
+            exclude = {arp_now.get(t, "") for t in targets}
+            if gateway:
+                exclude.add(arp_now.get(gateway, ""))
+            exclude.discard("")
+            cam = snmp.cam_map(targets, settings.snmp_community, exclude_macs=exclude)
             lldp = snmp.lldp_map(targets, settings.snmp_community)
             snmp_map = {**lldp, **cam}
             if lldp:
@@ -376,14 +412,16 @@ def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pip
     return devices
 
 
-def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = None) -> dict:
+def apply_scan(
+    conn, settings: Settings, devices: list[dict], now: str | None = None, *, skip_offline: bool = False
+) -> dict:
     now = now or db.utcnow()
     # K-10: Schreib-Lock sofort nehmen - Lesen und erstes Schreiben laufen sonst ohne
     # gemeinsamen Schnappschuss (Exporte mischen Daten vor/nach dem Scan)
     if not conn.in_transaction:
         conn.execute("BEGIN IMMEDIATE")
     try:
-        return _apply_scan_body(conn, settings, devices, now)
+        return _apply_scan_body(conn, settings, devices, now, skip_offline=skip_offline)
     except Exception:
         # K-5: ein Fehler mitten im Scan verwirft den GANZEN Scan (kein halber Stand),
         # das finally in run_once schreibt danach nur noch den Scanstatus
@@ -391,7 +429,7 @@ def apply_scan(conn, settings: Settings, devices: list[dict], now: str | None = 
         raise
 
 
-def _apply_scan_body(conn, settings: Settings, devices: list[dict], now: str) -> dict:
+def _apply_scan_body(conn, settings: Settings, devices: list[dict], now: str, *, skip_offline: bool = False) -> dict:
     existing = {r["mac"]: dict(r) for r in conn.execute("SELECT mac, status FROM devices")}
     seen: set[str] = set()
     new_devices: list[dict] = []
@@ -416,12 +454,16 @@ def _apply_scan_body(conn, settings: Settings, devices: list[dict], now: str) ->
             current = db.get_layout(conn, mac) or {}
             if not current.get("connected_manual"):
                 db.set_layout(conn, mac, connected_to=layout["connected_to"])
-    for mac, row in existing.items():
-        if mac not in seen and row["status"] == "online":
-            conn.execute("UPDATE devices SET status = 'offline' WHERE mac = ?", (mac,))
-            db.add_history(conn, mac, "offline", now)
-            db.add_event(conn, mac, "offline", "", now)
-    removed = apply_retention(conn, settings, now)
+    # SF-1: bei gesperrtem Lauf (leere Erkennung trotz online Bestand) weder offline setzen noch loeschen
+    if skip_offline:
+        removed = 0
+    else:
+        for mac, row in existing.items():
+            if mac not in seen and row["status"] == "online":
+                conn.execute("UPDATE devices SET status = 'offline' WHERE mac = ?", (mac,))
+                db.add_history(conn, mac, "offline", now)
+                db.add_event(conn, mac, "offline", "", now)
+        removed = apply_retention(conn, settings, now)
     db.set_scan_state(conn, last_scan=now, scanning=0)
     conn.commit()
     db.trim_history(conn, settings.history_hours, now)
@@ -443,7 +485,11 @@ def apply_retention(conn, settings: Settings, now: str) -> int:
     if days <= 0:
         return 0
     cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
-    rows = conn.execute("SELECT mac FROM devices WHERE status = 'offline' AND last_seen < ?", (cutoff,)).fetchall()
+    # C-5: last_seen wird nur bei online gesetzt; leer -> first_seen als Massstab
+    rows = conn.execute(
+        "SELECT mac FROM devices WHERE status = 'offline' AND COALESCE(NULLIF(last_seen, ''), first_seen) < ?",
+        (cutoff,),
+    ).fetchall()
     for r in rows:
         db.delete_device(conn, r["mac"])
     if rows:
@@ -453,10 +499,31 @@ def apply_retention(conn, settings: Settings, now: str) -> int:
 
 def run_once(settings: Settings, conn) -> dict:
     log.info("Scan gestartet (Subnetze: %s)", ", ".join(settings.subnet_list) or "auto")
-    db.set_scan_state(conn, scanning=1)
+    db.set_scan_state(conn, scanning=1, scan_started_at=db.utcnow())  # SF-3: Startzeit fuer Haenger-Erkennung
     conn.commit()
     try:
         devices = collect_devices(settings, conn)
+        # SF-1: leere Erkennung darf bei online Bestand nichts offline setzen oder loeschen.
+        # Die Sperre greift nur, wenn keine Subnetze bekannt oder die Sonden-Binaerdateien fehlen -
+        # sonst wuerde ein wirklich leeres Netz nie offline anzeigen.
+        skip_offline = False
+        if not devices:
+            online_before = conn.execute("SELECT COUNT(*) AS c FROM devices WHERE status = 'online'").fetchone()["c"]
+            if online_before:
+                subnets = settings.subnet_list or discover.local_subnets()
+                if not subnets or not discover.binaries_available():
+                    log.error(
+                        "Erkennung lieferte 0 Geraete, obwohl %s Geraete online waren (keine Subnetze oder fehlende "
+                        "Sonden-Binaerdateien) - Offline-Uebergang und Aufbewahrung werden uebersprungen",
+                        online_before,
+                    )
+                    skip_offline = True
+                else:
+                    log.warning(
+                        "Erkennung lieferte 0 Geraete, obwohl %s Geraete online waren - Netz wirkt leer, "
+                        "Offline-Uebergang wird durchgefuehrt",
+                        online_before,
+                    )
         n_ping = sum(1 for d in devices if "ping" in d.get("source", ""))
         n_tcp = sum(1 for d in devices if "tcp" in d.get("source", ""))
         n_arp = sum(1 for d in devices if "arp" in d.get("source", ""))
@@ -471,7 +538,7 @@ def run_once(settings: Settings, conn) -> dict:
             n_tr,
             n_only_tr,
         )
-        summary = apply_scan(conn, settings, devices)
+        summary = apply_scan(conn, settings, devices, skip_offline=skip_offline)
         # VPN-Clients (z. B. .201/.202 der FRITZ!Box) kommen und gehen mit dem VPN-Tunnel -> kein Alarm
         for d in summary["new_online"]:
             if d.get("vpn"):
@@ -480,7 +547,12 @@ def run_once(settings: Settings, conn) -> dict:
         skipped = len(summary["new_online"]) - len(alarm_list)
         if skipped:
             log.info("Alarm unterdrueckt (Whitelist): %s Geraet(e)", skipped)
-        notify.notify_new_devices(settings, alarm_list)
+        notify_ok = notify.notify_new_devices(settings, alarm_list)
+        if alarm_list:
+            # SF-5: Zustellstatus persistent speichern (Anzeige in der Oberflaeche folgt in W5)
+            db.set_setting(conn, "last_notify_status", "ok" if notify_ok else "fehlgeschlagen")
+            db.set_setting(conn, "last_notify_at", db.utcnow())
+            conn.commit()
         if settings.auto_export:
             last_export = db.get_setting(conn, "last_auto_export")
             interval = getattr(settings, "auto_export_interval_hours", 24)
@@ -491,7 +563,26 @@ def run_once(settings: Settings, conn) -> dict:
                 log.info("Auto-Export geschrieben: %s", ", ".join(os.path.basename(p) for p in written))
             else:
                 log.info("Auto-Export uebersprungen (Intervall %sh, letzter Export: %s)", interval, last_export)
+        # SF-2: Erfolg -> Fehlerzustand zuruecksetzen
+        db.set_scan_state(conn, last_error=None, last_error_at=None, consecutive_failures=0)
+        conn.commit()
         return summary
+    except Exception as exc:
+        # SF-2: Scanfehler im Scanzustand sichtbar machen (Healthcheck wertet ab 3 Fehlern aus)
+        try:
+            state = db.get_scan_state(conn)
+            fails = int(state.get("consecutive_failures") or 0) + 1
+            db.set_scan_state(
+                conn,
+                scanning=0,
+                last_error=str(exc)[:500],
+                last_error_at=db.utcnow(),
+                consecutive_failures=fails,
+            )
+            conn.commit()
+        except Exception:
+            log.debug("Scan-Fehler konnte nicht in scan_state geschrieben werden", exc_info=True)
+        raise
     finally:
         next_scan = db.utcnow()
         db.set_scan_state(conn, scanning=0, next_scan=next_scan)
