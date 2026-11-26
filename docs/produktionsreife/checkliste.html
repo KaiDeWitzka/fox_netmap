@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0+W1 erledigt (8079aab, 974b211), W2 als naechstes",
+        "stand": "2026-11-26, W0-W2 erledigt (8079aab, 974b211, bed6eed), W3 als naechstes",
         "wellen": [
                 {
                         "id": "W0",
@@ -250,9 +250,9 @@
                         "titel": "Ein Embed-Token mit Teilbereich liest über /api/device/{mac} jedes Gerät, und Tokens mit mehreren Subnetzen zeigen nur das erste",
                         "welle": "W2",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": "mit C-7, T-5"
                 },
                 {
@@ -260,9 +260,9 @@
                         "titel": "Der PDF-Export nimmt mit einem Embed-Token beliebig große Bilder an und belegt dabei über 1 GB Arbeitsspeicher",
                         "welle": "W2",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -300,19 +300,19 @@
                         "titel": "TR-064 fällt bei jedem TLS-Fehler still auf Klartext-HTTP zurück und sendet dabei Digest-Anmeldedaten",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
+                        "status": "in_arbeit",
                         "nachweis": "",
                         "commit": "",
-                        "notiz": ""
+                        "notiz": "E-3=C (Kais Wahl): Fallback bleibt mit WARN je Lauf; Doku-Korrektur + Restrisiko in docs/03-sicherheit.md §4 folgt in W8"
                 },
                 {
                         "id": "S-3",
                         "titel": "Der CSV-Export schreibt Hostnamen, Notizen und Hersteller mit führenden Formelzeichen unverändert",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -320,9 +320,9 @@
                         "titel": "Die Login-Drossel zählt Fehlversuche erst nach der Passwortprüfung, parallele Anfragen umgehen das Limit",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -330,9 +330,9 @@
                         "titel": "Hinter einem Reverse Proxy sperren 20 falsche Logins jede Anmeldung, auch mit dem richtigen Passwort",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -340,9 +340,9 @@
                         "titel": "Mehrere Endpunkte antworten ohne Anmeldung mit WAN-IP, Gateway, Version und Scanzeiten",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -350,9 +350,9 @@
                         "titel": "Die mDNS-Rückwärtsauflösung übernimmt jede Antwort von jedem Host als Gerätenamen",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -360,9 +360,9 @@
                         "titel": "Embed-Tokens stehen im Klartext im Zugriffslog von uvicorn",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -370,9 +370,9 @@
                         "titel": "uvicorn wertet X-Forwarded-For aus, obwohl die Doku das Gegenteil sagt",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -380,9 +380,9 @@
                         "titel": "Die Online-Herstellerabfrage folgt Weiterleitungen, liest unbegrenzt und gibt die Antwort in die Oberfläche",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -390,9 +390,9 @@
                         "titel": "Ein HTTP-Protokollfehler bei der Online-Herstellerabfrage bricht den ganzen Scan ab",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -400,9 +400,9 @@
                         "titel": "Der TR-064-Client begrenzt weder Antwortgröße noch Geräteanzahl, und eine fehlerhafte Zahl bricht den Scan ab",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -410,9 +410,9 @@
                         "titel": "POST-Routen ohne Body lassen sich von Seiten desselben Standorts auslösen",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -420,9 +420,9 @@
                         "titel": "Datenbank und Log sind für alle lesbar, und das per Oberfläche gesetzte FRITZ!Box-Passwort liegt im Klartext in der Datenbank",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -430,9 +430,9 @@
                         "titel": "Der Token-Ablauf in Stunden wird nicht geprüft: 0 heißt unbegrenzt, negative Werte sind schon abgelaufen",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
@@ -950,9 +950,9 @@
                         "titel": "Schreib-Routen unter den Token-Pfaden sind nur durch Depends(require_auth) geschützt, und kein Test hält das fest",
                         "welle": "W2",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
                         "notiz": ""
                 },
                 {
