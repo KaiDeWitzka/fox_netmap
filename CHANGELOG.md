@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.17] – 2026-11-26
+
+TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).
 
 ### Hinzugefügt
 - **TR-064 TLS-Option jetzt auch in der Web-UI:** Häkchen „TLS-Zertifikatsprüfung abschalten“ (`NETZ_TR064_INSECURE_TLS`) in den Einstellungen, Gruppe TR-064, mit MITM-Warnhinweis (i18n 6 Sprachen); serverseitig in `SAFE_SETTINGS`/`SettingsPatch`/`OVERRIDABLE` (runtime ohne Neustart). Tests: API-Roundtrip + UI-DOM. Doku: Handbuch-Tabelle 6 Sprachen, READMEs.
