@@ -4,6 +4,7 @@ Je Welle eine Zeile: Ergebnis + Commit. Details stehen in den Commit-Messages un
 
 | Welle | Ergebnis | Commit |
 | ----- | -------- | ------ |
+| W5 | erledigt: api.js+ApiError+role=alert (F-3/SF-6), Offline-Banner (F-4), Sequenzzähler (F-1), Fokus-Erhalt (F-2), x/y-Layout (F-5), Refresh ohne fit (F-6), O(n) Render (F-7), Tastatur+A11y (F-8/F-9), Kontrast+Druck (F-10/F-11), Embed (F-12), i18n+Datum (F-13/F-14/Q-11), Settings/Secrets/Theme/Notify (F-15/S-8/S-9/SF-5), mobil (F-16), TL-4, D-5 cytoscape 3.35.0; 349 pytest + UI-Checks, gate grün | `9127178` |
 | W4 | erledigt: Dual-Stack IPv4 (C-4), SF-1 leere Erkennung sperrt nichts, SF-2 scan_state-Fehler + Healthcheck (SF-3/K-9 read-only, haengende Scans), C-5 last_seen nur online, C-8 NDP nach Multicast, C-9 SNMP-Uplink, C-13 Ports validiert, SF-8/TL-1 warn_once, SF-5 Notify>=300 + Status, N-4 PDF 500+Log, SF-7 Entrypoint-WARN, T-2/T-3/T-6 Tests; 346 Tests, gate grün | `ed7efa3` |
 | W3 | erledigt: Dedupe ohne Datenverlust (K-3/C-14), connect ohne Schreib-Lock (K-1), sofortiges OUI-Commit (K-2), Scan-Rollback (K-5/K-10), SIGTERM + atomarer Export (K-8/K-11), Migrationen (K-4/K-12), Upsert COALESCE + stale-IP (C-6/N-1), Layout-UPSERT (K-6), scan_state-Fehlerfelder, T-10; 316 Tests, gate grün | `88f99df` |
 | W1 | erledigt: Schema+effective_settings, Secrets maskiert, auth env-only, compose vollstaendig, netutil, Logger; 257 Tests grün, gate grün | `974b211` |
