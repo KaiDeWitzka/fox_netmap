@@ -2,14 +2,11 @@ import ipaddress
 import logging
 import os
 import time
-from collections.abc import Callable
-from contextlib import suppress
 from datetime import UTC, datetime, timedelta
-from typing import Any
 from urllib.parse import urlparse
 
-from .. import db
-from ..config import Settings, get_settings
+from .. import db, netutil
+from ..config import Settings, effective_settings, get_settings
 from ..exporters import auto_export, auto_export_due
 from ..logsetup import get_logger
 from . import categorize, discover, mdns, names, notify, oui, ports, snmp, topology, tr064
@@ -17,50 +14,6 @@ from . import categorize, discover, mdns, names, notify, oui, ports, snmp, topol
 SEED_OUI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "oui_seed.txt")
 
 log = logging.getLogger("fox_netmap")
-
-OVERRIDABLE: dict[str, Callable[[str], Any]] = {
-    "scan_interval": int,
-    "subnets": str,
-    "port_top": int,
-    "snmp_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "history_hours": int,
-    "device_retention_days": int,
-    "event_retention_days": int,
-    "theme": str,
-    "auto_export": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "auto_export_interval_hours": int,
-    "mdns_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "oui_online_enabled": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "oui_online_max": int,
-    "oui_online_url": str,
-    "alarm_whitelist": str,
-    "sites": str,
-    "lang": str,
-    "scan_timeout": float,
-    "ports": str,
-    "fritz_url": str,
-    "fritz_urls": str,
-    "fritz_user": str,
-    "fritz_pass": str,
-    "fritz_mesh": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "tr064_insecure_tls": lambda v: str(v).lower() in ("1", "true", "yes"),
-    "vpn_pool": str,
-    "snmp_community": str,
-    "notify_webhook": str,
-    "notify_gotify": str,
-    "notify_ntfy": str,
-    "auto_export_dir": str,
-}
-
-
-def effective_settings(conn, base: Settings) -> Settings:
-    data = base.model_dump()
-    for key, cast in OVERRIDABLE.items():
-        stored = db.get_setting(conn, key)
-        if stored not in (None, ""):
-            with suppress(ValueError, TypeError):
-                data[key] = cast(stored)
-    return base.model_copy(update=data)
 
 
 def load_oui_table(settings: Settings) -> dict[str, str]:
@@ -198,7 +151,7 @@ def mesh_role_map(mesh_info: dict | None) -> dict[str, str]:
         if role not in ("master", "slave"):
             continue
         for m in [mac, *node.get("macs", [])]:
-            out.setdefault(oui.normalize_mac(m), role)
+            out.setdefault(netutil.normalize_mac_key(m), role)
     return out
 
 
@@ -208,7 +161,7 @@ def mesh_parent_map(mesh_info: dict, devices: list[dict], gateway: str) -> dict[
     Die Mesh-Liste fuehrt Geraete-MAC und Schnittstellen-MACs. Ist der Elternknoten unter keiner davon gescannt,
     wird der Mesh-Master auf die Gateway-IP abgebildet; andere unbekannte Eltern entfallen (Fallback greift).
     """
-    known = {oui.normalize_mac(d["mac"]) for d in devices if d.get("mac")}
+    known = {netutil.normalize_mac_key(d["mac"]) for d in devices if d.get("mac")}
     nodes = mesh_info.get("nodes", {})
     out: dict[str, str] = {}
     for child, link in mesh_info.get("parents", {}).items():
@@ -217,7 +170,7 @@ def mesh_parent_map(mesh_info: dict, devices: list[dict], gateway: str) -> dict[
         if not target and parent == mesh_info.get("master") and gateway:
             target = gateway
         if target and target != child:
-            out[oui.normalize_mac(child)] = target
+            out[netutil.normalize_mac_key(child)] = target
     return out
 
 
@@ -346,7 +299,7 @@ def collect_devices(settings: Settings, conn) -> list[dict]:  # noqa: C901 - Pip
     for d in devices:
         if not d.get("mac"):
             continue
-        d["mac"] = oui.normalize_mac(d["mac"])
+        d["mac"] = netutil.normalize_mac_key(d["mac"])
         d["ip6"] = v6_by_mac.get(d["mac"], "")
         if not d["ip6"] and d.get("hostname"):
             # Fallback: DNS-AAAA des Hostnamens (z. B. FRITZ!Box-DNS), per ping6 verifizieren

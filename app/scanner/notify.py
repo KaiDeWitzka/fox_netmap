@@ -2,17 +2,14 @@ import logging
 
 import httpx
 
-log = logging.getLogger("netmap.notify")
+log = logging.getLogger("fox_netmap.notify")
 
 
 def _norm_mac(mac: str) -> str:
-    parts = mac.lower().replace("-", ":").split(":")
-    if len(parts) == 6:
-        try:
-            return ":".join(f"{int(p, 16):02x}" for p in parts)
-        except ValueError:
-            return mac.lower()
-    return mac.lower()
+    # Q-9: eine Normalisierung in app/netutil.py; ip:-Platzhalter bleiben unveraendert
+    from ..netutil import normalize_mac_key
+
+    return normalize_mac_key(mac)
 
 
 def is_whitelisted(settings, dev: dict) -> bool:

@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+Produktionsreife Welle 1 (Bausteine, siehe docs/produktionsreife/UEBERGABE.md):
+- Neues zentrales Einstellungs-Schema `app/settings_schema.py`; `GET /api/settings` liefert getypte Werte und Secrets nur noch als `{"configured": true}` (nie Klartext) (S-8)
+- Gespeicherte Einstellungen werden beim Start von Web UND Scanner uebernommen (`effective_settings`, C-1); ungueltige DB-Werte loggen WARNING statt still auf Default zu fallen (SF-4); leerer String ueberschreibt Umgebung bewusst (C-2), leere Altzeilen werden migriert
+- `auth_enabled` ist nicht mehr per UI/PATCH schaltbar, nur noch `NETZ_AUTH_ENABLED` (S-9/E-2) - der Schalter in den Einstellungen wirkungslos, UI-Anpassung folgt in W5
+- TR-064-Endpunktwechsel verwirft ein gespeichertes `fritz_pass` bzw. verlangt bei Env-Passwort Neueingabe im selben PATCH (S-7); URLs mit Zugangsdaten (user:pass@) werden abgelehnt (S-8)
+- `docker-compose.yml` reicht alle `NETZ_*`-Variablen durch, `.env.example` neu (D-2); `snmp_switches` wirkt jetzt auch im Scanner (N-2)
+- Eine MAC-Normalisierung in `app/netutil.py`; API-Pfad `/api/device/{mac}` case-insensitive, `ip:`-Platzhalter unveraemmelt (Q-9, C-15, N-3)
+- Logger `fox_netmap.notify`/`fox_netmap.mdns` landen in `netmap.log` und im Log-Reiter (Q-8)
+
 ## [1.6.17] – 2026-11-26
 
 TR-064 TLS-Zertifikatsprüfung auch in der Web-UI schaltbar (PR #108).

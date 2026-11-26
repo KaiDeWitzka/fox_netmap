@@ -4,6 +4,8 @@ from contextlib import suppress
 
 import httpx
 
+from .. import netutil
+
 HOSTS_SERVICE = "urn:dslforum-org:service:Hosts:1"
 HOSTS_PATH = "/upnp/control/hosts"
 WAN_SERVICES = (
@@ -109,7 +111,7 @@ def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) ->
             password,
             verify=verify,
         )
-        mac = h.get("NewMACAddress", "").lower()
+        mac = netutil.normalize_mac_key(h.get("NewMACAddress", ""))
         if mac or h.get("NewIPAddress"):
             hosts.append(
                 {

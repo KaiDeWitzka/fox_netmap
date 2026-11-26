@@ -13,7 +13,7 @@ import time
 
 from .names import MDNS_V4, _decode_name, _encode_name
 
-log = logging.getLogger("netmap.mdns")
+log = logging.getLogger("fox_netmap.mdns")
 
 # Meta-Abfrage liefert alle Diensttypen; die konkreten Typen sorgen dafuer, dass TXT-Daten mitkommen
 QUERY_TYPES = (

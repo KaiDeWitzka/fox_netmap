@@ -5,16 +5,19 @@ import urllib.error
 import urllib.request
 
 from .. import db as _db
+from ..netutil import normalize_mac as _norm_mac
+from ..netutil import oui_prefix as _oui_prefix
 
 LINE_RE = re.compile(r"^([0-9A-Fa-f]{2})[-:]([0-9A-Fa-f]{2})[-:]([0-9A-Fa-f]{2})\s+\(hex\)\s+(.+)$")
 
 
 def normalize_mac(mac: str) -> str:
-    return mac.replace("-", ":").replace(".", ":").lower()
+    # duenn: Q-9, strenger Parser in app/netutil.py; unbekannte Werte bleiben als lower()-String
+    return _norm_mac(mac) or mac.replace("-", ":").replace(".", ":").lower()
 
 
 def oui_prefix(mac: str) -> str:
-    return normalize_mac(mac).replace(":", "")[:6].upper()
+    return _oui_prefix(mac)
 
 
 def load_oui(path: str) -> dict[str, str]:

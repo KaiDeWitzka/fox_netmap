@@ -261,8 +261,11 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"oui_online_url": "https://api.macvendors.com"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"oui_online_enabled": False}).status_code == 200
     body = auth_client.get("/api/settings").json()
-    for secret in ("fritz_pass", "auth_pass", "notify_gotify_token", "notify_ntfy_token"):
-        assert secret not in body, secret
+    # S-8: Secrets nie im Klartext, sondern als {"configured": bool}; auth_pass ist env-only und gar nicht im GET
+    assert "auth_pass" not in body
+    for secret in ("fritz_pass", "notify_gotify_token", "notify_ntfy_token"):
+        assert body[secret] == {"configured": False}, secret
+    assert body["snmp_community"] == {"configured": True}  # wurde oben auf "public" gesetzt
     assert body["fritz_url"] == "192.168.178.1:49000"
     assert body["scan_timeout"] in (2.5, "2.5")
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
@@ -361,7 +364,7 @@ def test_fritz_pass_write_only(auth_client, app):
     r = auth_client.patch("/api/settings", json={"fritz_pass": "geheim123"})
     assert r.status_code == 200
     body = auth_client.get("/api/settings").json()
-    assert "fritz_pass" not in body
+    assert body["fritz_pass"] == {"configured": True}  # S-8: write-only, nur configured im GET
     conn = db.connect(app.state.db_path)
     assert db.get_setting(conn, "fritz_pass") == "geheim123"
     conn.close()

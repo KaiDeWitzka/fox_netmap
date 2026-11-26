@@ -1,7 +1,10 @@
 import ipaddress
+import logging
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+log = logging.getLogger("fox_netmap")
 
 
 class Settings(BaseSettings):
@@ -105,3 +108,39 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def effective_settings(conn, base: Settings) -> Settings:
+    """Fuehrt Umgebung (base) und Datenbank zusammen. Wirft nie: ungueltige oder fuera
+    den Grenzen liegende gespeicherte Werte werden mit WARNING geloggt, der Umgebungswert
+    bleibt (SF-4). C-2: nur `None` heisst "nicht gesetzt" - ein gespeicherter leerer String
+    ueberschreibt die Umgebung. E-2/S-9: `auth_enabled` gewinnt immer die Umgebung."""
+    from . import db
+    from .settings_schema import FIELDS
+
+    data = base.model_dump()
+    for key, field in FIELDS.items():
+        if not field.scanner:
+            continue
+        stored = db.get_setting(conn, key)
+        if stored is None:
+            continue
+        try:
+            value = field.cast(stored)
+        except (ValueError, TypeError):
+            log.warning("ungueltiger gespeicherter Wert fuer %s: %r - Umgebungswert bleibt", key, stored)
+            continue
+        if (field.minimum is not None and value < field.minimum) or (
+            field.maximum is not None and value > field.maximum
+        ):
+            log.warning(
+                "gespeicherter Wert fuer %s liegt ausserhalb [%s, %s]: %r - Umgebungswert bleibt",
+                key,
+                field.minimum,
+                field.maximum,
+                stored,
+            )
+            continue
+        data[key] = value
+    data["auth_enabled"] = base.auth_enabled
+    return base.model_copy(update=data)

@@ -211,6 +211,8 @@ def _migrate_tokens(conn: sqlite3.Connection) -> None:
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
     _migrate(conn)
+    # C-2: leere Altzeilen loeschen (app.js sendete frueher jedes Feld; leer darf nicht die Umgebung ueberschreiben)
+    conn.execute("DELETE FROM settings WHERE value = ''")
     conn.execute("INSERT OR IGNORE INTO scan_state (id, last_scan, next_scan, scanning) VALUES (1, NULL, NULL, 0)")
     try:
         removed = dedupe_devices_by_ip(conn)

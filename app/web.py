@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import api, db
 from .auth import ensure_default_user, is_valid_session
-from .config import Settings, get_settings
+from .config import Settings, effective_settings, get_settings
 from .logsetup import get_logger
 from .security import LoginThrottle, security_headers
 
@@ -51,6 +51,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     conn = db.connect(app.state.db_path)
     db.init_db(conn)
     ensure_default_user(conn, settings)
+    # C-1/K-7: gespeicherte Einstellungen werden beim Start geladen, fuer Web und Scanner gleich
+    settings = effective_settings(conn, settings)
+    app.state.settings = settings
     conn.close()
 
     app.include_router(api.router)

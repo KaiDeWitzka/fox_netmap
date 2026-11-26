@@ -1,5 +1,4 @@
 import base64
-import ipaddress
 import logging
 import os
 import re
@@ -8,54 +7,20 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from . import db, exporters
+from . import db, exporters, validation
 from .auth import is_valid_session
 from .auth import router as auth_router
-from .config import Settings
+from .config import Settings, get_settings
+from .netutil import normalize_mac_key
 from .scanner.categorize import CATEGORIES
 from .scanner.topology import vpn_pool_rules
+from .settings_schema import FIELDS, exposed_fields
 
 router = APIRouter()
 router.include_router(auth_router)
 log = logging.getLogger("fox_netmap")
-
-
-SAFE_SETTINGS = [
-    "subnets",
-    "scan_interval",
-    "scan_timeout",
-    "port_top",
-    "snmp_enabled",
-    "snmp_switches",
-    "auth_enabled",
-    "history_hours",
-    "device_retention_days",
-    "event_retention_days",
-    "theme",
-    "auto_export",
-    "auto_export_dir",
-    "auto_export_interval_hours",
-    "mdns_enabled",
-    "oui_online_enabled",
-    "oui_online_max",
-    "oui_online_url",
-    "alarm_whitelist",
-    "sites",
-    "lang",
-    "scan_timeout",
-    "ports",
-    "fritz_url",
-    "fritz_urls",
-    "fritz_user",
-    "tr064_insecure_tls",
-    "snmp_community",
-    "notify_webhook",
-    "notify_gotify",
-    "notify_ntfy",
-    "vpn_pool",
-]
 
 
 def get_conn(request: Request):
@@ -153,6 +118,7 @@ def list_rooms(conn=Depends(get_conn), _=Depends(require_auth)):
 
 @router.get("/api/device/{mac}")
 def device_detail(mac: str, request: Request, token: str = "", conn=Depends(get_conn)):
+    mac = normalize_mac_key(mac)  # C-15/Q-9: Pfad-MAC case-insensitive, ip:-Platzhalter unveraendert
     if token and not db.get_valid_token(conn, token):
         raise HTTPException(status_code=403, detail="invalid or expired token")
     dev = db.get_device(conn, mac)
@@ -206,6 +172,7 @@ def _check_parent(conn, macs: set[str], parent: str) -> None:
 
 @router.delete("/api/device/{mac}")
 def delete_device(mac: str, request: Request, conn=Depends(get_conn), _=Depends(require_auth)):
+    mac = normalize_mac_key(mac)  # C-15/Q-9: Pfad-MAC case-insensitive, ip:-Platzhalter unveraendert
     """Löscht ein Gerät samt Verlauf (Recht auf Löschung). Ist es noch im Netz, erscheint es beim nächsten Scan neu."""
     if db.get_device(conn, mac) is None:
         raise HTTPException(status_code=404, detail="device not found")
@@ -217,6 +184,7 @@ def delete_device(mac: str, request: Request, conn=Depends(get_conn), _=Depends(
 
 @router.patch("/api/device/{mac}")
 def patch_device(mac: str, body: DevicePatch, request: Request, conn=Depends(get_conn), _=Depends(require_auth)):
+    mac = normalize_mac_key(mac)  # C-15/Q-9: Pfad-MAC case-insensitive, ip:-Platzhalter unveraendert
     if db.get_device(conn, mac) is None:
         raise HTTPException(status_code=404, detail="device not found")
     if body.category is not None:
@@ -367,15 +335,16 @@ def export_csv(
 
 
 @router.get("/api/settings")
-def get_settings_api(request: Request, conn=Depends(get_conn)):
+def get_settings_api(request: Request):
+    # Q-1/C-1: app.state.settings ist nach dem Start bereits Env+DB zusammengefuehrt und getypt (C-3).
+    # S-8: Secrets werden nie im Klartext ausgeliefert, sondern nur als "configured".
     settings = request.app.state.settings
-    out = {k: getattr(settings, k) for k in SAFE_SETTINGS}
+    out: dict = {}
+    for key in exposed_fields():
+        value = getattr(settings, key)
+        out[key] = {"configured": bool(value)} if FIELDS[key].secret else value
     out["version"] = settings.app_version
     out["auth_user"] = settings.auth_user
-    for key in SAFE_SETTINGS:
-        stored = db.get_setting(conn, key)
-        if stored not in (None, ""):
-            out[key] = stored
     out["notify_configured"] = {
         "webhook": bool(settings.notify_webhook),
         "gotify": bool(settings.notify_gotify and settings.notify_gotify_token),
@@ -385,15 +354,37 @@ def get_settings_api(request: Request, conn=Depends(get_conn)):
 
 
 class SettingsPatch(BaseModel):
-    scan_interval: int | None = None
+    # Q-1: Feldmenge wird durch tests/test_settings_schema.py::test_settings_patch_model_matches_patchable_fields
+    # gegen FIELDS in app/settings_schema.py abgeglichen. auth_enabled fehlt bewusst (S-9/E-2: nur NETZ_AUTH_ENABLED).
+    model_config = ConfigDict(extra="ignore")
+
     subnets: str | None = None
+    sites: str | None = None
+    scan_interval: int | None = None
+    scan_timeout: float | None = None
     port_top: int | None = None
+    ports: str | None = None
+    fritz_url: str | None = None
+    fritz_urls: str | None = None
+    fritz_user: str | None = None
+    fritz_pass: str | None = None
+    fritz_mesh: bool | None = None
+    tr064_insecure_tls: bool | None = None
+    vpn_pool: str | None = None
     snmp_enabled: bool | None = None
+    snmp_community: str | None = None
     snmp_switches: str | None = None
+    notify_webhook: str | None = None
+    notify_gotify: str | None = None
+    notify_gotify_token: str | None = None
+    notify_ntfy: str | None = None
+    notify_ntfy_token: str | None = None
+    alarm_whitelist: str | None = None
     history_hours: int | None = None
     device_retention_days: int | None = None
     event_retention_days: int | None = None
     theme: str | None = None
+    lang: str | None = None
     auto_export: bool | None = None
     auto_export_dir: str | None = None
     auto_export_interval_hours: int | None = None
@@ -401,136 +392,79 @@ class SettingsPatch(BaseModel):
     oui_online_enabled: bool | None = None
     oui_online_max: int | None = None
     oui_online_url: str | None = None
-    alarm_whitelist: str | None = None
-    sites: str | None = None
-    lang: str | None = None
-    scan_timeout: float | None = None
-    ports: str | None = None
-    fritz_url: str | None = None
-    fritz_urls: str | None = None
-    fritz_user: str | None = None
-    fritz_pass: str | None = None
-    tr064_insecure_tls: bool | None = None
-    snmp_community: str | None = None
-    notify_webhook: str | None = None
-    notify_gotify: str | None = None
-    notify_ntfy: str | None = None
-    vpn_pool: str | None = None
-    auth_enabled: bool | None = None
 
 
-def _valid_endpoint(s: str) -> bool:
-    if s.startswith(("http://", "https://")):
-        return True
-    return bool(re.match(r"^[a-zA-Z0-9.\-]+(:\d+)?$", s))
-
-
-def validate_settings(body: SettingsPatch) -> str | None:  # noqa: C901 - Zerlegung in W7 (Q-2)
-    if body.scan_interval is not None and not 30 <= body.scan_interval <= 86400:
-        return "scan_interval muss zwischen 30 und 86400 Sekunden liegen"
-    if body.port_top is not None and not 0 <= body.port_top <= 65535:
-        return "port_top muss zwischen 0 (alle Ports) und 65535 liegen"
-    if body.history_hours is not None and not 1 <= body.history_hours <= 87600:
-        return "history_hours muss zwischen 1 und 87600 liegen"
-    if body.device_retention_days is not None and not 0 <= body.device_retention_days <= 3650:
-        return "device_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
-    if body.event_retention_days is not None and not 0 <= body.event_retention_days <= 3650:
-        return "event_retention_days muss zwischen 0 (nie löschen) und 3650 liegen"
-    if body.theme is not None and body.theme not in ("dark", "light"):
-        return "theme muss 'dark' oder 'light' sein"
-    if body.lang is not None and body.lang not in ("de", "en", "fr", "es", "it", "pt"):
-        return "lang muss de, en, fr, es, it oder pt sein"
-    if body.scan_timeout is not None and not 0.2 <= body.scan_timeout <= 10:
-        return "scan_timeout muss zwischen 0.2 und 10 Sekunden liegen"
-    if body.ports is not None and body.ports.strip():
-        for p in body.ports.split(","):
-            p = p.strip()
-            if not p.isdigit() or not 1 <= int(p) <= 65535:
-                return f"ungueltiger Port in eigener Portliste: {p!r}"
-    if body.fritz_url is not None and body.fritz_url.strip() and not _valid_endpoint(body.fritz_url.strip()):
-        return f"ungueltiges TR-064-Hauptgeraet: {body.fritz_url.strip()!r} (URL oder host:port erwartet)"
-    if body.fritz_urls is not None and body.fritz_urls.strip():
-        for u in body.fritz_urls.split(","):
-            u = u.strip()
-            if u and not _valid_endpoint(u):
-                return f"ungueltiger weiterer TR-064-Endpunkt: {u!r} (URL oder host:port erwartet)"
-    for key in ("notify_webhook", "notify_gotify", "notify_ntfy"):
-        val = getattr(body, key)
-        if val is not None and val.strip() and not val.strip().startswith(("http://", "https://")):
-            return f"{key} muss eine http(s)-URL sein: {val.strip()!r}"
-    if (
-        body.snmp_community is not None
-        and body.snmp_community.strip()
-        and re.search(r"\s", body.snmp_community.strip())
-    ):
-        return "snmp_community darf keine Leerzeichen enthalten"
-    if body.fritz_pass is not None and len(body.fritz_pass) > 256:
-        return "fritz_pass darf hoechstens 256 Zeichen haben"
-    if body.oui_online_max is not None and not 0 <= body.oui_online_max <= 200:
-        return "oui_online_max muss zwischen 0 und 200 liegen"
-    if (
-        body.oui_online_url is not None
-        and body.oui_online_url.strip()
-        and not body.oui_online_url.strip().startswith(("http://", "https://"))
-    ):
-        return f"oui_online_url muss eine http(s)-URL sein: {body.oui_online_url.strip()!r}"
-    if body.vpn_pool is not None:
+def validate_settings(body: BaseModel) -> str | None:  # noqa: C901 - Zerlegung in W7 (Q-2)
+    # Q-2: reine Pruefer in app/validation.py, Meldungen woertlich gleich; Grenzen/Enums ueber FIELDS.
+    data = body.model_dump(exclude_none=True)
+    for key, value in data.items():
+        err = validation.check_range(key, value, FIELDS[key])
+        if err:
+            return err
+    if str(data.get("ports", "")).strip():
         try:
-            vpn_pool_rules(body.vpn_pool, "")
+            validation.parse_ports(data["ports"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("fritz_url", "")).strip():
+        try:
+            validation.parse_endpoint(data["fritz_url"])
+        except ValueError as exc:
+            return f"ungueltiges TR-064-Hauptgeraet: {exc}"
+    if str(data.get("fritz_urls", "")).strip():
+        for u in data["fritz_urls"].split(","):
+            u = u.strip()
+            if u:
+                try:
+                    validation.parse_endpoint(u)
+                except ValueError as exc:
+                    return f"ungueltiger weiterer TR-064-Endpunkt: {exc}"
+    for key in ("notify_webhook", "notify_gotify", "notify_ntfy"):
+        val = data.get(key)
+        if val is not None and str(val).strip():
+            try:
+                validation.parse_notify_url(key, val)
+            except ValueError as exc:
+                return str(exc)
+    if str(data.get("snmp_community", "")).strip() and re.search(r"\s", data["snmp_community"].strip()):
+        return "snmp_community darf keine Leerzeichen enthalten"
+    if data.get("fritz_pass") is not None and len(data["fritz_pass"]) > 256:
+        return "fritz_pass darf hoechstens 256 Zeichen haben"
+    if str(data.get("oui_online_url", "")).strip():
+        try:
+            validation.parse_notify_url("oui_online_url", data["oui_online_url"])
+        except ValueError as exc:
+            return str(exc)
+    if "vpn_pool" in data:
+        try:
+            vpn_pool_rules(data["vpn_pool"], "")
         except ValueError as exc:
             return f"ungueltiger vpn_pool-Eintrag: {exc}"
-    if body.subnets is not None and body.subnets.strip():
-        for sn in body.subnets.split(","):
-            try:
-                ipaddress.ip_network(sn.strip(), strict=False)
-            except ValueError:
-                return f"ungültiges Subnetz: {sn.strip()!r} (CIDR erwartet, z. B. 192.168.178.0/24)"
-    if body.snmp_switches is not None and body.snmp_switches.strip():
-        for ip in body.snmp_switches.split(","):
-            try:
-                ipaddress.ip_address(ip.strip())
-            except ValueError:
-                return f"ungültige IP für SNMP-Switch: {ip.strip()!r}"
-    if body.auto_export_dir is not None:
-        d = body.auto_export_dir.strip()
-        if not d or d.startswith("/") or ".." in d.split("/"):
-            return "auto_export_dir muss ein relativer Ordnername innerhalb des Daten-Volumes sein"
-    if body.auto_export_interval_hours is not None and not 0 <= body.auto_export_interval_hours <= 720:
-        return "auto_export_interval_hours muss zwischen 0 (jeder Scan) und 720 liegen"
-    if body.alarm_whitelist is not None and body.alarm_whitelist.strip():
-        for entry in body.alarm_whitelist.split(","):
-            e = entry.strip()
-            if not e:
-                continue
-            try:
-                ipaddress.ip_address(e)
-                continue
-            except ValueError:
-                pass
-            parts = e.replace("-", ":").split(":")
-            is_mac = len(parts) == 6 and all(
-                len(p) in (1, 2) and all(c in "0123456789abcdefABCDEF" for c in p) for p in parts
-            )
-            if not is_mac:
-                return f"ungueltiger Whitelist-Eintrag: {e!r} (MAC oder IP erwartet)"
-    if body.sites is not None and body.sites.strip():
-        for part in body.sites.split(";"):
-            part = part.strip()
-            if not part:
-                continue
-            if ":" not in part:
-                return f"ungueltiger Standort-Eintrag: {part!r} (Format: Name:Subnetz[,Subnetz]; ...)"
-            name, _, subs = part.partition(":")
-            if not name.strip():
-                return f"Standort ohne Namen: {part!r}"
-            for sn in subs.split(","):
-                sn = sn.strip()
-                if not sn:
-                    continue
-                try:
-                    ipaddress.ip_network(sn, strict=False)
-                except ValueError:
-                    return f"ungueltiges Subnetz im Standort {name.strip()!r}: {sn!r}"
+    if str(data.get("subnets", "")).strip():
+        try:
+            validation.parse_subnets(data["subnets"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("snmp_switches", "")).strip():
+        try:
+            validation.parse_snmp_switches(data["snmp_switches"])
+        except ValueError as exc:
+            return str(exc)
+    if "auto_export_dir" in data:
+        try:
+            validation.parse_auto_export_dir(data["auto_export_dir"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("alarm_whitelist", "")).strip():
+        try:
+            validation.parse_whitelist(data["alarm_whitelist"])
+        except ValueError as exc:
+            return str(exc)
+    if str(data.get("sites", "")).strip():
+        try:
+            validation.parse_sites(data["sites"])
+        except ValueError as exc:
+            return str(exc)
     return None
 
 
@@ -540,7 +474,18 @@ def patch_settings(body: SettingsPatch, request: Request, conn=Depends(get_conn)
     if error:
         raise HTTPException(status_code=422, detail=error)
     settings = request.app.state.settings
-    for key, value in body.model_dump(exclude_none=True).items():
+    data = body.model_dump(exclude_none=True)
+    # S-7: wer den FRITZ!Box-Endpunkt aendert, darf das gespeicherte Passwort nicht an den neuen Host senden
+    if any(k in data for k in ("fritz_url", "fritz_urls", "fritz_user")) and "fritz_pass" not in data:
+        if get_settings().fritz_pass:  # Umgebungs-Passwort aktiv
+            raise HTTPException(
+                status_code=422,
+                detail="bei Aenderung des TR-064-Endpunkts muss fritz_pass im selben PATCH stehen (Umgebungs-Passwort ist aktiv)",
+            )
+        db.set_setting(conn, "fritz_pass", "")
+    for key, value in data.items():
+        if FIELDS[key].secret and value == "":
+            continue  # S-8: leeres Secret-Feld im PATCH heisst "unveraendert", loescht nichts
         db.set_setting(conn, key, str(value).lower() if isinstance(value, bool) else str(value))
         setattr(settings, key, value)
     conn.commit()
