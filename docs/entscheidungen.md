@@ -1,4 +1,4 @@
-# Entscheidungsvermerke der Produktionsreife-Kampagne (W7)
+# Entscheidungsvermerke der Produktionsreife-Kampagne (W7/W8)
 
 Vermerke zu Befunden, die bewusst **nicht** im Code umgesetzt werden (UEBERGABE Abschnitt 7.7,
 Q-13/Q-12/Q-16). Verhalten aendert sich dadurch nicht.
@@ -34,3 +34,11 @@ Q-13/Q-12/Q-16). Verhalten aendert sich dadurch nicht.
 - **Noch offen (bewusst):** die Env-Aliase `NETZ_SUBNET` und `NETZ_FRITZ_URL` bleiben als
   deprecated kompatibel (`Settings.subnet`/`fritz_url` in `app/config.py`); sie werden in einer
   größeren Version zusammen mit der Datenmigration entfernt.
+
+## D-3 – `/docs` und `/openapi.json` werden abgeschaltet (W8)
+
+- **Fakt:** FastAPI registriert `/docs` und `/openapi.json` standardmäßig — hinter dem Login
+  geschützt, aber bei `NETZ_AUTH_ENABLED=false` öffentlich erreichbar.
+- **Entscheidung (W8):** `docs_url=None, openapi_url=None` in `app/web.py::create_app`. Die Doku
+  liegt versioniert im Repo unter `docs/`; eine automatisch generierte API-Doku ohne Review ist
+  kein Mehrwert. Nachweis: `tests/test_docs.py::test_docs_url_disabled`.

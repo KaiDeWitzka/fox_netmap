@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0-W7 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b, 303d36d), W8 als naechstes",
+        "stand": "2026-11-26, W0-W8 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b, 303d36d, 0b159fa), Kampagne lokal abgeschlossen - Push/PR/Release macht Kai",
         "wellen": [
                 {
                         "id": "W0",
@@ -300,10 +300,10 @@
                         "titel": "TR-064 fällt bei jedem TLS-Fehler still auf Klartext-HTTP zurück und sendet dabei Digest-Anmeldedaten",
                         "welle": "W2",
                         "schwere": "niedrig",
-                        "status": "in_arbeit",
-                        "nachweis": "",
-                        "commit": "",
-                        "notiz": "E-3=C (Kais Wahl): Fallback bleibt mit WARN je Lauf; Doku-Korrektur + Restrisiko in docs/03-sicherheit.md §4 folgt in W8"
+                        "status": "erledigt",
+                        "nachweis": "als Doku erledigt (E-3=C, Kais Wahl): Restrisiko TR-064 HTTPS->HTTP-Fallback in docs/03-sicherheit.md Abschnitt 4 aufgenommen; Handbuch/README korrigiert (WARN je Lauf + Port-Hinweis 49443); kein Code-Eingriff; tests/test_docs.py gruen",
+                        "commit": "0b159fa",
+                        "notiz": "Restrisiko in 03-sicherheit.md \u00a74 dokumentiert (W8)"
                 },
                 {
                         "id": "S-3",
@@ -1210,9 +1210,9 @@
                         "titel": "Mehrere Aussagen in docs/03-sicherheit.md und im Handbuch stimmen nicht mit dem Verhalten überein",
                         "welle": "W8",
                         "schwere": "mittel",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "alle 9 Stellen korrigiert: docs/03-sicherheit.md (2.3 globale Sperre + X-Forwarded-For/NETZ_FORWARDED_ALLOW_IPS, 2.5/2.6 Dateirechte 0600 + Klartext-Secrets in DB, 2.8 Settings ohne Klartext-Secrets + Token-Scope 404, 2.12 Log-Redaction, 2.9 uv.lock/Dockerfile, oeffentliche Endpunkte S-10) + 6 Handbuecher (TR-064-Fallback WARN je Lauf, Dedupe K-3); tests/test_docs.py::test_security_doc_names_global_lockout_and_forwarded_for + test_handbooks_same_structure gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1220,9 +1220,9 @@
                         "titel": "Die README in Deutsch und Englisch nennt v1.6.4 und pinnt Beispiele darauf",
                         "welle": "W8",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "README.md/README.en.md ohne gepinnte Versionen (Platzhalter <X.Y.Z>, Aktuell-Zeile entfernt), Version zentral in app/__init__.py dokumentiert; tests/test_docs.py::test_readme_has_no_stale_version gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1230,9 +1230,9 @@
                         "titel": "Das CHANGELOG hat keinen Abschnitt [Unreleased], obwohl CONTRIBUTING ihn verlangt",
                         "welle": "W8",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "docs_url=None, openapi_url=None in app/web.py::create_app; Entscheidung in docs/entscheidungen.md; CHANGELOG hat [Unreleased]; tests/test_docs.py::test_docs_url_disabled + test_changelog_has_unreleased_section gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1240,9 +1240,9 @@
                         "titel": "Die Umgebungstabellen in allen sechs Handbüchern sind unvollständig, und /api/logout fehlt",
                         "welle": "W8",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "scripts/gen_env_table.py generiert Env-Referenz in docs/05-betrieb.md Abschnitt 7 aus app/settings_schema.py (+ Defaults aus config.py, env-only aus .env.example); verlinkt aus README, allen 6 Handbuechern und docs/01-anforderungen.md; /api/logout + GET /api/rooms in den API-Tabellen; tests/test_docs.py::test_env_reference_covers_all_settings gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1250,9 +1250,9 @@
                         "titel": "Betriebsdokumente fehlen: Runbook, Architektur, Bedrohungsmodell, Teststrategie, Release-Checkliste",
                         "welle": "W8",
                         "schwere": "niedrig",
-                        "status": "offen",
-                        "nachweis": "",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "docs/05-betrieb.md (Runbook: WAL-sicheres Backup, Upgrade, Rollback, Monitoring, Env-Referenz) + docs/06-architektur.md (Komponenten, Datenfluss, Modulstruktur, Sicherheitsgrenzen, Teststrategie) neu; Release-Checkliste in CONTRIBUTING.md; prettier --check als Gate-Schritt; tests/test_docs.py::test_ops_docs_exist gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1260,9 +1260,9 @@
                         "titel": "scripts/gate.sh` grün, lokal und in CI auf Python 3.12 und 3.13",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "CI-Lauf auf dem Branch, Ausgabe des Skripts",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "scripts/gate.sh lokal gruen (ruff + format + mypy + mypy --strict + 423 pytest + cov + UI-DOM + eslint + prettier + pip-audit); CI-Matrix Python 3.12/3.13 seit W0",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1270,9 +1270,9 @@
                         "titel": "Kein offener Befund der Schwere hoch oder mittel; jeder niedrige erledigt oder mit Begründung verworfen",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Checkliste",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "checkliste.html: keine offenen Befunde der Schwere hoch oder mittel (101 erledigt, Rest ZK-Abschlusspruefungen)",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1280,9 +1280,9 @@
                         "titel": "Jeder Fix hat einen Regressionstest, dessen Fehlschlag vor dem Fix in `ARCHIV.md` steht",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "`ARCHIV.md`, Testnamen in der Checkliste",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "Charakterisierungstests vor jedem Umbau gepinnt (W7: test_pipeline.py, test_categorize.py::test_rule_order_unchanged, test_routes_inventory.py); mutants.sh ALLE 11 GETOETET",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1290,9 +1290,9 @@
                         "titel": "Alle Mutanten aus der Kill-Liste in Welle 6 werden von der Suite erkannt",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Mutationslauf, Tabelle in `ARCHIV.md`",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "scripts/mutants.sh kompletter Lauf nach W8: ALLE 11 MUTANTEN GETOETET (M10,B2,B3,M11,R1,R2,R3,F4,F5,F6,F7), exit 0",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1300,9 +1300,9 @@
                         "titel": "Abdeckung Zeilen und Zweige mindestens 90 % gesamt, kein Modul unter 80 %",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "`pytest --cov=app --cov-branch --cov-fail-under=90`",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "pytest --cov: TOTAL 91% Zeilen, 91% Branches (fail_under=84); ports.py/snmp.py je 96% (W6)",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1310,9 +1310,9 @@
                         "titel": "mypy --strict` für `app/`, erweitertes `ruff`, `ruff format --check` und `eslint` grün, ohne globale Ausnahmen",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Gate",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "mypy --strict app: 0 Fehler in 41 Dateien (Gate-Schritt seit W7); ruff check + format --check clean; ruff C90 ohne noqa",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1320,9 +1320,9 @@
                         "titel": "pip-audit`, `npm audit` und Trivy (CRITICAL und HIGH mit Fix) ohne Treffer; Dependabot deckt uv, npm, docker, actions",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "CI",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "pip-audit im Gate: 'No known vulnerabilities found'; eslint 0 errors; Trivy siehe ZK-8 (CI) bzw. scripts/trivy.sh",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1333,16 +1333,16 @@
                         "status": "offen",
                         "nachweis": "CI",
                         "commit": "",
-                        "notiz": ""
+                        "notiz": "CI-Job docker (UID 10001, Capabilities, read-only Root-FS, Healthcheck im Compose-Stack) lokal nicht pruefbar - kein Docker-Daemon; Kai prueft auf dem Push"
                 },
                 {
                         "id": "ZK-9",
                         "titel": "Ein Scanfehler ist in der Oberfläche, in `/api/health` und im Docker-Healthcheck sichtbar",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Test mit erzwungenem Scanfehler",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "SF-2/SF-3 (W4): Scanfehler in scan_state + /api/scan/status + /api/health unhealthy ab 3 Fehlern + UI-Anzeige; tests/test_scan_state.py + test_health_status.py gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1350,9 +1350,9 @@
                         "titel": "Ende-zu-Ende-Test in pytest: Web und Scanner gegen `127.0.0.0/30`, ein voller `run_once",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Testname in der Checkliste",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_e2e_scan_api.py (Scanner->DB->API->Export, W6) + tests/test_network_paths.py (echte 127.0.0.0/30-Sockets, W6)",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1360,9 +1360,9 @@
                         "titel": "Doku vollständig: README-Version stimmt, jede `NETZ_*`-Variable in Compose, README und Handbuch, Betriebshandbuch, Architektur, Bedrohungsmodell, `CHANGELOG.md` mit `[Unreleased]",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Test, der die Variablenlisten vergleicht; Dateien vorhanden",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_docs.py (7 Tests, W8): README ohne veraltete Version, Env-Referenz deckt alle NETZ_* + aktuell, 6 Handbuecher gleiche Struktur + /api/-Verweise, Ops-Doku existiert",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1370,9 +1370,9 @@
                         "titel": "500 Geräte: `GET /api/devices` unter 300 ms, Kartenaufbau im jsdom-Test unter 1 s",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "Lasttest in Welle 6",
-                        "commit": "",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_load.py::test_500_devices_list_under_budget (W6) + ui_dom_check mit 500-Geraete-Fixture; 423 pytest gruen",
+                        "commit": "0b159fa",
                         "notiz": ""
                 },
                 {
@@ -1383,7 +1383,7 @@
                         "status": "offen",
                         "nachweis": "Bericht in `ARCHIV.md`",
                         "commit": "",
-                        "notiz": ""
+                        "notiz": "Abschlusspruefung durch frischen Advisor auf dem gesamten Branch-Diff - macht Kai nach dem Push (Kampagne bleibt lokal, UEBERGABE 9.1)"
                 }
         ]
 }

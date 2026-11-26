@@ -1,6 +1,6 @@
 # fox_netmap — Benutzerhandbuch
 
-Version 1.6.1 · Stand: November 2026
+Stand: November 2026 · App-Version: `app/__init__.py` bzw. `/api/meta`
 
 > Sprachen / Languages : [Deutsch](02-benutzerhandbuch.md) · [English](02-benutzerhandbuch.en.md) · [Français](02-benutzerhandbuch.fr.md) · [Español](02-benutzerhandbuch.es.md) · [Italiano](02-benutzerhandbuch.it.md) · [Português](02-benutzerhandbuch.pt.md)
 
@@ -152,7 +152,7 @@ Rechts öffnet sich bei Klick auf ein Gerät (oder über ⚙) die Seitenleiste m
 
 ![Log](screenshots/04-log.svg)
 
-Die **Log**-Ansicht zeigtDie Level werden farbig dargestellt (INFO blau, WARN amber, ERROR rot).  `netmap.log` (rotierend, 1 MB × 3) mit Auto-Refresh alle 5 s,
+Die **Log**-Ansicht zeigtDie Level werden farbig dargestellt (INFO blau, WARN amber, ERROR rot). `netmap.log` (rotierend, 1 MB × 3) mit Auto-Refresh alle 5 s,
 Filter nach Level, und Download der kompletten Datei. Dasselbe liefern die API-Endpunkte
 `/api/logs` und `/api/logs/download`.
 
@@ -184,25 +184,27 @@ Das Formular ist nach **Themenschwerpunkten gruppiert** (Allgemein · Scan · TR
 Alle hier änderbaren Werte wirken **beim nächsten Scan ohne Container-Neustart** (die Compose-
 Env-Werte bleiben Default für frische Installationen; leer = Env-Default).
 
-| Feld | Env-Äquivalent | Bedeutung |
-|---|---|---|
-| Subnetze | `NETZ_SUBNETS` | kommagetrennt, IPv4- und IPv6-CIDR (z. B. `192.0.2.0/24, 2003:db8::/64`) |
-| Scan-Intervall / Timeout | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT` | Sekunden; Intervall 30–86400 |
-| Port-Umfang / Eigene Ports | `NETZ_PORT_TOP` / `NETZ_PORTS` | Top-N (0 = alle) oder eigene Liste `80,443,…` |
-| SNMP aktiv / Switches / Community | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY` | CAM-Tabelle + LLDP der Switches (161/udp). Community ohne Standardwert (seit v1.6.0), ohne Community kein SNMP |
-| TR-064 Hauptgerät / weitere Endpunkte / Benutzer / Passwort | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS` | URL oder `host:port`; Repeater als weitere Endpunkte; Passwort ist **write-only** (wird nie per GET ausgeliefert, leer = unverändert) |
-| TR-064 TLS-Zertifikatsprüfung abschalten (Häkchen) | `NETZ_TR064_INSECURE_TLS` | nur bei `https://…:49443` (selbstsigniertes Zertifikat) nötig — **nur im eigenen LAN** (MITM-Risiko); Default aus; WARN im Log |
-| Alarm-URLs (Webhook/Gotify/Ntfy) | `NETZ_NOTIFY_*` | `http(s)://…`; Tokens bleiben env-only (`NETZ_NOTIFY_*_TOKEN`) |
-| Whitelist | `NETZ_ALARM_WHITELIST` | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen |
-| Standorte | `NETZ_SITES` | `Name:Subnetz; …` z. B. `Zuhause:192.0.2.0/24; Remote:198.51.100.0/24` |
-| VPN-Adresspool | `NETZ_VPN_POOL` | Default `off` (bei konfiguriertem TR-064 automatisch `auto`). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.0.2.201-192.0.2.254`), kommagetrennt |
-| Historie / Retention | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie) |
-| Ereignis-Löschfrist | `NETZ_EVENT_RETENTION_DAYS` | Ereignisse nach N Tagen löschen, Standard 90 (0 = nie) |
-| Auto-Export / Intervall / Ordner | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR` | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan) |
-| mDNS | `NETZ_MDNS_ENABLED` | Hostnamen per mDNS-PTR als Fallback (+ DNS-SD, v1.6.0) |
-| Online-OUI-Fallback / max. Lookups pro Scan / API-URL | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL` | Hersteller unbekannter MACs online nachschlagen (Default `https://api.macvendors.com`), **Default aus** (Datenschutz: MAC-Präfixe gehen an einen Drittanbieter), gecacht in der DB |
-| Login aktiv | `NETZ_AUTH_ENABLED` | Session-Login an/aus (User/Pass bleiben env-only) |
-| Theme / Sprache | `NETZ_THEME` / `NETZ_LANG` | dark/light; de/en/fr/es/it/pt |
+| Feld                                                        | Env-Äquivalent                                      | Bedeutung                                                                                                                                                                                                        |
+| ----------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subnetze                                                    | `NETZ_SUBNETS`                                      | kommagetrennt, IPv4- und IPv6-CIDR (z. B. `192.0.2.0/24, 2003:db8::/64`)                                                                                                                                         |
+| Scan-Intervall / Timeout                                    | `NETZ_SCAN_INTERVAL` / `NETZ_SCAN_TIMEOUT`          | Sekunden; Intervall 30–86400                                                                                                                                                                                     |
+| Port-Umfang / Eigene Ports                                  | `NETZ_PORT_TOP` / `NETZ_PORTS`                      | Top-N (0 = alle) oder eigene Liste `80,443,…`                                                                                                                                                                    |
+| SNMP aktiv / Switches / Community                           | `NETZ_SNMP_ENABLED` / `_SWITCHES` / `_COMMUNITY`    | CAM-Tabelle + LLDP der Switches (161/udp). Community ohne Standardwert (seit v1.6.0), ohne Community kein SNMP                                                                                                   |
+| TR-064 Hauptgerät / weitere Endpunkte / Benutzer / Passwort | `NETZ_FRITZ_URL` / `_URLS` / `_USER` / `_PASS`      | URL oder `host:port`; Repeater als weitere Endpunkte; Passwort ist **write-only** (wird nie per GET ausgeliefert, leer = unverändert)                                                                            |
+| TR-064 TLS-Zertifikatsprüfung abschalten (Häkchen)          | `NETZ_TR064_INSECURE_TLS`                           | nur bei `https://…:49443` (selbstsigniertes Zertifikat) nötig — **nur im eigenen LAN** (MITM-Risiko); Default aus; WARN im Log                                                                                   |
+| Alarm-URLs (Webhook/Gotify/Ntfy)                            | `NETZ_NOTIFY_*`                                     | `http(s)://…`; Tokens sind write-only Secret-Felder in den Settings (`NETZ_NOTIFY_*_TOKEN`; GET zeigt nur `{"configured": true}`, leer = löschen)                                                                |
+| Whitelist                                                   | `NETZ_ALARM_WHITELIST`                              | MACs/IPs, die keinen „neues Gerät“-Alarm auslösen                                                                                                                                                                |
+| Standorte                                                   | `NETZ_SITES`                                        | `Name:Subnetz; …` z. B. `Zuhause:192.0.2.0/24; Remote:198.51.100.0/24`                                                                                                                                           |
+| VPN-Adresspool                                              | `NETZ_VPN_POOL`                                     | Default `off` (bei konfiguriertem TR-064 automatisch `auto`). `auto` = FRITZ!-Konvention: im Gateway-/24 letzte Oktett ≥ 201; auch CIDRs (`10.8.0.0/24`) und Bereiche (`192.0.2.201-192.0.2.254`), kommagetrennt |
+| Historie / Retention                                        | `NETZ_HISTORY_HOURS` / `NETZ_DEVICE_RETENTION_DAYS` | Verlauf in Stunden; offline-Geräte nach N Tagen löschen (0 = nie)                                                                                                                                                |
+| Ereignis-Löschfrist                                         | `NETZ_EVENT_RETENTION_DAYS`                         | Ereignisse nach N Tagen löschen, Standard 90 (0 = nie)                                                                                                                                                           |
+| Auto-Export / Intervall / Ordner                            | `NETZ_AUTO_EXPORT` / `_INTERVAL_HOURS` / `_DIR`     | JSON+CSV automatisch; Intervall in h (0 = nach jedem Scan)                                                                                                                                                       |
+| mDNS                                                        | `NETZ_MDNS_ENABLED`                                 | Hostnamen per mDNS-PTR als Fallback (+ DNS-SD, v1.6.0)                                                                                                                                                           |
+| Online-OUI-Fallback / max. Lookups pro Scan / API-URL       | `NETZ_OUI_ONLINE_ENABLED` / `_MAX` / `_URL`         | Hersteller unbekannter MACs online nachschlagen (Default `https://api.macvendors.com`), **Default aus** (Datenschutz: MAC-Präfixe gehen an einen Drittanbieter), gecacht in der DB                               |
+| Login aktiv                                                 | `NETZ_AUTH_ENABLED`                                 | env-only — nicht per UI änderbar (E-2); User/Pass env-only                                                                                                                                                       |
+| Theme / Sprache                                             | `NETZ_THEME` / `NETZ_LANG`                          | dark/light; de/en/fr/es/it/pt                                                                                                                                                                                    |
+
+**Vollständige Referenz aller `NETZ_*`-Variablen** (inkl. env-only, Defaults, Secret-/PATCH-Flags), generiert aus `app/settings_schema.py` (`scripts/gen_env_table.py`): [Umgebungsvariablen-Referenz](05-betrieb.md#7-umgebungsvariablen).
 
 **Plausibilitätsprüfung:** Ungültige Eingaben (z. B. `keine-ip` als Subnetz, Port `abc`,
 Webhook ohne `https://`) werden sofort im Frontend gemeldet und vom Backend mit HTTP 422
@@ -216,7 +218,11 @@ In den Einstellungen (Bereich **Embed-Tokens**) Token anlegen — optional mit A
 Filtern (Subnetze/Kategorien). Einbettung per:
 
 ```html
-<iframe src="https://netmap.example.de/embed?token=ABC123&lang=de" width="100%" height="600"></iframe>
+<iframe
+  src="https://netmap.example.de/embed?token=ABC123&lang=de"
+  width="100%"
+  height="600"
+></iframe>
 ```
 
 Das Token wird nur direkt nach dem Anlegen angezeigt, gespeichert wird nur ein Hash (seit v1.6.0). Bitte sofort kopieren; die Liste zeigt danach nur die ersten 6 Zeichen.
@@ -233,7 +239,7 @@ kann über `?theme=dark|light` und `?lang=…` angepasst werden.
   und VPN-Kennzeichen (`vpn`). CSV mit wählbarem Trennzeichen (`/api/export/csv?sep=;`).
 - **Drucken → PDF:** druckoptimierte Ansicht (Browser „Als PDF speichern“).
 - **Auto-Export:**
-- **PDF (serverseitig):** Button **PDF** im Header — Karten-Snapshot (PNG) + Geräte-Tabelle als echtes PDF via `POST /api/export/pdf`  (auch mit Embed-Token, Filter via Query-Parameter). Ausrichtung hoch/quer per Select neben dem Button wählbar und gemerkt (`orientation` im POST-Body); lange Zellen werden umgebrochen statt zu überlappen. in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
+- **PDF (serverseitig):** Button **PDF** im Header — Karten-Snapshot (PNG) + Geräte-Tabelle als echtes PDF via `POST /api/export/pdf` (auch mit Embed-Token, Filter via Query-Parameter). Ausrichtung hoch/quer per Select neben dem Button wählbar und gemerkt (`orientation` im POST-Body); lange Zellen werden umgebrochen statt zu überlappen. in den Einstellungen aktivieren; schreibt JSON+CSV nach jedem Intervall in
   den Export-Ordner (relativ zum Daten-Volume, Default `exports`).
 
 ---
@@ -248,7 +254,7 @@ Zwei Compose-Services teilen sich das Volume `./data`:
 **Quellen pro Scan (Merge-Priorität):** Ping-Sweep + ARP (`/proc/net/arp`) + TCP-Probe
 (80/443/22/445/8080) für ICMP-blockierte Hosts (z. B. VPN-Subnetz) → TR-064 (Hauptgerät +
 `NETZ_FRITZ_URLS`, Merge nach IP, Repeater via `tr064_parent`) → SNMP (CAM/LLDP) → mDNS/DNS.
-MAC-Konflikte: ARP-MAC gewinnt. Duplikate (gleiche IP) werden beim Start automatisch zusammengeführt.
+MAC-Konflikte: ARP-MAC gewinnt. Duplikate (gleiche IP): Beim Start wird nur ein `ip:<ip>`-Platzhalter in die echte MAC derselben IP eingemischt; zwei echte MACs werden nie verschmolzen (beide bleiben erhalten, die IP des älteren Offline-Geräts wird geleert).
 
 **Zyklus:** Default alle 900 s + manueller Trigger (▶ Scan). Jeder Scan schreibt Verlauf
 (`device_history`), Ereignisse (`device_events`, inkl. online/offline/Port-Änderungen/neu) und
@@ -289,7 +295,7 @@ Berechtigung „App“ oder „Phone“. Abschalten mit `NETZ_FRITZ_MESH=false`.
 
 **HTTP 401 trotz korrektem Passwort:** Nach mehreren fehlgeschlagenen Anmeldeversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) — auch TR-064-Calls mit korrektem Passwort schlagen dann mit 401 fehl. Lösung: einmal erfolgreich als TR-064-Benutzer im Web-UI der FRITZ!Box anmelden (hebt die Sperre auf), alternativ einige Minuten warten; **System → Ereignisse** zeigt die Fehlversuche. Danach erneut scannen.
 
-**TR-064 über HTTPS (Port 49443):** Statt `http://…:49000` kann `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oder `https://fritz.box:49443`) gesetzt werden — die SOAP-Calls laufen dann verschlüsselt. Das FRITZ!Box-Zertifikat ist selbstsigniert, deshalb schlägt die Zertifikatsprüfung fehl; mit **`NETZ_TR064_INSECURE_TLS=true`** wird die TLS-Prüfung *nur für die TR-064-Calls* (Hosts, WAN, Mesh) abgeschaltet (Default `false` = Prüfung an). **Risiko bewusst in Kauf nehmen:** nur im eigenen LAN aktivieren — dort kann die Verbindung mitgeschnitten oder ein Angreifer kann sich als FRITZ!Box ausgeben (MITM). Solange die Option aktiv ist, wird bei jedem Scan eine WARN im Log ausgegeben. Ohne HTTPS bleibt TR-064 auf `http://…:49000` (laut AVM nur aus dem LAN erreichbar, Digest-Auth — Passwort nicht im Klartext). **Achtung Port:** HTTPS läuft auf **49443**, nicht 49000 — `https://…:49000` schlägt mit `SSL: WRONG_VERSION_NUMBER` fehl (Klartext-Port); dafür greift jetzt automatisch ein http-Fallback für Hosts, WAN und Mesh, und das Log weist auf den Port hin.
+**TR-064 über HTTPS (Port 49443):** Statt `http://…:49000` kann `NETZ_FRITZ_URL=https://192.168.178.1:49443` (oder `https://fritz.box:49443`) gesetzt werden — die SOAP-Calls laufen dann verschlüsselt. Das FRITZ!Box-Zertifikat ist selbstsigniert, deshalb schlägt die Zertifikatsprüfung fehl; mit **`NETZ_TR064_INSECURE_TLS=true`** wird die TLS-Prüfung _nur für die TR-064-Calls_ (Hosts, WAN, Mesh) abgeschaltet (Default `false` = Prüfung an). **Risiko bewusst in Kauf nehmen:** nur im eigenen LAN aktivieren — dort kann die Verbindung mitgeschnitten oder ein Angreifer kann sich als FRITZ!Box ausgeben (MITM). Solange die Option aktiv ist, wird bei jedem Scan eine WARN im Log ausgegeben. Ohne HTTPS bleibt TR-064 auf `http://…:49000` (laut AVM nur aus dem LAN erreichbar, Digest-Auth — Passwort nicht im Klartext). **Achtung Port:** HTTPS läuft auf **49443**, nicht 49000 — `https://…:49000` schlägt mit `SSL: WRONG_VERSION_NUMBER` fehl (Klartext-Port); dafür greift weiterhin ein http-Fallback für Hosts, WAN und Mesh - jeder betroffene Lauf loggt **WARN mit Port-Hinweis (49443)** (Restrisiko: [Sicherheitskonzept §4](03-sicherheit.md#4-bekannte-restrisiken)).
 
 **Switch-Heuristik:** Nicht verwaltete Switches sind für die Box unsichtbar. Sieht sie an einem LAN-Port mehrere
 Geräte und ist genau eines davon als Switch kategorisiert, werden die übrigen diesem Switch zugeordnet. Hängen zwei
@@ -331,10 +337,9 @@ VPN-Geräte lösen keinen „neues Gerät“-Alarm aus, weil sie mit dem Tunnel 
 - Details: [Sicherheitskonzept](03-sicherheit.md).
 - Session-Login (PBKDF2, Cookie `fox_session`), default an; `NETZ_AUTH_ENABLED=false` schaltet ab.
 - `NETZ_AUTH_USER`/`NETZ_AUTH_PASS` sind env-only; leeres Passwort → zufälliges Startpasswort in `./data/initial-admin-password.txt` (seit v1.5.0 nicht mehr im Log).
-- `GET /api/settings` liefert **keine Secrets** (Test abgesichert): weder `auth_pass`,
-  `fritz_pass` noch `notify_*_token`. TR-064-Passwort ist write-only in den Settings.
+- `GET /api/settings` liefert **keine Secrets im Klartext** (Test abgesichert): `fritz_pass`, `snmp_community` und `notify_*_token` nur als `{"configured": true}`; `auth_pass` gar nicht sichtbar. Leerer Wert beim PATCH löscht das Secret serverseitig.
 - Embed-Tokens: ablauffähig, filterbar, read-only; token-geschützte API-Pfade nur
-  `/api/devices`, `/api/device/…`, `/api/export/…`.
+  `/api/devices`, `/api/device/…`, `/api/export/…`, `/api/meta`, `/api/sites`, `/api/scan/status`.
 - Scanner läuft mit minimalen Caps (`NET_RAW`), read-only auf das Netz.
 - **Datenschutz:** welche Daten erhoben, gespeichert und nach außen gesendet werden, steht im [Datenschutzhinweis](04-datenschutz.md). Einzelne Geräte lassen sich seit v1.5.2 im Detail-Panel unter **Gerät löschen** samt Verlauf, Ports und Ereignissen entfernen (Rückfrage vor dem Löschen). Ist das Gerät weiter im Netz, erscheint es beim nächsten Scan neu.
 
@@ -349,57 +354,59 @@ docker compose down               # Stop (Daten bleiben)
 docker compose down -v            # ACHTUNG: löscht ./data (DB, Log, Exporte)!
 ```
 
-- Health: `GET /api/health` → `{ "status": "ok", "version": "1.5.2" }`
+- Health: `GET /api/health` → `{ "status": "ok" }`
 - Container laufen seit v1.5.0 **nicht mehr als root**, sondern als UID/GID `10001`. Die Web-Oberfläche hat keine Capabilities und ein schreibgeschütztes Root-Dateisystem; der Scanner behält nur `NET_RAW` für ping.
 - Beim ersten Start nach dem Update übernimmt der Container vorhandene Dateien in `./data` automatisch für UID 10001. Auf dem Host danach `sudo` zum Lesen nutzen oder den eigenen Benutzer in eine Gruppe mit GID 10001 aufnehmen.
 - Docker-Healthcheck: `docker compose ps` zeigt `healthy`/`unhealthy` (Web: `/api/health`, Scanner: Scan-Schleife läuft).
 - Volumes: `./data:/data` (SQLite-WAL, `netmap.log` rotierend, `exports/`)
-    Journal-Modus: WAL mit automatischem Fallback auf `delete` bei `disk I/O error` (z. B. Bind-Mount ueber Docker Desktop/NAS); erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
+  Journal-Modus: WAL mit automatischem Fallback auf `delete` bei `disk I/O error` (z. B. Bind-Mount ueber Docker Desktop/NAS); erzwingen mit `NETZ_SQLITE_JOURNAL=wal|delete|auto`.
 - Ports: `NETMAP_PORT` (Host) → 8399 (Container)
 - Zeitzone: `TZ=Europe/Berlin`
 - Releases: SemVer-Tags `vX.Y.Z` laufen durch `release.yml` (ruff + pytest + UI-Tests) und
   erzeugen automatisch ein GitHub-Release.
 - Fertiges Image (seit v1.5.1): `docker pull ghcr.io/kaidewitzka/fox_netmap:latest` (amd64/arm64). Bei privatem Repository vorher `docker login ghcr.io` mit Token (`read:packages`). In der Compose `build: .` durch `image: ghcr.io/kaidewitzka/fox_netmap:<version>` ersetzen. Jedes Image ist mit Trivy geprüft; SBOM und Scan-Bericht hängen am GitHub-Release.
+- Runbook (Backup, Upgrade, Rollback) und vollständige Umgebungsvariablen-Referenz: [05-betrieb.md](05-betrieb.md) · Architektur und Datenfluss: [06-architektur.md](06-architektur.md).
 
 ---
 
 ## 16. REST-API (Kurzüberblick)
 
-| Endpunkt | Zweck |
-|---|---|
-| `GET /api/health` | Health + Version (öffentlich) |
-| `GET /api/devices?q=&category=&status=&subnet=&site=` | Geräteliste, filterbar |
-| `PATCH /api/device/{mac}` | Kategorie/Notiz/„Verbunden mit“/Position bearbeiten |
-| `DELETE /api/device/{mac}` | Gerät samt Verlauf, Ports und Ereignissen löschen (Login nötig) |
-| `GET /api/device/{mac}` | Details inkl. Ports/Verlauf/Ereignisse |
-| `POST /api/scan` · `GET /api/scan/status` | Scan auslösen / Status |
-| `GET /api/settings` · `PATCH /api/settings` | Settings lesen (ohne Secrets) / ändern (422 bei ungültig) |
-| `GET/POST /api/tokens` · `DELETE /api/tokens/{id}` | Embed-Tokens verwalten |
-| `POST /api/devices/connect` | Mehrfach-Zuordnung: `{"macs": [...], "connected_to": "<MAC>"}`, `""` = automatisch |
-| `GET /api/export/json` · `GET /api/export/csv?sep=,` | Exporte |
-| `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | Log |
-| `GET /api/meta` | WAN-IP, Gateway, Version, Subnetze (öffentlich) |
-| `GET /api/sites` · `GET /api/categories` | Standorte / Kategorien (öffentlich) |
-| `POST /api/layout/reset` | gespeicherte Knoten-Positionen löschen |
+| Endpunkt                                                           | Zweck                                                                              |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `GET /api/health`                                                  | Health, nur `{"status": "ok"}` (öffentlich, ohne Metadaten)                        |
+| `GET /api/devices?q=&category=&status=&subnet=&site=`              | Geräteliste, filterbar                                                             |
+| `PATCH /api/device/{mac}`                                          | Kategorie/Notiz/„Verbunden mit“/Position bearbeiten                                |
+| `DELETE /api/device/{mac}`                                         | Gerät samt Verlauf, Ports und Ereignissen löschen (Login nötig)                    |
+| `GET /api/device/{mac}`                                            | Details inkl. Ports/Verlauf/Ereignisse                                             |
+| `POST /api/scan` · `GET /api/scan/status`                          | Scan auslösen / Status                                                             |
+| `GET /api/settings` · `PATCH /api/settings`                        | Settings lesen (ohne Secrets) / ändern (422 bei ungültig)                          |
+| `GET/POST /api/tokens` · `DELETE /api/tokens/{id}`                 | Embed-Tokens verwalten                                                             |
+| `POST /api/devices/connect`                                        | Mehrfach-Zuordnung: `{"macs": [...], "connected_to": "<MAC>"}`, `""` = automatisch |
+| `GET /api/export/json` · `GET /api/export/csv?sep=,`               | Exporte                                                                            |
+| `GET /api/logs?lines=200&level=WARNING` · `GET /api/logs/download` | Log                                                                                |
+| `GET /api/meta`                                                    | WAN-IP, Gateway, Version, Subnetze (Login oder Embed-Token nötig)                  |
+| `GET /api/sites`                                                   | Standorte (Login/Token)                                                            |
+| `GET /api/categories`                                              | Kategorien (öffentlich)                                                            |
+| `POST /api/layout/reset`                                           | gespeicherte Knoten-Positionen löschen                                             |
 
-Auth: Session-Cookie nach `POST /api/login`; Embed-Token statt Session für die Token-Pfade.
+Auth: Session-Cookie nach `POST /api/login` (Abmelden: `POST /api/logout`); Embed-Token statt Session für die Token-Pfade. Räume: `GET /api/rooms`.
 
 ---
 
 ## 17. Fehlerbehebung
 
-| Symptom | Ursache / Lösung |
-|---|---|
-| „Zu viele Fehlversuche“ beim Login | Login-Sperre aktiv (HTTP 429). 15 Minuten warten oder Container neu starten (`docker compose restart netmap`). |
-| Embed wird im iframe nicht angezeigt | `NETZ_EMBED_ANCESTORS` enthält die einbettende Seite nicht. Domain ergänzen und `docker compose up -d`. |
-| Gerät fehlt im VPN-Subnetz | ICMP blockiert → TCP-Probe greift automatisch; im Log (`WARN … TCP-Probe ok`) sichtbar. Subnetz in den Settings eintragen. |
-| TR-064-Fehler im Log | https→http-Fallback automatisch; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. HTTP 401 trotz korrektem Passwort: Nach mehreren Fehlversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) — einmal erfolgreich als TR-064-Benutzer im Web-UI anmelden (hebt die Sperre auf) oder einige Minuten warten; System → Ereignisse zeigt die Fehlversuche; dann erneut scannen. |
-| Switch ohne Nachbarn | TL-SG108E o. Ä. ohne SNMP → Port 80 only; Topologie dann manuell im Detail-Panel setzen. |
-| „Doppeltes“ Gerät | Gleiche IP mit zwei MACs → ARP-MAC gewinnt, Rest wird beim Start dedupliziert. |
-| Alte Geräte verschwinden | Retention aktiv (Default 30 Tage offline) — in den Settings auf `0` = nie stellen. |
-| Karte unübersichtlich | „Subnetze gruppieren“ + Router/Switch „Kinder ausblenden“ + Layout `tree`/`grid` testen. |
-| Login vergessen | `NETZ_AUTH_PASS` in der Compose/.env setzen und `docker compose up -d --build`. |
-| Alles neu aufsetzen | `docker compose down -v && docker compose up -d --build` — löscht DB! Exporte vorher sichern. |
+| Symptom                              | Ursache / Lösung                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| „Zu viele Fehlversuche“ beim Login   | Login-Sperre aktiv (HTTP 429). 15 Minuten warten oder Container neu starten (`docker compose restart netmap`).                                                                                                                                                                                                                                                                                                                                                                           |
+| Embed wird im iframe nicht angezeigt | `NETZ_EMBED_ANCESTORS` enthält die einbettende Seite nicht. Domain ergänzen und `docker compose up -d`.                                                                                                                                                                                                                                                                                                                                                                                  |
+| Gerät fehlt im VPN-Subnetz           | ICMP blockiert → TCP-Probe greift automatisch; im Log (`WARN … TCP-Probe ok`) sichtbar. Subnetz in den Settings eintragen.                                                                                                                                                                                                                                                                                                                                                               |
+| TR-064-Fehler im Log                 | bei TLS-Fehler http-Fallback mit WARN je Lauf + Port-Hinweis 49443; URL/User/Pass in den Settings prüfen (Passwort write-only). SOAP-Fehler werden als Klartext geloggt. HTTP 401 trotz korrektem Passwort: Nach mehreren Fehlversuchen sperrt die FRITZ!Box den Benutzer kurzzeitig (Brute-Force-Schutz) — einmal erfolgreich als TR-064-Benutzer im Web-UI anmelden (hebt die Sperre auf) oder einige Minuten warten; System → Ereignisse zeigt die Fehlversuche; dann erneut scannen. |
+| Switch ohne Nachbarn                 | TL-SG108E o. Ä. ohne SNMP → Port 80 only; Topologie dann manuell im Detail-Panel setzen.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| „Doppeltes“ Gerät                    | Gleiche IP mit zwei MACs → ARP-MAC gewinnt; nur `ip:`-Platzhalter werden in die echte MAC eingemischt, zwei echte MACs bleiben getrennt (siehe §11).                                                                                                                                                                                                                                                                                                                                     |
+| Alte Geräte verschwinden             | Retention aktiv (Default 30 Tage offline) — in den Settings auf `0` = nie stellen.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Karte unübersichtlich                | „Subnetze gruppieren“ + Router/Switch „Kinder ausblenden“ + Layout `tree`/`grid` testen.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Login vergessen                      | `NETZ_AUTH_PASS` in der Compose/.env setzen und `docker compose up -d --build`.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Alles neu aufsetzen                  | `docker compose down -v && docker compose up -d --build` — löscht DB! Exporte vorher sichern.                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Log-Seite (Tab **Log**) + `docker compose logs netmap-scanner` zeigen jeden Scan-Schritt.
 
@@ -434,5 +441,5 @@ Log-Seite (Tab **Log**) + `docker compose logs netmap-scanner` zeigen jeden Scan
 
 ---
 
-*Fragen oder Fehler? Issue im Repo `KaiDeWitzka/fox_netmap` anlegen — Anforderungen stehen in
-`docs/01-anforderungen.md`.*
+_Fragen oder Fehler? Issue im Repo `KaiDeWitzka/fox_netmap` anlegen — Anforderungen stehen in
+`docs/01-anforderungen.md`._
