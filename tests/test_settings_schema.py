@@ -131,3 +131,22 @@ def test_legacy_alias_migrated_allein(tmp_path):
     assert db.get_setting(conn, "fritz_url") is None
     assert db.get_setting(conn, "fritz_urls") == "192.168.178.1:49000"
     conn.close()
+
+
+def test_empty_env_vars_fall_back_to_defaults(monkeypatch, tmp_path):
+    """PR #115 CI: Compose reicht unsetzte NETZ_* als leere Strings durch (${VAR:-}).
+
+    Leer muss "nicht gesetzt" heissen (env_ignore_empty) - sonst wirft pydantic bei
+    Bool-/Int-Feldern einen ValidationError und der Container startet nicht (unhealthy).
+    """
+    monkeypatch.setenv("NETZ_AUTH_ENABLED", "")
+    monkeypatch.setenv("NETZ_SCAN_INTERVAL", "")
+    monkeypatch.setenv("NETZ_SNMP_ENABLED", "")
+    monkeypatch.setenv("NETZ_AUTH_PASS", "")
+    s = Settings(data_dir=str(tmp_path))
+    assert s.auth_enabled is True
+    assert s.scan_interval == 900
+    assert s.snmp_enabled is True
+    assert s.auth_pass == ""
+    monkeypatch.setenv("NETZ_AUTH_ENABLED", "false")
+    assert Settings(data_dir=str(tmp_path)).auth_enabled is False

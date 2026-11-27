@@ -9,7 +9,10 @@ log = logging.getLogger("fox_netmap")
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="NETZ_", env_file=".env", extra="ignore")
+    # env_ignore_empty: Compose reicht unsetzte NETZ_* als leere Strings durch (${VAR:-});
+    # leer = "nicht gesetzt" (sonst wuerde z. B. NETZ_AUTH_ENABLED="" einen ValidationError
+    # beim Start werfen und beide Container crashen - PR #115 CI docker-Job).
+    model_config = SettingsConfigDict(env_prefix="NETZ_", env_file=".env", extra="ignore", env_ignore_empty=True)
 
     data_dir: str = "/data"
     host: str = "0.0.0.0"  # noqa: S104 - Container horcht bewusst auf allen Interfaces; Zugriff ueber Port-Mapping/Reverse-Proxy
