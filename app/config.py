@@ -1,14 +1,21 @@
 import ipaddress
+import logging
+import sqlite3
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+log = logging.getLogger("fox_netmap")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="NETZ_", env_file=".env", extra="ignore")
+    # env_ignore_empty: Compose reicht unsetzte NETZ_* als leere Strings durch (${VAR:-});
+    # leer = "nicht gesetzt" (sonst wuerde z. B. NETZ_AUTH_ENABLED="" einen ValidationError
+    # beim Start werfen und beide Container crashen - PR #115 CI docker-Job).
+    model_config = SettingsConfigDict(env_prefix="NETZ_", env_file=".env", extra="ignore", env_ignore_empty=True)
 
     data_dir: str = "/data"
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104 - Container horcht bewusst auf allen Interfaces; Zugriff ueber Port-Mapping/Reverse-Proxy
     port: int = 8399
     subnets: str = ""
     subnet: str = ""
@@ -63,7 +70,12 @@ class Settings(BaseSettings):
     embed_ancestors: str = "*"
     # Secure-Flag des Session-Cookies: "auto" (bei HTTPS bzw. X-Forwarded-Proto: https), "true" oder "false".
     cookie_secure: str = "auto"
-    app_version: str = "1.6.18"
+
+    @property
+    def app_version(self) -> str:
+        from app import __version__
+
+        return __version__
 
     @property
     def subnet_list(self) -> list[str]:
@@ -100,3 +112,39 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def effective_settings(conn: sqlite3.Connection, base: Settings) -> Settings:
+    """Fuehrt Umgebung (base) und Datenbank zusammen. Wirft nie: ungueltige oder fuera
+    den Grenzen liegende gespeicherte Werte werden mit WARNING geloggt, der Umgebungswert
+    bleibt (SF-4). C-2: nur `None` heisst "nicht gesetzt" - ein gespeicherter leerer String
+    ueberschreibt die Umgebung. E-2/S-9: `auth_enabled` gewinnt immer die Umgebung."""
+    from . import db
+    from .settings_schema import FIELDS
+
+    data = base.model_dump()
+    for key, field in FIELDS.items():
+        if not field.scanner:
+            continue
+        stored = db.get_setting(conn, key)
+        if stored is None:
+            continue
+        try:
+            value = field.cast(stored)
+        except (ValueError, TypeError):
+            log.warning("ungueltiger gespeicherter Wert fuer %s: %r - Umgebungswert bleibt", key, stored)
+            continue
+        if (field.minimum is not None and value < field.minimum) or (
+            field.maximum is not None and value > field.maximum
+        ):
+            log.warning(
+                "gespeicherter Wert fuer %s liegt ausserhalb [%s, %s]: %r - Umgebungswert bleibt",
+                key,
+                field.minimum,
+                field.maximum,
+                stored,
+            )
+            continue
+        data[key] = value
+    data["auth_enabled"] = base.auth_enabled
+    return base.model_copy(update=data)

@@ -1,9 +1,10 @@
 """Tests für die Härtung v1.5.0: Passwort-Hash, Sessions, Cookie, Startpasswort, Privacy by Default, Healthcheck."""
 
 import os
+import socket
 import stat
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -16,12 +17,13 @@ from app.web import create_app
 
 def test_production_iterations_meet_owasp(monkeypatch):
     monkeypatch.undo()  # Produktionswert, nicht den schnellen Testwert
+    # T-8 (W6): billiger Wachposten - Konstanten-Check, kein Verhaltenstest
     assert auth.PBKDF2_ITERATIONS >= 600_000
 
 
 def test_hash_format_and_verify():
     h = auth.hash_password("geheim")
-    scheme, iterations, salt, digest = h.split("$")
+    scheme, iterations, salt, _digest = h.split("$")
     assert scheme == "pbkdf2_sha256" and int(iterations) == auth.PBKDF2_ITERATIONS and len(salt) == 32
     assert auth.verify_password("geheim", h)
     assert not auth.verify_password("falsch", h)
@@ -74,7 +76,9 @@ def test_logout_invalidates_session(auth_client):
 def test_cookie_secure_auto(client):
     r = client.post("/api/login", json={"username": "admin", "password": "secret"})
     assert "secure" not in r.headers["set-cookie"].lower()
-    r = client.post("/api/login", json={"username": "admin", "password": "secret"}, headers={"X-Forwarded-Proto": "https"})
+    r = client.post(
+        "/api/login", json={"username": "admin", "password": "secret"}, headers={"X-Forwarded-Proto": "https"}
+    )
     assert "secure" in r.headers["set-cookie"].lower()
 
 
@@ -131,15 +135,15 @@ def _state(tmp_path, **fields):
 
 
 def test_health_scanner_states(tmp_path):
-    now = datetime(2026, 11, 21, 12, 0, tzinfo=timezone.utc)
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]  # noch keine DB
+    now = datetime(2026, 11, 21, 12, 0, tzinfo=UTC)
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]  # noch keine DB
     _state(tmp_path, scanning=0, next_scan=(now + timedelta(minutes=10)).isoformat())
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]
     _state(tmp_path, scanning=0, next_scan=(now - timedelta(minutes=30)).isoformat())
-    ok, msg = healthcheck.check_scanner(str(tmp_path), now)
+    ok, msg = healthcheck.check_scanner(str(tmp_path), now=now)
     assert not ok and "ueberfaellig" in msg
     _state(tmp_path, scanning=1)
-    assert healthcheck.check_scanner(str(tmp_path), now)[0]
+    assert healthcheck.check_scanner(str(tmp_path), now=now)[0]
 
 
 def test_health_role_from_env(monkeypatch):
@@ -148,10 +152,43 @@ def test_health_role_from_env(monkeypatch):
 
 
 def test_health_web_unreachable():
-    ok, _ = healthcheck.check_web(1)
-    assert not ok
+    # T-14 (W6): frei gewaehlter, gerade geschlossener Port statt fest verdrahtetem Port 1
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        closed_port = s.getsockname()[1]
+    ok, msg = healthcheck.check_web(closed_port)
+    assert not ok and "erreichbar" in msg
 
 
 def test_entrypoint_shell_syntax():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     assert subprocess.run(["sh", "-n", os.path.join(root, "docker", "entrypoint.sh")]).returncode == 0
+
+
+def test_entrypoint_reports_chown_probe_failure(tmp_path):
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    entrypoint = os.path.join(root, "docker", "entrypoint.sh")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fakes = {
+        "id": "#!/bin/sh\necho 0\n",
+        "find": "#!/bin/sh\necho 'find: simulated I/O error' >&2\nexit 1\n",
+        "setpriv": "#!/bin/sh\nexit 0\n",
+    }
+    for name, body in fakes.items():
+        p = bin_dir / name
+        p.write_text(body)
+        os.chmod(p, 0o700)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "APP_UID": "10001",
+        "APP_GID": "10001",
+        "NETZ_DATA_DIR": str(data_dir),
+    }
+    r = subprocess.run(["sh", entrypoint, "scanner"], env=env, capture_output=True, text=True, timeout=15)
+    assert r.returncode == 0
+    assert "WARN" in r.stderr
+    assert "simulated I/O error" in r.stderr

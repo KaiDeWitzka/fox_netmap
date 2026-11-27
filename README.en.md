@@ -20,6 +20,7 @@ fox_netmap may be used, modified and redistributed freely (commercial use includ
 - [User manual](docs/02-benutzerhandbuch.en.md) — in 6 languages: [de](docs/02-benutzerhandbuch.md) · [en](docs/02-benutzerhandbuch.en.md) · [fr](docs/02-benutzerhandbuch.fr.md) · [es](docs/02-benutzerhandbuch.es.md) · [it](docs/02-benutzerhandbuch.it.md) · [pt](docs/02-benutzerhandbuch.pt.md) (quickstart, usage, screenshots, settings, embed, exports, troubleshooting, API)
 - [Requirements & architecture](docs/01-anforderungen.md) (German)
 - [Security concept](docs/03-sicherheit.md) (German) · [Report vulnerabilities](SECURITY.md) · [Changelog](CHANGELOG.md)
+- [Operations/runbook + environment variable reference](docs/05-betrieb.md) (German) · [Architecture](docs/06-architektur.md) (German)
 - [Node design plan v1.6.1](docs/plaene/v1.6.1-knotendesign.md) (German) — map nodes per target design, with decisions, contrast values and implementation status
 - [Third-party components and licenses](THIRD_PARTY.md) — Cytoscape.js, Lucide icons, OUI list
 - [Privacy notice](docs/04-datenschutz.md) (German) — what data is collected, stored and sent externally, retention periods, privacy-friendly configuration
@@ -34,9 +35,9 @@ docker compose up -d --build
 
 **Applying changes to `docker-compose.yml` / `.env`:** running containers never pick up compose changes automatically. After editing, run `docker compose up -d` — compose recreates changed services. `docker compose restart` alone is not enough: env vars, ports and command stay old. After image code changes: `docker compose up -d --build`. Data lives in the `./data` volume (SQLite, logs, exports) and survives every recreate; `docker compose down -v` deletes it. Check effective config: `docker compose config`.
 
-Configuration via environment variables (`NETZ_*`, see `docker-compose.yml`) — defaults for fresh installs. Changeable at runtime without restart in **Settings**: subnets (incl. IPv6 CIDR), scan interval/timeout, ports (top-N/custom list), TR-064 (URL/URLs/user, TLS certificate check optionally off), SNMP (enabled/switches/community), alarm URLs (webhook/Gotify/Ntfy), history, retention, auto-export (on/interval/folder), mDNS, whitelist, sites, VPN address pool, theme, language, login on/off. **Secrets** (`NETZ_AUTH_PASS`, `NETZ_NOTIFY_*_TOKEN`) and deployment variables (`NETZ_DATA_DIR`, port, `TZ`) deliberately stay env-only in the compose file. `NETZ_FRITZ_PASS` is additionally changeable in Settings (write-only: never returned by `GET /api/settings`; empty = env default). Originally:
+Configuration via environment variables (`NETZ_*`, see `docker-compose.yml`) — defaults for fresh installs. Changeable at runtime without restart in **Settings**: subnets (incl. IPv6 CIDR), scan interval/timeout, ports (top-N/custom list), TR-064 (URL/URLs/user, TLS certificate check optionally off), SNMP (enabled/switches/community), alarm URLs (webhook/Gotify/Ntfy), history, retention, auto-export (on/interval/folder), mDNS, whitelist, sites, VPN address pool, theme, language. **Env-only** stay the deployment variables (`NETZ_DATA_DIR`, port, `TZ`) and `NETZ_AUTH_ENABLED`/`NETZ_AUTH_USER`/`NETZ_AUTH_PASS` (the login switch is not changeable via the UI, E-2). **Secrets** (`NETZ_FRITZ_PASS`, `NETZ_SNMP_COMMUNITY`, `NETZ_NOTIFY_*_TOKEN`) are changeable in Settings as write-only secret fields (GET returns only `{"configured": true}`, empty = delete). Full reference of all `NETZ_*` variables: [docs/05-betrieb.md §7](docs/05-betrieb.md#7-umgebungsvariablen). Originally:
 `NETZ_SUBNETS` (comma-separated, IPv4 + IPv6 CIDRs, empty = local subnet; IPv6 discovery in large networks via ff02::1 multicast + NDP + SLAAC/EUI-64 probe + DNS AAAA + gateway, in small ones additionally a sweep), `NETZ_SITES` (sites as `Name:subnet[,subnet]; Name2:subnet2` — display/filter/export, e.g. `Home:192.0.2.0/24; Remote:198.51.100.0/24`), `NETZ_SCAN_INTERVAL` (seconds, default 900),
-`NETZ_PORT_TOP` (top-N ports, 0 = all), `NETZ_FRITZ_URL/USER/PASS` (TR-064, main device), `NETZ_FRITZ_URLS` (additional TR-064 endpoints, comma-separated, e.g. repeaters — their WLAN clients are assigned to the respective device), `NETZ_TR064_INSECURE_TLS` (TR-064 over HTTPS: set `NETZ_FRITZ_URL=https://…:49443`; disables the TLS certificate check **only for TR-064** so the self-signed FRITZ!Box certificate is accepted — default `false` = check on; **enable only in your own LAN**, MITM risk, logged as WARN on every scan; **port note:** HTTPS runs on **49443**, not 49000 — `https://…:49000` → `SSL: WRONG_VERSION_NUMBER`, automatic http fallback for hosts/WAN/mesh + log hint),
+`NETZ_PORT_TOP` (top-N ports, 0 = all), `NETZ_FRITZ_URL/USER/PASS` (TR-064, main device), `NETZ_FRITZ_URLS` (additional TR-064 endpoints, comma-separated, e.g. repeaters — their WLAN clients are assigned to the respective device), `NETZ_TR064_INSECURE_TLS` (TR-064 over HTTPS: set `NETZ_FRITZ_URL=https://…:49443`; disables the TLS certificate check **only for TR-064** so the self-signed FRITZ!Box certificate is accepted — default `false` = check on; **enable only in your own LAN**, MITM risk, logged as WARN on every scan; **port note:** HTTPS runs on **49443**, not 49000 — `https://…:49000` → `SSL: WRONG_VERSION_NUMBER`, http fallback for hosts/WAN/mesh with WARN per run + port hint 49443, residual risk see docs/03-sicherheit.md §4),
 `NETZ_SNMP_ENABLED/COMMUNITY/SWITCHES`, `NETZ_AUTH_ENABLED/USER/PASS`, `NETZ_NOTIFY_*`, `NETZ_HISTORY_HOURS`, `NETZ_DEVICE_RETENTION_DAYS` (delete offline devices after N days, default 30, 0 = never), `NETZ_EVENT_RETENTION_DAYS` (delete events after N days, default 90, 0 = never), `NETZ_SNMP_COMMUNITY` has had no default since v1.6.0 (no SNMP without a community), `NETZ_THEME`, `NETZ_LANG` (UI language: de/en/fr/es/it/pt, default de; switchable in the header, storable in Settings, embed via `?lang=`), `NETZ_AUTO_EXPORT`/`NETZ_AUTO_EXPORT_DIR`/`NETZ_AUTO_EXPORT_INTERVAL_HOURS` (auto-export, default every 24 h, 0 = after every scan), `NETZ_MDNS_ENABLED` (mDNS name resolution as DNS fallback, default on), `NETZ_OUI_ONLINE_ENABLED/MAX/URL` (online OUI fallback: look up vendors of unknown MACs online, **default off** since v1.5.0 — MAC prefixes would go to a third party, max 10 lookups/scan, cached in `oui_cache`), `NETZ_ALARM_WHITELIST` (MACs/IPs, comma-separated, that never trigger a "new device" alarm), `NETZ_EMBED_ANCESTORS` (pages allowed to embed `/embed` via iframe, CSP syntax, default `*`, e.g. `https://wiki.example.org`), `NETZ_COOKIE_SECURE` (`auto`/`true`/`false`, Secure flag of the session cookie, default `auto` = on HTTPS), `NETZ_VPN_POOL` (VPN address pool for flagging VPN clients, default `off` = no assumption; `auto` = FRITZ! convention: last octet ≥ 201 in the gateway's /24, alternatively CIDRs/ranges `a-b` comma-separated; TR-064 additionally detects VPN clients via interface type "VPN" — VPN devices get a VPN badge and never trigger a "new device" alarm; recommendation: `auto` for FRITZ!Box VPN clients (.201+ in the gateway /24), own VPN subnet as CIDR (e.g. `192.168.179.0/24`); with TR-064 configured and `off`, `auto` is applied automatically). `NETZ_SQLITE_JOURNAL` (`auto`/`wal`/`delete`, default `auto`: WAL is probed with a real write, automatic fallback to `delete` on `disk I/O error`).
 
 The scanner container runs in host network mode (`network_mode: host`) so MAC addresses can be resolved via ARP. Data lives in `./data` (SQLite + exports).
@@ -51,7 +52,7 @@ Update the OUI database: `python scripts/update_oui.py ./data` (downloads the IE
 
 ## Releases
 
-- The version lives in `app/__init__.py` (`__version__`), `pyproject.toml` and `app/config.py` (`app_version`). Current: **v1.6.4**
+- The version lives centrally in `app/__init__.py` (`__version__`); `pyproject.toml` (Hatch) and `app/config.py` (`app_version`) read it from there. Stale versions in the README are rejected by `tests/test_docs.py`
 - SemVer since v1.0.0: releases are tags `vMAJOR.MINOR.PATCH` (e.g. `v1.0.0`, `v1.1.0`, `v2.0.0`) on `main`
 - Push a tag (`git tag v1.1.0 && git push origin v1.1.0`) → workflow `release.yml` runs tests (ruff + pytest + UI-DOM), builds the multi-arch image (amd64/arm64), scans it with Trivy, publishes it to the GitHub Container Registry and creates a GitHub release with SBOM (CycloneDX, SPDX) and Trivy report
 - The tag must match `app.__version__`, otherwise the release fails
@@ -62,21 +63,16 @@ Update the OUI database: `python scripts/update_oui.py ./data` (downloads the IE
 Instead of building locally, use the published image (`linux/amd64`, `linux/arm64`):
 
 ```bash
-docker pull ghcr.io/kaidewitzka/fox_netmap:latest     # or :1.6.4, :1.6, :1
+docker pull ghcr.io/kaidewitzka/fox_netmap:latest     # or :<X.Y.Z> (specific release), :1.6, :1
 ```
 
-Tags: `X.Y.Z`, `X.Y`, `X`, `latest`, `main` and `sha-<commit>`. The package is **public** — `docker pull` works without login. In `docker-compose.yml`, replace `build: .` with `image: ghcr.io/kaidewitzka/fox_netmap:1.6.4` in both services, then `docker compose pull && docker compose up -d`.
+Tags: `X.Y.Z`, `X.Y`, `X`, `latest`, `main` and `sha-<commit>`. The package is **public** — `docker pull` works without login. In `docker-compose.yml`, replace `build: .` with `image: ghcr.io/kaidewitzka/fox_netmap:<X.Y.Z>` in both services, then `docker compose pull && docker compose up -d`.
 
-Verify provenance: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_netmap:1.6.4 --format '{{json .Provenance}}'` (provenance and SBOM attestations are attached to the image).
+Verify provenance: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_netmap:<X.Y.Z> --format '{{json .Provenance}}'` (provenance and SBOM attestations are attached to the image).
 
 ## Supply chain
 
-- **Dependencies hash-pinned:** `requirements.in` / `requirements-dev.in` hold the allowed version ranges, `requirements.txt` / `requirements-dev.txt` the exact resolved versions with SHA-256 (install with `--require-hashes`). Update:
-  ```bash
-  pip install pip-tools
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements.txt requirements.in
-  pip-compile --generate-hashes --allow-unsafe --strip-extras -o requirements-dev.txt requirements-dev.in
-  ```
+- **Dependencies hash-pinned:** `pyproject.toml` holds the allowed version ranges (`dependencies` + `dependency-groups`), `uv.lock` the exact resolved versions with hashes (`uv sync --frozen` installs only from it; Dockerfile and CI use `uv.lock` as well). Update: `uv lock --upgrade`.
 - **Base image and GitHub Actions pinned by digest/SHA**, Trivy runs via `scripts/trivy.sh` from a pinned image.
 - **Trivy gate:** CI and release fail on `CRITICAL`/`HIGH` findings with an available fix. Exceptions only with justification in `.trivyignore`. Locally: `scripts/trivy.sh image <image>` (requires Docker).
 - **Dependabot** (`.github/dependabot.yml`) proposes weekly updates for pip, npm, the Docker base image and actions; `image-scan.yml` re-checks `latest` every Monday.
@@ -85,7 +81,8 @@ Verify provenance: `docker buildx imagetools inspect ghcr.io/kaidewitzka/fox_net
 ## Development
 
 ```bash
-pip install --require-hashes --no-deps -r requirements-dev.txt
+uv sync                 # venv from uv.lock (versions + hashes pinned), dev group included
+bash scripts/gate.sh    # ruff + format + mypy + pytest+cov + UI-DOM + eslint + pip-audit in one run
 ruff check .
 python -m pytest -q
 npm ci && node tests/ui_dom_check.mjs   # UI DOM audit (jsdom)

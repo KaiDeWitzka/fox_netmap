@@ -1,6 +1,6 @@
 # fox_netmap – Sicherheitskonzept
 
-Stand: v1.6.1. Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
+Stand: November 2026 (App-Version: `app/__init__.py` bzw. `/api/meta`). Dieses Dokument beschreibt die umgesetzten Schutzmaßnahmen, ihren Bezug zum
 BSI IT-Grundschutz und die bekannten Restrisiken. Es wird mit jedem sicherheitsrelevanten
 Release fortgeschrieben.
 
@@ -13,14 +13,22 @@ Schutzbedarf: **normal bis hoch** für Vertraulichkeit, normal für Integrität 
 
 Betrachtete Angreifer:
 
-| Angreifer | Beispiel | Relevante Maßnahmen |
-|---|---|---|
-| Gerät im eigenen Netz | kompromittiertes IoT-Gerät setzt einen präparierten mDNS-/DHCP-Hostnamen | Ausgabe-Escaping, CSP |
-| Fremde Webseite | bindet die UI per iframe ein (Clickjacking) oder liest Embed-Token über den Referer | `frame-ancestors`, `X-Frame-Options`, `Referrer-Policy` |
-| Netzteilnehmer ohne Zugang | probiert Passwörter durch | Login-Drosselung, PBKDF2 |
-| Dritter Online-Dienst | liefert manipulierte Herstellernamen (OUI-Lookup) | Ausgabe-Escaping, CSP |
+| Angreifer                  | Beispiel                                                                            | Relevante Maßnahmen                                     |
+| -------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Gerät im eigenen Netz      | kompromittiertes IoT-Gerät setzt einen präparierten mDNS-/DHCP-Hostnamen            | Ausgabe-Escaping, CSP                                   |
+| Fremde Webseite            | bindet die UI per iframe ein (Clickjacking) oder liest Embed-Token über den Referer | `frame-ancestors`, `X-Frame-Options`, `Referrer-Policy` |
+| Netzteilnehmer ohne Zugang | probiert Passwörter durch                                                           | Login-Drosselung, PBKDF2                                |
+| Dritter Online-Dienst      | liefert manipulierte Herstellernamen (OUI-Lookup)                                   | Ausgabe-Escaping, CSP                                   |
 
 ## 2. Umgesetzte Maßnahmen
+
+**Öffentliche Endpunkte (ohne Anmeldung, S-10):** `GET /api/health` (liefert nur
+`{"status": "ok"}`, keine Metadaten), `POST /api/login`, `GET /api/categories`, `/embed` (nur mit
+gültigem Token), die statischen Dateien und `/login`. Die Token-Pfade (`/api/devices`,
+`/api/device/{mac}`, `/api/export/*`, `/api/meta`, `/api/sites`, `/api/scan/status`) brauchen eine
+Sitzung **oder** einen gültigen Embed-Token — `/api/meta` liefert WAN-IP, Gateway und Version und
+ist deshalb nicht öffentlich. `/docs` und `/openapi.json` sind abgeschaltet (D-3, siehe
+`docs/entscheidungen.md`).
 
 ### 2.1 Ausgabe-Escaping (seit v1.4.1)
 
@@ -34,14 +42,14 @@ beschränkt. Regel für Beiträge: **kein `innerHTML` ohne `esc()`.** Der UI-Tes
 
 Gesetzt durch `app/security.py` auf **allen** Antworten (auch 401/303):
 
-| Header | Wert | Zweck |
-|---|---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` | Zweite Verteidigungslinie gegen XSS; kein Inline-JS, keine fremden Skripte |
-| `X-Frame-Options` | `DENY` (nicht bei `/embed`) | Clickjacking-Schutz für ältere Browser |
-| `Referrer-Policy` | `no-referrer` | Embed-Token in der URL fließt nicht an verlinkte Seiten ab |
-| `X-Content-Type-Options` | `nosniff` | Kein MIME-Sniffing |
-| `Permissions-Policy` | Kamera, Mikrofon, Standort, Payment, USB aus | Minimalprinzip |
-| `Cross-Origin-Opener-Policy` | `same-origin` | Isolation gegenüber geöffneten Fenstern |
+| Header                       | Wert                                                                                                                                                                                                      | Zweck                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `Content-Security-Policy`    | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'` | Zweite Verteidigungslinie gegen XSS; kein Inline-JS, keine fremden Skripte |
+| `X-Frame-Options`            | `DENY` (nicht bei `/embed`)                                                                                                                                                                               | Clickjacking-Schutz für ältere Browser                                     |
+| `Referrer-Policy`            | `no-referrer`                                                                                                                                                                                             | Embed-Token in der URL fließt nicht an verlinkte Seiten ab                 |
+| `X-Content-Type-Options`     | `nosniff`                                                                                                                                                                                                 | Kein MIME-Sniffing                                                         |
+| `Permissions-Policy`         | Kamera, Mikrofon, Standort, Payment, USB aus                                                                                                                                                              | Minimalprinzip                                                             |
+| `Cross-Origin-Opener-Policy` | `same-origin`                                                                                                                                                                                             | Isolation gegenüber geöffneten Fenstern                                    |
 
 `style-src 'unsafe-inline'` ist nötig, weil Cytoscape und die Spaltenbreiten der Tabelle
 Inline-Styles setzen. Styles können kein JavaScript ausführen; das Restrisiko ist gering.
@@ -60,8 +68,13 @@ Einbettungen). Empfehlung: auf die eigenen Seiten einschränken, z. B.
 - Bewusst **nicht** pro Benutzer allein, damit ein Angreifer den Admin nicht netzweit aussperren kann.
 - Erfolgreicher Login setzt den Zähler für IP+Benutzer zurück. Fehlversuche werden mit IP geloggt.
 - Zustand nur im Speicher; ein Neustart setzt die Sperren zurück.
-- Hinter einem Reverse Proxy sieht fox_netmap nur die Proxy-IP; `X-Forwarded-For` wird bewusst
-  nicht ausgewertet (fälschbar). Dann greift faktisch die Grenze pro Benutzer über alle Clients.
+- `X-Forwarded-For` wird standardmäßig **nicht** ausgewertet (`proxy_headers` aus, S-13), weil der
+  Header fälschbar ist. Nur mit `NETZ_FORWARDED_ALLOW_IPS=<Proxy-IPs>` vertraut uvicorn dem Header
+  (`app/__main__.py`).
+- Hinter einem Reverse Proxy ohne `NETZ_FORWARDED_ALLOW_IPS` sieht fox_netmap nur die Proxy-IP —
+  beide IP-Grenzen greifen dann faktisch **global** für alle Clients hinter dem Proxy: Ein Angreifer
+  kann über die Proxy-IP kurzzeitig alle Benutzer sperren (15 Minuten; ein Neustart setzt zurück).
+  Wer echte Client-IPs in der Sperre braucht, setzt `NETZ_FORWARDED_ALLOW_IPS` auf die Proxy-IPs.
 
 ### 2.4 Passwort-Hash und Sessions (seit v1.5.0)
 
@@ -80,14 +93,17 @@ Einbettungen). Empfehlung: auf die eigenen Seiten einschränken, z. B.
 
 ### 2.5 Container-Härtung (seit v1.5.0)
 
-| Maßnahme | Web-Oberfläche (`netmap`) | Scanner (`netmap-scanner`) |
-|---|---|---|
-| Benutzer | UID/GID 10001 | UID/GID 10001 |
-| Capabilities (Bounding-Set) | keine | nur `NET_RAW` (für ping) |
-| `no-new-privileges` | ja | nein – ping erhält `NET_RAW` über eine Datei-Capability |
-| Root-Dateisystem | schreibgeschützt, `/tmp` als tmpfs | schreibgeschützt, `/tmp` als tmpfs |
-| Netzwerk | Bridge, nur Port 8399 | Host-Netzwerk (nötig für ARP/NDP) |
-| Healthcheck | `GET /api/health` | Scan-Schleife darf nicht > 5 min überfällig sein |
+| Maßnahme                    | Web-Oberfläche (`netmap`)          | Scanner (`netmap-scanner`)                              |
+| --------------------------- | ---------------------------------- | ------------------------------------------------------- |
+| Benutzer                    | UID/GID 10001                      | UID/GID 10001                                           |
+| Capabilities (Bounding-Set) | keine                              | nur `NET_RAW` (für ping)                                |
+| `no-new-privileges`         | ja                                 | nein – ping erhält `NET_RAW` über eine Datei-Capability |
+| Root-Dateisystem            | schreibgeschützt, `/tmp` als tmpfs | schreibgeschützt, `/tmp` als tmpfs                      |
+| Netzwerk                    | Bridge, nur Port 8399              | Host-Netzwerk (nötig für ARP/NDP)                       |
+| Healthcheck                 | `GET /api/health`                  | Scan-Schleife darf nicht > 5 min überfällig sein        |
+
+**Dateirechte im Daten-Volume (S-17):** `umask 0o077` beim Start — `netmap.db`, `netmap.log`,
+Exporte und `initial-admin-password.txt` sind `0600` (nur Besitzer UID 10001).
 
 Ablauf: Der Container startet als root nur für den Entrypoint (`docker/entrypoint.sh`). Dieser übergibt
 Bestandsdaten im Daten-Volume einmalig an UID 10001 (Upgrade von v1.4.x), entfernt alle nicht benötigten
@@ -102,35 +118,46 @@ sendet der Scanner die ersten drei Bytes unbekannter MAC-Adressen an den konfigu
 (Default `https://api.macvendors.com`). Wer die Funktion bereits in den Einstellungen gespeichert
 hatte, behält seine Wahl. Ohne Online-Abfrage nutzt fox_netmap nur die lokale OUI-Datenbank.
 
+**Gespeicherte Zugangsdaten:** `fritz_pass`, `snmp_community` und die `notify_*_token` liegen im
+Klartext in `netmap.db` (Dateirechte `0600`, siehe 2.5) bzw. als Umgebungsvariable; die API liefert
+sie nie aus (S-8, siehe 2.8).
+
 ### 2.7 Eingabeprüfung
 
 - Login: Benutzername max. 128, Passwort max. 1024 Zeichen (Schutz vor teuren PBKDF2-Läufen).
 - Gerätenotiz: max. 2000 Zeichen.
 - Einstellungen: Wertebereiche, IP/CIDR-Syntax, Export-Ordner nur relativ im Daten-Volume,
-  URLs nur `http(s)` (siehe `validate_settings` in `app/api.py`).
+  URLs nur `http(s)` (siehe `validate_patch` in `app/validation.py`, Quelle `app/settings_schema.py`).
 - SQL ausschließlich parametrisiert.
 
 ### 2.8 Bestehende Maßnahmen (vor v1.4.1)
 
 - Passwortvergleich zeitkonstant (`hmac.compare_digest`).
-- `GET /api/settings` liefert keine Secrets; FRITZ!Box-Passwort ist write-only.
-- Embed-Tokens: zufällig (192 Bit), ablauffähig, filterbar, nur lesend, in der DB nur als Hash (2.12).
+- `GET /api/settings` liefert **keine Secrets im Klartext** (S-8): Secret-Felder (`fritz_pass`,
+  `snmp_community`, `notify_*_token`) nur als `{"configured": true/false}`, `auth_pass` gar nicht;
+  ein leerer Wert beim PATCH löscht das Secret serverseitig. URLs mit Zugangsdaten (`user:pass@`)
+  werden abgelehnt.
+- Embed-Tokens: zufällig (192 Bit), ablauffähig, nur lesend, in der DB nur als Hash (2.12). Der
+  Token-Scope (Subnetz/Kategorie-Filter, S-1) gilt für Liste **und** Detail: `/api/device/{mac}`
+  außerhalb des Scopes antwortet `404` (nie `403`, damit nichts geleakt wird); eine Filter-Abfrage
+  außerhalb des Scopes liefert leere Treffer.
 - Die Web-Oberfläche läuft ohne Host-Netzwerk.
 
 ### 2.9 Lieferkette (Supply Chain, seit v1.5.1)
 
-| Maßnahme | Umsetzung |
-|---|---|
-| Hash-gepinnte Python-Abhängigkeiten | `requirements.txt` per `pip-compile --generate-hashes`; Installation in Image und CI nur mit `--require-hashes --no-deps` |
-| Gepinntes Basis-Image | `python:3.12-slim@sha256:…`; zusätzlich `apt-get upgrade` beim Build |
-| Gepinnte CI-Bausteine | Alle GitHub Actions per Commit-SHA (Versionskommentar dahinter), `npm ci` gegen `package-lock.json` |
-| Trivy ohne `trivy-action` | `scripts/trivy.sh` startet `ghcr.io/aquasecurity/trivy` per Digest. Hintergrund: Am 19.03.2026 wurden Tags von `trivy-action` und `setup-trivy` sowie das Binary v0.69.4 manipuliert ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23), CVE-2026-33634, [BSI-Warnung](https://www.bsi.bund.de/SharedDocs/Cybersicherheitswarnungen/DE/2026/2026-237970-1032.pdf?__blob=publicationFile&v=4)). Ein Digest kann nachträglich nicht umgebogen werden. |
-| Schwachstellen-Gate | CI (`docker`-Job) und Release brechen bei fixbaren `CRITICAL`/`HIGH`-Befunden ab; `trivy fs` prüft zusätzlich Dockerfile/Compose (Misconfig) und Secrets. Ausnahmen nur begründet in `.trivyignore` |
-| Scan pro Merge | `main-scan.yml` läuft bei jedem Push auf `main`: Image bauen, Trivy-Gate (CRITICAL/HIGH mit Fix), SBOM (CycloneDX/SPDX) + Trivy-Bericht als Artefakt (30 Tage), dann Multi-Arch-Push als `:main` / `:sha-<sha>` nach GHCR — nur nach grünem Gate |
-| Nachscan | `image-scan.yml` scannt `latest` **und** `main` wöchentlich gegen die aktuelle Schwachstellen-Datenbank |
-| SBOM | CycloneDX und SPDX (Trivy) je Merge als CI-Artefakt (`main-scan-<sha>`) und je Release als Anhang; zusätzlich BuildKit-SBOM- und Provenance-Attestierung (`mode=max`) am Image in GHCR. Orientierung: BSI TR-03183-2 (SBOM-Formate CycloneDX/SPDX) |
-| Updates | Dependabot wöchentlich für pip, npm, Docker, Actions; 7 Tage Cooldown gegen kurzlebige kompromittierte Releases |
-| Release-Integrität | Image wird nur aus Tags gebaut, die zur App-Version passen, und nur nach grünem Test- und Trivy-Lauf gepusht |
+| Maßnahme                            | Umsetzung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Hash-gepinnte Python-Abhängigkeiten | `uv.lock` (exakte Versionen + Hashes); Image und CI installieren nur daraus (`uv sync --frozen` / `uv run --frozen`)                                                                                                                                                                                                                                                                                                                                                                                   |
+| Gepinntes Basis-Image               | zweistufiges Dockerfile auf `python:3.12-slim@sha256:…` (kein `apt-get upgrade`)                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Gepinnte CI-Bausteine               | Alle GitHub Actions und `setup-uv` per Commit-SHA, `npm ci` gegen `package-lock.json`, Python-Matrix 3.12/3.13                                                                                                                                                                                                                                                                                                                                                                                         |
+| Trivy ohne `trivy-action`           | `scripts/trivy.sh` startet `ghcr.io/aquasecurity/trivy` per Digest. Hintergrund: Am 19.03.2026 wurden Tags von `trivy-action` und `setup-trivy` sowie das Binary v0.69.4 manipuliert ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23), CVE-2026-33634, [BSI-Warnung](https://www.bsi.bund.de/SharedDocs/Cybersicherheitswarnungen/DE/2026/2026-237970-1032.pdf?__blob=publicationFile&v=4)). Ein Digest kann nachträglich nicht umgebogen werden. |
+| Schwachstellen-Gate                 | CI (`docker`-Job) und Release brechen bei fixbaren `CRITICAL`/`HIGH`-Befunden ab; `trivy fs` prüft zusätzlich Dockerfile/Compose (Misconfig) und Secrets. Ausnahmen nur begründet in `.trivyignore`                                                                                                                                                                                                                                                                                                    |
+| Scan pro Merge                      | `main-scan.yml` läuft bei jedem Push auf `main`: Image bauen, Trivy-Gate (CRITICAL/HIGH mit Fix), SBOM (CycloneDX/SPDX) + Trivy-Bericht als Artefakt (30 Tage), dann Multi-Arch-Push als `:main` / `:sha-<sha>` nach GHCR — nur nach grünem Gate                                                                                                                                                                                                                                                       |
+| Nachscan                            | `image-scan.yml` scannt `latest` **und** `main` wöchentlich gegen die aktuelle Schwachstellen-Datenbank                                                                                                                                                                                                                                                                                                                                                                                                |
+| SBOM                                | CycloneDX und SPDX (Trivy) je Merge als CI-Artefakt (`main-scan-<sha>`) und je Release als Anhang; zusätzlich BuildKit-SBOM- und Provenance-Attestierung (`mode=max`) am Image in GHCR. Orientierung: BSI TR-03183-2 (SBOM-Formate CycloneDX/SPDX)                                                                                                                                                                                                                                                     |
+| Updates                             | Dependabot wöchentlich für pip, npm, Docker, Actions; 7 Tage Cooldown gegen kurzlebige kompromittierte Releases                                                                                                                                                                                                                                                                                                                                                                                        |
+| Release-Integrität                  | Image wird nur aus Tags gebaut, die zur App-Version passen, und nur nach grünem Test- und Trivy-Lauf gepusht                                                                                                                                                                                                                                                                                                                                                                                           |
+| Doku-Gate                           | `tests/test_docs.py` + `prettier --check` (Markdown) in `scripts/gate.sh`; die Umgebungsvariablen-Referenz wird aus `app/settings_schema.py` generiert (`scripts/gen_env_table.py`)                                                                                                                                                                                                                                                                                                                    |
 
 Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht verfügbar: Code-Scanning-Upload (SARIF) und GitHub-Artifact-Attestations. Ersatz: Berichte als Artefakt/Release-Anhang und BuildKit-Attestierungen in der Registry.
 
@@ -163,6 +190,8 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 - Vorhandene Klartext-Tokens werden beim Start einmalig gehasht (idempotente Migration). Bestehende Links bleiben
   gültig.
 - Bei 192 Bit Zufall reicht ein ungesalzener SHA-256; ein Wörterbuchangriff ist nicht möglich.
+- Das Klartext-Token wird im Zugriffslog geschwärzt (`token=***`, S-12; `install_access_log_filter` in
+  `app/logsetup.py`) — es landet also weder in `netmap.log` noch in Proxy-Logs.
 
 ### 2.13 Benachrichtigungen (seit v1.6.0)
 
@@ -209,35 +238,37 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
 
 ## 3. Bezug zum IT-Grundschutz
 
-| Baustein / Anforderung | Umsetzung |
-|---|---|
-| APP.3.1.A1 Authentisierung | Login mit Drosselung, Passwort-Hashing |
-| APP.3.1.A14 Schutz vertraulicher Daten | keine Secrets in API-Antworten, `no-referrer` |
-| APP.3.1.A21 Sichere HTTP-Konfiguration | Security-Header, CSP |
-| CON.10.A1 / A6 Webentwicklung: Ausgabe-Kodierung | `esc()`, `textContent`, UI-Test |
-| ORP.4.A13 Schutz gegen Brute Force | Login-Drosselung |
-| ORP.4.A8 Passwortgebrauch / Speicherung | PBKDF2 mit 600.000 Iterationen, Startpasswort nicht im Log |
-| SYS.1.6.A3 / A8 / A21 Container: Rechte, Ressourcen, Härtung | Nicht-root, minimale Capabilities, Read-only-Root-FS, Healthcheck |
-| DSGVO Art. 25 Privacy by Default | Online-Herstellerabfrage standardmäßig aus |
-| CON.8 Software-Entwicklung (A6 Bibliotheken aus vertrauenswürdigen Quellen, A20 Prüfung von Komponenten) | Hash-gepinnte Abhängigkeiten, Trivy-Gate, SBOM |
-| OPS.1.1.3 Patch- und Änderungsmanagement | Dependabot, wöchentlicher Nachscan, Patch-Releases |
-| SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung | Basis-Image per Digest, eigenes Image in GHCR mit Provenance |
-| APP.6 Allgemeine Software (Beschaffung, Inventar) | SBOM je Release, Lizenzhinweise in `THIRD_PARTY.md` |
-| CON.2 Datenschutz, CON.6 Löschen | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Löschfristen für Geräte, Verlauf und Ereignisse |
-| APP.3.1.A14 / CON.8 Schutz gespeicherter Zugangsdaten | Embed-Tokens nur als Hash, Gotify-Token im Header |
-| OPS.1.1.5 Protokollierung | Login-Erfolg/-Fehlschlag mit IP im Log |
+| Baustein / Anforderung                                                                                   | Umsetzung                                                                                               |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| APP.3.1.A1 Authentisierung                                                                               | Login mit Drosselung, Passwort-Hashing                                                                  |
+| APP.3.1.A14 Schutz vertraulicher Daten                                                                   | keine Secrets in API-Antworten, `no-referrer`                                                           |
+| APP.3.1.A21 Sichere HTTP-Konfiguration                                                                   | Security-Header, CSP                                                                                    |
+| CON.10.A1 / A6 Webentwicklung: Ausgabe-Kodierung                                                         | `esc()`, `textContent`, UI-Test                                                                         |
+| ORP.4.A13 Schutz gegen Brute Force                                                                       | Login-Drosselung                                                                                        |
+| ORP.4.A8 Passwortgebrauch / Speicherung                                                                  | PBKDF2 mit 600.000 Iterationen, Startpasswort nicht im Log                                              |
+| SYS.1.6.A3 / A8 / A21 Container: Rechte, Ressourcen, Härtung                                             | Nicht-root, minimale Capabilities, Read-only-Root-FS, Healthcheck                                       |
+| DSGVO Art. 25 Privacy by Default                                                                         | Online-Herstellerabfrage standardmäßig aus                                                              |
+| CON.8 Software-Entwicklung (A6 Bibliotheken aus vertrauenswürdigen Quellen, A20 Prüfung von Komponenten) | Hash-gepinnte Abhängigkeiten, Trivy-Gate, SBOM                                                          |
+| OPS.1.1.3 Patch- und Änderungsmanagement                                                                 | Dependabot, wöchentlicher Nachscan, Patch-Releases                                                      |
+| SYS.1.6.A6 / A12 Container-Images aus vertrauenswürdigen Quellen, Verteilung                             | Basis-Image per Digest, eigenes Image in GHCR mit Provenance                                            |
+| APP.6 Allgemeine Software (Beschaffung, Inventar)                                                        | SBOM je Release, Lizenzhinweise in `THIRD_PARTY.md`                                                     |
+| CON.2 Datenschutz, CON.6 Löschen                                                                         | [Datenschutzhinweis](04-datenschutz.md), Gerät löschen, Löschfristen für Geräte, Verlauf und Ereignisse |
+| APP.3.1.A14 / CON.8 Schutz gespeicherter Zugangsdaten                                                    | Embed-Tokens nur als Hash, Gotify-Token im Header                                                       |
+| OPS.1.1.5 Protokollierung                                                                                | Login-Erfolg/-Fehlschlag mit IP im Log                                                                  |
 
 ## 4. Bekannte Restrisiken
 
-| Risiko | Bewertung / geplante Maßnahme |
-|---|---|
-| Embed-Token in der URL | Nötig, damit ein iframe ohne Login funktioniert. `no-referrer` verhindert den Abfluss über den Referer; Tokens laufen ab und sind nur lesend. In der DB liegt nur der Hash (2.12) |
-| SNMPv2c ohne Verschlüsselung | Die Community geht im Klartext durchs Netz. Nur Read-only-Community verwenden, SNMPv3 ist nicht umgesetzt |
-| Sessions nur im Speicher | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte |
-| Scanner ohne `no-new-privileges` | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt |
-| `style-src 'unsafe-inline'` in der CSP | Nötig für Cytoscape; Styles können kein JavaScript ausführen |
-| Paket in GHCR privat | Solange das Repository privat ist; Pull nur mit Token (`read:packages`). Für eine Runtipi-App müsste das Paket öffentlich werden |
-| Fixlose Schwachstellen im Basis-Image | Werden gemeldet, aber nicht als Gate gewertet (`--ignore-unfixed`); Abhilfe über Dependabot-Digest-Updates |
+| Risiko                                               | Bewertung / geplante Maßnahme                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Embed-Token in der URL                               | Nötig, damit ein iframe ohne Login funktioniert. `no-referrer` verhindert den Abfluss über den Referer; im Zugriffslog wird es geschwärzt (S-12); Tokens laufen ab und sind nur lesend. In der DB liegt nur der Hash (2.12)                                                                                                                                                                                                                                                                                           |
+| TR-064 HTTPS→HTTP-Fallback (S-2, Entscheidung E-3=C) | Bei jedem TLS-Fehler fällt der TR-064-Abruf (Hosts/WAN/Mesh) auf Klartext-HTTP zurück und loggt **WARN je Lauf mit Port-Hinweis 49443**. Digest-Anmeldedaten gehen dann unverschlüsselt durchs LAN. Das Restrisiko trägt, wer den Downgrade aktiv nutzt (z. B. Port 49000 statt 49443, oder ein Angreifer, der TLS blockiert). Empfehlung: HTTPS auf 49443 mit `NETZ_TR064_INSECURE_TLS=true` (nur eigenes LAN). E-3=C (Kais Wahl, abweichend von Empfehlung B): Fallback bleibt mit WARN je Lauf, kein Code-Eingriff |
+| Öffentliche Endpunkte                                | `/api/health` liefert nur `{"status": "ok"}` (S-10); `/api/meta` (WAN-IP, Gateway, Version) braucht Login oder Token; `/docs`/`/openapi.json` sind abgeschaltet (D-3)                                                                                                                                                                                                                                                                                                                                                 |
+| SNMPv2c ohne Verschlüsselung                         | Die Community geht im Klartext durchs Netz. Nur Read-only-Community verwenden, SNMPv3 ist nicht umgesetzt                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Sessions nur im Speicher                             | Bewusst: Neustart meldet alle ab, keine Session-Daten auf der Platte                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Scanner ohne `no-new-privileges`                     | Nötig für ping; Bounding-Set auf `NET_RAW` begrenzt                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `style-src 'unsafe-inline'` in der CSP               | Nötig für Cytoscape; Styles können kein JavaScript ausführen                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Paket in GHCR privat                                 | Solange das Repository privat ist; Pull nur mit Token (`read:packages`). Für eine Runtipi-App müsste das Paket öffentlich werden                                                                                                                                                                                                                                                                                                                                                                                      |
+| Fixlose Schwachstellen im Basis-Image                | Werden gemeldet, aber nicht als Gate gewertet (`--ignore-unfixed`); Abhilfe über Dependabot-Digest-Updates                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ## 5. Sicherheitslücken melden
 

@@ -6,6 +6,8 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+.hypothesis/
+.coverage
 .ruff_cache/
 *.db
 *.db-wal

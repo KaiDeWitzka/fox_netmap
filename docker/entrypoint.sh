@@ -9,6 +9,8 @@
 # Läuft der Container bereits als Nicht-root (z. B. `user:` in Compose/Runtipi), wird direkt gestartet.
 set -eu
 
+umask 077  # S-17: neue Dateien im Daten-Volume nur fuer den App-Benutzer
+
 APP_UID="${APP_UID:-10001}"
 APP_GID="${APP_GID:-10001}"
 DATA_DIR="${NETZ_DATA_DIR:-/data}"
@@ -19,7 +21,12 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 mkdir -p "$DATA_DIR"
-if [ -n "$(find "$DATA_DIR" \( ! -user "$APP_UID" -o ! -group "$APP_GID" \) -print -quit 2>/dev/null)" ]; then
+# SF-7: Fehler der Rechtepruefung (z. B. NFS root_squash) sichtbar melden statt still zu uebergehen
+probe_out="$(find "$DATA_DIR" \( ! -user "$APP_UID" -o ! -group "$APP_GID" \) -print -quit 2>/tmp/fox_netmap_find.err)" || {
+    echo "[fox_netmap] WARN: Rechtepruefung in $DATA_DIR fehlgeschlagen ($(cat /tmp/fox_netmap_find.err 2>/dev/null)) - chown wird uebersprungen" >&2
+    probe_out=""
+}
+if [ -n "$probe_out" ]; then
     echo "[fox_netmap] Uebernehme Dateien in $DATA_DIR fuer UID $APP_UID (einmalig nach Upgrade)"
     chown -R "$APP_UID:$APP_GID" "$DATA_DIR"
 fi

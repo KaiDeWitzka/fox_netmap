@@ -8,14 +8,18 @@ import hmac
 import logging
 import os
 import secrets
+import sqlite3
 import threading
 import time
+from contextlib import suppress
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import db
+from .config import Settings
 
 log = logging.getLogger("fox_netmap")
 
@@ -119,7 +123,9 @@ def is_valid_session(token: str | None) -> bool:
     if not token:
         return False
     entry = SESSIONS.get(token)
-    return bool(entry) and entry[1] > now
+    if entry is None:
+        return False
+    return entry[1] > now
 
 
 def _cookie_secure(request: Request) -> bool:
@@ -135,10 +141,10 @@ def _cookie_secure(request: Request) -> bool:
 
 # --- Initialer Benutzer -------------------------------------------------------------------------
 
-INITIAL_PASSWORD_FILE = "initial-admin-password.txt"
+INITIAL_PASSWORD_FILE = "initial-admin-password.txt"  # noqa: S105 - Dateiname, kein Passwort
 
 
-def ensure_default_user(conn, settings) -> None:
+def ensure_default_user(conn: sqlite3.Connection, settings: Settings) -> None:
     """Legt den Admin an bzw. setzt sein Passwort aus NETZ_AUTH_PASS.
 
     Ohne NETZ_AUTH_PASS wird nur beim allerersten Start ein Zufallspasswort erzeugt und in
@@ -148,7 +154,11 @@ def ensure_default_user(conn, settings) -> None:
     password = settings.auth_pass
     existing = db.get_user(conn, settings.auth_user)
     if password:
-        if existing is None or not verify_password(password, existing["pass_hash"]) or needs_rehash(existing["pass_hash"]):
+        if (
+            existing is None
+            or not verify_password(password, existing["pass_hash"])
+            or needs_rehash(existing["pass_hash"])
+        ):
             db.ensure_user(conn, settings.auth_user, hash_password(password), db.utcnow())
         _remove_initial_password_file(settings.data_dir)
     elif existing is None:
@@ -174,10 +184,8 @@ def _write_initial_password_file(data_dir: str, username: str, password: str) ->
 
 
 def _remove_initial_password_file(data_dir: str) -> None:
-    try:
+    with suppress(FileNotFoundError):
         os.remove(os.path.join(data_dir, INITIAL_PASSWORD_FILE))
-    except FileNotFoundError:
-        pass
 
 
 # --- Endpunkte ----------------------------------------------------------------------------------
@@ -189,13 +197,25 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/api/login")
-def login(body: LoginRequest, request: Request, response: Response):
+def login(
+    body: LoginRequest, request: Request, response: Response
+) -> Any:  # Any: FastAPI baut aus Union[Response, dict] kein response_model
     throttle = request.app.state.login_throttle
     client_ip = request.client.host if request.client else "unknown"
     wait = throttle.retry_after(client_ip, body.username)
     if wait:
-        log.warning("Login gesperrt (zu viele Fehlversuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
-        return JSONResponse({"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)})
+        # S-5: bei aktiver Sperre wird das Passwort trotzdem geprueft - ein richtiges kommt durch
+        # (sonst sperrt ein Angreifer hinter einem gemeinsamen Proxy alle aus). Die Kosten begrenzen
+        # die Drossel: ohne Reservierung laeuft kein Hash.
+        if not throttle.try_acquire_unlocked(client_ip, body.username):
+            log.warning("Login gesperrt (zu viele Fehlversuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
+            return JSONResponse(
+                {"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)}
+            )
+    elif not throttle.try_acquire(client_ip, body.username):
+        # S-4: Limit (inkl. laufender Versuche) erreicht - ohne Hash ablehnen
+        log.warning("Login gedrosselt (zu viele Versuche) fuer IP %s, Benutzer '%s'", client_ip, body.username)
+        return JSONResponse({"detail": "too many failed attempts"}, status_code=429)
     conn = db.connect(request.app.state.db_path)
     try:
         user = db.get_user(conn, body.username)
@@ -208,20 +228,32 @@ def login(body: LoginRequest, request: Request, response: Response):
     finally:
         conn.close()
     if not ok:
-        throttle.register_failure(client_ip, body.username)
+        throttle.release(client_ip, body.username, success=False)
         log.warning("Login fehlgeschlagen fuer Benutzer '%s' von IP %s", body.username, client_ip)
+        if wait:
+            return JSONResponse(
+                {"detail": "too many failed attempts"}, status_code=429, headers={"Retry-After": str(wait)}
+            )
         return JSONResponse({"detail": "invalid credentials"}, status_code=401)
-    throttle.register_success(client_ip, body.username)
+    # S-5: richtiges Passwort ist auch waehrend einer Sperre gueltig (sonst sperrt ein Angreifer
+    # hinter einem gemeinsamen Proxy alle aus); register_success hebt die Sperre auf
+    throttle.release(client_ip, body.username, success=True)
     log.info("Login ok: %s", body.username)
     token = create_session(body.username)
     response.set_cookie(
-        "fox_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL, secure=_cookie_secure(request), path="/"
+        "fox_session",
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_TTL,
+        secure=_cookie_secure(request),
+        path="/",
     )
     return {"ok": True, "username": body.username}
 
 
 @router.post("/api/logout")
-def logout(request: Request, response: Response):
+def logout(request: Request, response: Response) -> dict[str, Any]:
     with _sessions_lock:
         SESSIONS.pop(request.cookies.get("fox_session", ""), None)
     response.delete_cookie("fox_session", path="/", httponly=True, samesite="lax", secure=_cookie_secure(request))
@@ -229,7 +261,7 @@ def logout(request: Request, response: Response):
 
 
 @router.get("/api/me")
-def me(request: Request):
+def me(request: Request) -> Any:  # Any: 401 als JSONResponse, sonst dict - kein response_model
     token = request.cookies.get("fox_session")
     entry = SESSIONS.get(token or "")
     if not is_valid_session(token) or entry is None:

@@ -1,7 +1,7 @@
 """Sicherheits- und Datenschutzpunkte v1.6.0: Ereignis-Loeschfrist, Gotify-Header, gehashte Embed-Tokens, SNMP ohne Default."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app import db
 from app.config import Settings
@@ -9,7 +9,7 @@ from app.scanner import notify, run
 
 
 def _ts(days_ago: float) -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat(timespec="seconds")
+    return (datetime.now(UTC) - timedelta(days=days_ago)).isoformat(timespec="seconds")
 
 
 def _conn(tmp_path):
@@ -19,6 +19,7 @@ def _conn(tmp_path):
 
 
 # ---- Ereignisse ----
+
 
 def test_ereignisse_aktiver_geraete_werden_nach_frist_geloescht(tmp_path):
     conn = _conn(tmp_path)
@@ -45,6 +46,7 @@ def test_apply_scan_wendet_frist_an(tmp_path):
 
 
 def test_standard_frist_90_tage():
+    # T-8 (W6): billiger Wachposten - Konstanten-Check, kein Verhaltenstest
     assert Settings().event_retention_days == 90
 
 
@@ -56,6 +58,7 @@ def test_settings_api_frist(auth_client):
 
 
 # ---- Gotify ----
+
 
 class _Resp:
     def __init__(self, code=200):
@@ -79,8 +82,11 @@ def test_benachrichtigungsfehler_ohne_geheimnisse_im_log(monkeypatch, caplog):
         raise RuntimeError(f"connect failed {url} {kw.get('headers')}")
 
     monkeypatch.setattr(notify.httpx, "post", boom)
-    s = Settings(notify_gotify="https://gotify.local", notify_gotify_token="geheim123",
-                 notify_webhook="https://hook.local/x?key=hooksecret")
+    s = Settings(
+        notify_gotify="https://gotify.local",
+        notify_gotify_token="geheim123",
+        notify_webhook="https://hook.local/x?key=hooksecret",
+    )
     with caplog.at_level(logging.WARNING, logger="netmap.notify"):
         notify.notify_new_devices(s, [{"mac": "aa:bb:cc:dd:ee:ff", "ip": "10.0.0.5"}])
     assert "Gotify-Benachrichtigung fehlgeschlagen: RuntimeError" in caplog.text
@@ -95,6 +101,7 @@ def test_benachrichtigung_http_fehler_wird_gemeldet(monkeypatch, caplog):
 
 
 # ---- Embed-Tokens ----
+
 
 def test_token_nur_als_hash_gespeichert(auth_client, app):
     tok = auth_client.post("/api/tokens", json={"expires_hours": 24}).json()["token"]
@@ -111,7 +118,9 @@ def test_token_nur_als_hash_gespeichert(auth_client, app):
 
 def test_alte_klartext_tokens_werden_migriert(tmp_path):
     conn = _conn(tmp_path)
-    conn.execute("INSERT INTO embed_tokens (token, expires, subnets, categories, created) VALUES ('altestoken123', '', '', '', 'x')")
+    conn.execute(
+        "INSERT INTO embed_tokens (token, expires, subnets, categories, created) VALUES ('altestoken123', '', '', '', 'x')"
+    )
     conn.commit()
     db.init_db(conn)
     row = conn.execute("SELECT token, hint FROM embed_tokens").fetchone()
@@ -128,6 +137,7 @@ def test_leeres_token_ungueltig(tmp_path):
 
 # ---- SNMP ----
 
+
 def test_snmp_ohne_community_wird_uebersprungen(tmp_path, monkeypatch, caplog):
     assert Settings().snmp_community == ""
     conn = _conn(tmp_path)
@@ -137,12 +147,18 @@ def test_snmp_ohne_community_wird_uebersprungen(tmp_path, monkeypatch, caplog):
 
     monkeypatch.setattr(run.snmp, "cam_map", nie)
     monkeypatch.setattr(run.snmp, "lldp_map", nie)
-    monkeypatch.setattr(run.discover, "discover", lambda subnets, timeout: [{"ip": "10.0.0.2", "mac": "aa:aa:aa:aa:aa:02", "source": "ping"}])
+    monkeypatch.setattr(
+        run.discover,
+        "discover",
+        lambda subnets, timeout: [{"ip": "10.0.0.2", "mac": "aa:aa:aa:aa:aa:02", "source": "ping"}],
+    )
     monkeypatch.setattr(run.ports, "scan_ports", lambda *a, **k: [{"port": 161}])
     monkeypatch.setattr(run.names, "resolve_all", lambda ips_, use_mdns=False: {})
     monkeypatch.setattr(run.topology, "gateway_ip", lambda: "10.0.0.1")
     monkeypatch.setattr(run.topology, "gateway_ip6", lambda: "")
-    s = Settings(data_dir=str(tmp_path), subnets="10.0.0.0/24", snmp_enabled=True, mdns_enabled=False, snmp_switches="10.0.0.2")
+    s = Settings(
+        data_dir=str(tmp_path), subnets="10.0.0.0/24", snmp_enabled=True, mdns_enabled=False, snmp_switches="10.0.0.2"
+    )
     with caplog.at_level(logging.INFO):
         run.collect_devices(s, conn)
     assert "SNMP übersprungen" in caplog.text
@@ -151,5 +167,6 @@ def test_snmp_ohne_community_wird_uebersprungen(tmp_path, monkeypatch, caplog):
 def test_compose_ohne_public_default():
     import pathlib
 
+    # T-8 (W6): billiger Wachposten - Literal-Vergleich gegen docker-compose.yml
     text = (pathlib.Path(__file__).parent.parent / "docker-compose.yml").read_text()
     assert ":-public" not in text

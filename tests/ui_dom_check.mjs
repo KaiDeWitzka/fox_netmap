@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { JSDOM } from "jsdom";
+import { DEVS } from "./ui/devs_fixture.mjs";
 
 const repo = path.resolve(new URL("..", import.meta.url).pathname);
 const html = fs
   .readFileSync(path.join(repo, "app/static/index.html"), "utf8")
   .replace('<script src="/static/vendor/cytoscape.min.js"></script>', "")
   .replace('<script src="/static/i18n.js"></script>', "")
+  .replace('<script src="/static/api.js"></script>', "")
   .replace('<script src="/static/app.js"></script>', "");
 const css = fs.readFileSync(path.join(repo, "app/static/styles.css"), "utf8");
 
@@ -18,38 +20,6 @@ style.textContent = css;
 doc.head.appendChild(style);
 
 const calls = [];
-const DEVS = [
-      {
-        mac: "aa:bb:cc:dd:ee:ff", ip: "10.0.0.5", ip6: "2001:db8::10", hostname: "nas", vendor: "Synology",
-        category: "Server/NAS", status: "online", subnet: "10.0.0.0/24", site: "Zuhause", source: "ping+arp,tr064", room: "Keller",
-        ports_str: "80;443", connected_to: "10.0.0.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 2, x: null, y: null, connection: "lan",
-      },
-      {
-        mac: "ip:192.168.179.20", ip: "192.168.179.20", hostname: "remote-plug", vendor: "",
-        category: "Smart-Home/IoT", status: "offline", subnet: "192.168.179.0/24", site: "Remote", source: "tcp",
-        ports_str: "", connected_to: "02:00:00:8e:ee:06", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 0, x: null, y: null, connection: "",
-      },
-      {
-        mac: "02:00:00:8e:ee:06", ip: "192.168.178.10", hostname: "TL-SG108E-GZ", vendor: "TP-Link",
-        category: "Switch", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "ping+arp",
-        ports_str: "80", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 1, x: null, y: null, connection: "lan",
-      },
-      {
-        mac: "aa:bb:cc:00:11:22", ip: "192.168.178.77", hostname: "wlan-tv", vendor: "",
-        category: "Smart-Home/IoT", status: "online", subnet: "192.168.178.0/24", site: "Zuhause", source: "tr064", room: "EG-Wohnzimmer",
-        ports_str: "", connected_to: "wlan:192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 0, x: null, y: null, connection: "wlan", vpn: 1,
-      },
-      {
-        mac: "76:84:18:83:f1:3c", ip: "", hostname: "PC-76-84-18-83-F1-3C", vendor: "",
-        category: "Client", status: "online", subnet: "", site: "", source: "tr064",
-        ports_str: "", connected_to: "192.168.178.1", note: "", last_seen: "2026-01-01T10:00:00+00:00",
-        port_count: 0, x: null, y: null, connection: "",
-      },
-];
 let metaExtra = {}; // Tests duerfen /api/meta-Felder ueberschreiben
 w.fetch = async (url, opts = {}) => {
   calls.push({ url: String(url), method: opts.method || "GET", body: opts.body || null });
@@ -194,9 +164,18 @@ w.eval(
     "\n;\n" +
     fs.readFileSync(path.join(repo, "app/static/icons.js"), "utf8") +
     "\n;\n" +
+    fs.readFileSync(path.join(repo, "app/static/api.js"), "utf8") +
+    "\n;\n" +
     fs.readFileSync(path.join(repo, "app/static/app.js"), "utf8")
 );
-await new Promise((r) => setTimeout(r, 200));
+// T-14 (W6): auf Bereitschaft warten statt fest 200 ms zu schlafen:
+// init() ruft loadDevices() -> GET /api/devices; erst dann sind die Views initialisiert.
+{
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline && !calls.some((c) => c.url.includes("/api/devices"))) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
 
 let failures = 0;
 function check(name, cond) {
@@ -255,7 +234,7 @@ check(
 );
 check(
   "Settings: alle Eingabe-IDs stabil geblieben",
-  ["st-theme", "st-lang", "st-auth", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
+  ["st-theme", "st-lang", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
 );
 
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));
@@ -1033,6 +1012,19 @@ check("VPN: ungueltiger Pool -> kein PATCH (clientseitige Validierung)", patchCo
 const loginHtml = fs.readFileSync(path.join(repo, "app/static/login.html"), "utf8");
 check("A11y: login.html mit sichtbaren Labels + role=alert", loginHtml.includes('for="login-user"') && loginHtml.includes('for="login-pass"') && loginHtml.includes('role="alert"'));
 check("Sicherheit: login.html ohne Inline-Skript (CSP script-src 'self')", !/<script>/i.test(loginHtml) && loginHtml.includes('src="/static/login.js"'));
+
+// W5: alle tests/ui/*.mjs mitlaufen lassen (eigenes Harness je Datei)
+const uiDir = path.join(repo, "tests", "ui");
+if (fs.existsSync(uiDir)) {
+  for (const f of fs.readdirSync(uiDir).filter((x) => x.endsWith(".mjs") && x !== "harness.mjs").sort()) {
+    const mod = await import(path.join(uiDir, f));
+    if (typeof mod.run === "function") {
+      const f2 = await mod.run();
+      failures += f2;
+      console.log(`tests/ui/${f}: ${f2 === 0 ? "OK" : f2 + " FAILED"}`);
+    }
+  }
+}
 
 console.log(failures === 0 ? "ALL UI CHECKS PASSED" : failures + " UI CHECKS FAILED");
 process.exit(failures === 0 ? 0 : 1);

@@ -1,15 +1,18 @@
 import ipaddress
 import subprocess
+from typing import Any
+
+from ..logsetup import warn_once
 
 
 def _default_gateway(args: list[str]) -> str:
     try:
-        out = subprocess.run(args, capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(args, capture_output=True, text=True, timeout=5).stdout  # noqa: S603 - feste Systemprogramme (ip), keine Nutzereingabe
         parts = out.split()
         if "via" in parts:
             return parts[parts.index("via") + 1]
-    except (OSError, subprocess.SubprocessError):
-        pass
+    except (OSError, subprocess.SubprocessError) as exc:
+        warn_once("bin:ip-route", "ip route nicht ausfuehrbar (%s) - Gateway unbekannt", type(exc).__name__)
     return ""
 
 
@@ -41,7 +44,9 @@ def conn_type(interface_type: str) -> str:
     return ""
 
 
-def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
+def vpn_pool_rules(
+    vpn_pool: str, gateway: str = ""
+) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network | None, int, list[Any], list[Any]]:
     """Parst das Setting vpn_pool.
 
     Rueckgabe: (auto_net, auto_min, nets, ranges)
@@ -52,8 +57,8 @@ def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
     Leer/"off"/"0" (Default) deaktiviert die Pool-Heuristik komplett - es wird kein VPN-Pool
     angenommen; dann greift nur die TR-064-Erkennung (siehe is_vpn_tr064).
     """
-    nets: list = []
-    ranges: list = []
+    nets: list[Any] = []
+    ranges: list[Any] = []
     auto_net = None
     auto_min = 0
     pool = (vpn_pool or "").strip()
@@ -79,7 +84,7 @@ def vpn_pool_rules(vpn_pool: str, gateway: str = ""):
                 ib = ipaddress.ip_address(b.strip())
             except ValueError:
                 raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}") from None
-            if ia.version != ib.version or ia > ib:
+            if ia.version != ib.version or ia.packed > ib.packed:
                 raise ValueError(f"ungueltiger VPN-Bereich: {tok!r}")
             ranges.append((ia, ib))
         else:
@@ -96,9 +101,13 @@ def is_vpn_ip(ip: str, vpn_pool: str, gateway: str = "") -> bool:
     except ValueError:
         return False
     auto_net, auto_min, nets, ranges = vpn_pool_rules(vpn_pool, gateway)
-    if auto_net is not None and addr.version == 4 and addr in auto_net:
-        if int(addr) - int(auto_net.network_address) >= auto_min:
-            return True
+    if (
+        auto_net is not None
+        and addr.version == 4
+        and addr in auto_net
+        and int(addr) - int(auto_net.network_address) >= auto_min
+    ):
+        return True
     if any(addr in n for n in nets):
         return True
     return any(a <= addr <= b for a, b in ranges)
@@ -112,10 +121,10 @@ def is_vpn_tr064(interface_type: str) -> bool:
 def resolve_connected_to(
     mac: str,
     ip: str,
-    snmp_map: dict | None = None,
-    tr064_parent: dict | None = None,
+    snmp_map: dict[str, str] | None = None,
+    tr064_parent: dict[str, str] | None = None,
     tr064_type: str = "",
-    mesh_parent: dict | None = None,
+    mesh_parent: dict[str, str] | None = None,
     gateway: str = "",
     gateway6: str = "",
     manual: str | None = None,
@@ -135,7 +144,7 @@ def resolve_connected_to(
     return gw
 
 
-def assign_behind_switch(devices: list[dict], ports: dict[str, tuple[str, str]], fixed: set[str]) -> int:
+def assign_behind_switch(devices: list[dict[str, Any]], ports: dict[str, tuple[str, str]], fixed: set[str]) -> int:
     """Ordnet Geraete einem Switch zu, der am selben LAN-Port des Elternknotens haengt.
 
     Ein LAN-Port einer FRITZ!Box hat genau eine Leitung. Sieht die Box dort mehrere Geraete und ist genau

@@ -1,6 +1,6 @@
 # fox_netmap – Datenschutzhinweis
 
-Stand: v1.6.1. Dieser Hinweis beschreibt, welche Daten fox_netmap erhebt, wo sie liegen, wie lange sie
+Stand: November 2026 (App-Version: `app/__init__.py` bzw. `/api/meta`). Dieser Hinweis beschreibt, welche Daten fox_netmap erhebt, wo sie liegen, wie lange sie
 gespeichert bleiben und wann Daten das lokale Netz verlassen. Er richtet sich an Betreiberinnen und Betreiber
 der Software. fox_netmap ist ein selbst gehostetes Werkzeug: Es gibt **keinen Cloud-Dienst, keine Telemetrie,
 kein Tracking und keine externen Schriften oder CDNs**. Alle Daten bleiben auf dem eigenen Server, solange
@@ -23,19 +23,19 @@ der Software.
 
 ## 2. Welche Daten werden erhoben?
 
-| Daten | Quelle | Personenbezug |
-|---|---|---|
-| MAC-Adresse, IP-Adresse (IPv4/IPv6), Subnetz | ARP/NDP, ping, TCP, TR-064, SNMP | Ja, sobald ein Gerät einer Person zugeordnet werden kann (z. B. Smartphone) |
-| Hostname | DNS-Rückwärtsauflösung, mDNS, TR-064 | Oft direkt, z. B. „iPhone-von-Anna“ |
-| Kategorie und Begründung (seit v1.6.0) | Hostname, Hersteller, Ports, mDNS-Dienste und -Modell (z. B. `iPhone14,2`) | Indirekt: Gerätetyp. Gespeichert wird nur das entscheidende Signal, keine mDNS-Rohdaten |
-| Hersteller (OUI) | Lokale OUI-Datenbank, optional Online-Abfrage | Indirekt |
-| Offene TCP-Ports und Dienstnamen | Port-Scan | Indirekt (Rückschluss auf genutzte Software) |
-| Online-/Offline-Verlauf mit Zeitstempel, erste/letzte Sichtung | Jeder Scan | **Ja – ergibt bei persönlichen Geräten ein Anwesenheitsprofil** |
-| Ereignisse (z. B. „neues Gerät“) | Scanner | Indirekt |
-| Kategorie, Notiz, Kartenposition, Verbindung | Manuelle Eingabe | Je nach Inhalt der Notiz |
-| Benutzername, Passwort-Hash (PBKDF2-SHA256) | Login-Verwaltung | Ja (Admin-Konto) |
-| Login-Protokoll: Benutzername, Client-IP, Erfolg/Fehlschlag | Anwendungslog | Ja |
-| Embed-Tokens mit Filter und Ablaufdatum | Einstellungen | Nein |
+| Daten                                                          | Quelle                                                                     | Personenbezug                                                                           |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| MAC-Adresse, IP-Adresse (IPv4/IPv6), Subnetz                   | ARP/NDP, ping, TCP, TR-064, SNMP                                           | Ja, sobald ein Gerät einer Person zugeordnet werden kann (z. B. Smartphone)             |
+| Hostname                                                       | DNS-Rückwärtsauflösung, mDNS, TR-064                                       | Oft direkt, z. B. „iPhone-von-Anna“                                                     |
+| Kategorie und Begründung (seit v1.6.0)                         | Hostname, Hersteller, Ports, mDNS-Dienste und -Modell (z. B. `iPhone14,2`) | Indirekt: Gerätetyp. Gespeichert wird nur das entscheidende Signal, keine mDNS-Rohdaten |
+| Hersteller (OUI)                                               | Lokale OUI-Datenbank, optional Online-Abfrage                              | Indirekt                                                                                |
+| Offene TCP-Ports und Dienstnamen                               | Port-Scan                                                                  | Indirekt (Rückschluss auf genutzte Software)                                            |
+| Online-/Offline-Verlauf mit Zeitstempel, erste/letzte Sichtung | Jeder Scan                                                                 | **Ja – ergibt bei persönlichen Geräten ein Anwesenheitsprofil**                         |
+| Ereignisse (z. B. „neues Gerät“)                               | Scanner                                                                    | Indirekt                                                                                |
+| Kategorie, Notiz, Kartenposition, Verbindung                   | Manuelle Eingabe                                                           | Je nach Inhalt der Notiz                                                                |
+| Benutzername, Passwort-Hash (PBKDF2-SHA256)                    | Login-Verwaltung                                                           | Ja (Admin-Konto)                                                                        |
+| Login-Protokoll: Benutzername, Client-IP, Erfolg/Fehlschlag    | Anwendungslog                                                              | Ja                                                                                      |
+| Embed-Tokens mit Filter und Ablaufdatum                        | Einstellungen                                                              | Nein                                                                                    |
 
 **Nicht** erhoben werden: Inhalte des Datenverkehrs, besuchte Webseiten, DNS-Anfragen der Geräte,
 Standortdaten außerhalb des Netzes.
@@ -49,8 +49,10 @@ Ausschließlich im Datenverzeichnis `./data` (Container: `/data`) auf dem eigene
 - `exports/` – automatische und manuelle Exporte (JSON, CSV, PDF), falls aktiviert
 - `initial-admin-password.txt` – nur, wenn kein `NETZ_AUTH_PASS` gesetzt ist (Rechte 0600)
 
-Die Dateien gehören UID 10001 und sind nicht verschlüsselt. Schutz erfolgt über Zugriffsrechte des
-Servers; für Backups gilt dieselbe Vertraulichkeit wie für das Original.
+Die Dateien gehören UID 10001, sind `0600` (umask `0o077`, S-17) und nicht verschlüsselt. Schutz
+erfolgt über Zugriffsrechte des Servers; für Backups gilt dieselbe Vertraulichkeit wie für das
+Original. In `netmap.db` liegen Secret-Einstellungen (`fritz_pass`, `snmp_community`,
+`notify_*_token`) im Klartext — geschützt durch die Dateirechte; die API liefert sie nie aus (S-8).
 
 **Im Browser** speichert fox_netmap ein technisch notwendiges Session-Cookie (`fox_session`, HttpOnly,
 SameSite=Lax, 12 Stunden) und im `localStorage` reine Anzeige-Einstellungen: Sprache, Theme, Layout,
@@ -59,15 +61,15 @@ Cookie-Banner ist daher nicht erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG).
 
 ## 4. Speicherdauer und Löschung
 
-| Daten | Standard | Einstellung |
-|---|---|---|
-| Online-/Offline-Verlauf | 720 Stunden (30 Tage) | `NETZ_HISTORY_HOURS` bzw. Einstellungen → Historie |
-| Geräte samt Ports, Verlauf, Ereignissen und Kartenposition | gelöscht nach 30 Tagen offline | `NETZ_DEVICE_RETENTION_DAYS` (0 = nie) |
-| Ereignisse (auch von Geräten, die weiter online sind) | 90 Tage | `NETZ_EVENT_RETENTION_DAYS` (0 = nie), auch in den Einstellungen |
-| Anwendungslog | rotierend, 4 Dateien à 1 MB | – |
-| Exporte in `exports/` | unbegrenzt | manuell löschen |
-| Sessions | nur im Arbeitsspeicher, max. 12 Stunden | – |
-| Hersteller-Cache (`oui_cache`) | unbegrenzt, nur MAC-Präfixe | – |
+| Daten                                                      | Standard                                | Einstellung                                                      |
+| ---------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| Online-/Offline-Verlauf                                    | 720 Stunden (30 Tage)                   | `NETZ_HISTORY_HOURS` bzw. Einstellungen → Historie               |
+| Geräte samt Ports, Verlauf, Ereignissen und Kartenposition | gelöscht nach 30 Tagen offline          | `NETZ_DEVICE_RETENTION_DAYS` (0 = nie)                           |
+| Ereignisse (auch von Geräten, die weiter online sind)      | 90 Tage                                 | `NETZ_EVENT_RETENTION_DAYS` (0 = nie), auch in den Einstellungen |
+| Anwendungslog                                              | rotierend, 1 MB × 3 Dateien             | –                                                                |
+| Exporte in `exports/`                                      | unbegrenzt                              | manuell löschen                                                  |
+| Sessions                                                   | nur im Arbeitsspeicher, max. 12 Stunden | –                                                                |
+| Hersteller-Cache (`oui_cache`)                             | unbegrenzt, nur MAC-Präfixe             | –                                                                |
 
 Einzelne Geräte lassen sich im Detail-Panel unter **Gerät löschen** entfernen (oder per `DELETE /api/device/{mac}`). Vollständige Löschung aller Daten:
 `docker compose down -v` bzw. das Verzeichnis `./data` entfernen.
@@ -77,14 +79,19 @@ Einzelne Geräte lassen sich im Detail-Panel unter **Gerät löschen** entfernen
 Nur, wenn eine der folgenden Funktionen bewusst eingerichtet wird. In der Grundeinstellung ist **keine**
 davon aktiv.
 
-| Funktion | Was wird gesendet | An wen | Standard |
-|---|---|---|---|
-| Online-Herstellerabfrage (`NETZ_OUI_ONLINE_ENABLED`) | erste 3 Bytes der MAC-Adresse (Herstellerkennung), max. 10 je Scan | `api.macvendors.com` oder eigene URL | **aus** seit v1.5.0 |
-| Alarm-Webhook (`NETZ_NOTIFY_WEBHOOK`) | MAC, IP, Hostname, Hersteller neuer Geräte | frei konfigurierte URL | aus |
-| Gotify / ntfy (`NETZ_NOTIFY_GOTIFY`, `NETZ_NOTIFY_NTFY`) | Hostname bzw. IP und MAC neuer Geräte | eigener oder öffentlicher Push-Dienst | aus |
-| OUI-Datenbank aktualisieren (`scripts/update_oui.py`) | nur ein Download, keine Gerätedaten | `standards-oui.ieee.org` | manuell |
-| Kartensymbole (seit v1.6.1) | nichts – die Symbole sind in `app/static/icons.js` enthalten, kein Abruf von CDN oder Schriftdienst | – | – |
-| TR-064 / SNMP (inkl. FRITZ!Box-Mesh-Liste seit v1.6.0) | Abfragen an eigene Router und Switche im lokalen Netz | lokal | TR-064 aus, SNMP an (nur lokale Geräte) |
+| Funktion                                                 | Was wird gesendet                                                                                   | An wen                                | Standard                                |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------- |
+| Online-Herstellerabfrage (`NETZ_OUI_ONLINE_ENABLED`)     | erste 3 Bytes der MAC-Adresse (Herstellerkennung), max. 10 je Scan                                  | `api.macvendors.com` oder eigene URL  | **aus** seit v1.5.0                     |
+| Alarm-Webhook (`NETZ_NOTIFY_WEBHOOK`)                    | MAC, IP, Hostname, Hersteller neuer Geräte                                                          | frei konfigurierte URL                | aus                                     |
+| Gotify / ntfy (`NETZ_NOTIFY_GOTIFY`, `NETZ_NOTIFY_NTFY`) | Hostname bzw. IP und MAC neuer Geräte                                                               | eigener oder öffentlicher Push-Dienst | aus                                     |
+| OUI-Datenbank aktualisieren (`scripts/update_oui.py`)    | nur ein Download, keine Gerätedaten                                                                 | `standards-oui.ieee.org`              | manuell                                 |
+| Kartensymbole (seit v1.6.1)                              | nichts – die Symbole sind in `app/static/icons.js` enthalten, kein Abruf von CDN oder Schriftdienst | –                                     | –                                       |
+| TR-064 / SNMP (inkl. FRITZ!Box-Mesh-Liste seit v1.6.0)   | Abfragen an eigene Router und Switche im lokalen Netz                                               | lokal                                 | TR-064 aus, SNMP an (nur lokale Geräte) |
+
+**TR-064-Fallback (S-2, E-3=C):** Schlägt HTTPS (Port 49443) fehl, sendet der TR-064-Client bei
+jedem betroffenen Lauf Digest-Anmeldedaten unverschlüsselt über HTTP — das bleibt im lokalen
+Netz, ist dort aber ein Mitschnitt-Risiko (WARN je Lauf + Port-Hinweis 49443; Restrisiko siehe
+[Sicherheitskonzept §4](03-sicherheit.md)).
 
 Empfehlung: Für Benachrichtigungen einen selbst gehosteten Dienst nutzen (z. B. eigene Gotify- oder
 ntfy-Instanz). Bei öffentlichen Diensten wie `ntfy.sh` sind Gerätenamen und MAC-Adressen für den Betreiber des

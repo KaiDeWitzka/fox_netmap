@@ -10,10 +10,11 @@ import logging
 import socket
 import struct
 import time
+from typing import Any
 
 from .names import MDNS_V4, _decode_name, _encode_name
 
-log = logging.getLogger("netmap.mdns")
+log = logging.getLogger("fox_netmap.mdns")
 
 # Meta-Abfrage liefert alle Diensttypen; die konkreten Typen sorgen dafuer, dass TXT-Daten mitkommen
 QUERY_TYPES = (
@@ -33,7 +34,7 @@ MAX_PACKET_BYTES = 9000
 MAX_VALUE_LEN = 64
 
 
-def build_query(types=QUERY_TYPES) -> bytes:
+def build_query(types: tuple[str, ...] = QUERY_TYPES) -> bytes:
     header = struct.pack(">HHHHHH", 0, 0, len(types), 0, 0, 0)
     return header + b"".join(_encode_name(t) + struct.pack(">HH", 12, 1) for t in types)
 
@@ -90,7 +91,7 @@ def parse_packet(data: bytes) -> tuple[set[str], str]:
 
 
 def _service_type(name: str) -> str:
-    """"Wohnzimmer._airplay._tcp.local" -> "_airplay._tcp"; Meta-Name und Hostnamen -> ""."""
+    """ "Wohnzimmer._airplay._tcp.local" -> "_airplay._tcp"; Meta-Name und Hostnamen -> ""."""
     labels = [x for x in name.lower().rstrip(".").split(".") if x]
     for i in range(len(labels) - 1):
         if labels[i].startswith("_") and labels[i + 1] in ("_tcp", "_udp"):
@@ -99,12 +100,13 @@ def _service_type(name: str) -> str:
     return ""
 
 
-def browse(timeout: float = 2.0) -> dict[str, dict]:
+def browse(timeout: float = 2.0) -> dict[str, dict[str, Any]]:
     """{ip: {"services": set[str], "model": str}} fuer alle Geraete, die antworten. Fehler ergeben {}."""
-    result: dict[str, dict] = {}
+    result: dict[str, dict[str, Any]] = {}
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     except OSError:
+        log.debug("mDNS-Socket nicht verfuegbar - Dienstsuche uebersprungen", exc_info=True)
         return result
     try:
         sock.settimeout(0.3)

@@ -1,0 +1,1488 @@
+
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>fox_netmap · Produktionsreife · Checkliste</title>
+    <style>
+      :root {
+        --bg: #fff;
+        --fg: #1b1f24;
+        --mut: #5b6470;
+        --line: #d8dde3;
+        --card: #f6f8fa;
+        --ok: #1a7f37;
+        --run: #9a6700;
+        --rev: #8250df;
+        --open: #57606a;
+        --bad: #cf222e;
+        --drop: #6e7781;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1117;
+          --fg: #e6edf3;
+          --mut: #9da7b3;
+          --line: #30363d;
+          --card: #161b22;
+          --ok: #3fb950;
+          --run: #d29922;
+          --rev: #a371f7;
+          --open: #8b949e;
+          --bad: #f85149;
+          --drop: #6e7681;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          15px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        max-width: 1200px;
+        margin-inline: auto;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0.2rem 0;
+      }
+      .meta {
+        color: var(--mut);
+        margin: 0 0 1rem;
+      }
+      .bars {
+        display: grid;
+        gap: 6px;
+        margin: 1rem 0;
+      }
+      .bar {
+        display: grid;
+        grid-template-columns: 9rem 1fr 4.5rem;
+        gap: 8px;
+        align-items: center;
+      }
+      .track {
+        height: 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .fill {
+        height: 100%;
+        background: var(--ok);
+      }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 1rem 0;
+      }
+      select,
+      input {
+        background: var(--card);
+        color: var(--fg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px 8px;
+        font: inherit;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+      }
+      .tag {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        border: 1px solid currentColor;
+        white-space: nowrap;
+      }
+      .s-erledigt {
+        color: var(--ok);
+      }
+      .s-in_arbeit {
+        color: var(--run);
+      }
+      .s-review {
+        color: var(--rev);
+      }
+      .s-offen {
+        color: var(--open);
+      }
+      .s-blockiert {
+        color: var(--bad);
+      }
+      .s-verworfen {
+        color: var(--drop);
+      }
+      .sev-kritisch,
+      .sev-hoch {
+        font-weight: 600;
+      }
+      code {
+        font-size: 0.85em;
+      }
+      .mut {
+        color: var(--mut);
+      }
+      @media print {
+        th {
+          position: static;
+        }
+        .filters {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <p class="mut">Checkliste · fox_netmap</p>
+    <h1>Weg zur Produktionsreife</h1>
+    <p class="meta" id="meta"></p>
+    <div class="bars" id="bars" aria-label="Fortschritt je Welle"></div>
+    <div class="filters">
+      <label
+        >Welle
+        <select id="f-welle">
+          <option value="">alle</option>
+        </select></label
+      >
+      <label
+        >Status
+        <select id="f-status">
+          <option value="">alle</option>
+        </select></label
+      >
+      <label
+        >Schwere
+        <select id="f-schwere">
+          <option value="">alle</option>
+        </select></label
+      >
+      <label>Suche <input id="f-text" type="search" /></label>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Punkt</th>
+            <th>Welle</th>
+            <th>Schwere</th>
+            <th>Status</th>
+            <th>Nachweis</th>
+            <th>Commit</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <script id="daten" type="application/json">
+      {
+        "stand": "2026-11-26, W0-W8 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b, 303d36d, 0b159fa), Kampagne lokal abgeschlossen - Push/PR/Release macht Kai",
+        "wellen": [
+                {
+                        "id": "W0",
+                        "titel": "Werkzeuge"
+                },
+                {
+                        "id": "W1",
+                        "titel": "Bausteine: Einstellungen, MAC-Normalisierung, Logging"
+                },
+                {
+                        "id": "W2",
+                        "titel": "Sicherheit"
+                },
+                {
+                        "id": "W3",
+                        "titel": "Datenbank und Nebenläufigkeit"
+                },
+                {
+                        "id": "W4",
+                        "titel": "Scanner und stille Fehler"
+                },
+                {
+                        "id": "W5",
+                        "titel": "Oberfläche"
+                },
+                {
+                        "id": "W6",
+                        "titel": "Testlücken"
+                },
+                {
+                        "id": "W7",
+                        "titel": "Struktur und Typen"
+                },
+                {
+                        "id": "W8",
+                        "titel": "Doku"
+                }
+        ],
+        "punkte": [
+                {
+                        "id": "S-1",
+                        "titel": "Ein Embed-Token mit Teilbereich liest über /api/device/{mac} jedes Gerät, und Tokens mit mehreren Subnetzen zeigen nur das erste",
+                        "welle": "W2",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": "mit C-7, T-5"
+                },
+                {
+                        "id": "S-6",
+                        "titel": "Der PDF-Export nimmt mit einem Embed-Token beliebig große Bilder an und belegt dabei über 1 GB Arbeitsspeicher",
+                        "welle": "W2",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-8",
+                        "titel": "GET /api/settings liefert SNMP-Community, Benachrichtigungs-URLs und Zugangsdaten in URLs im Klartext",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-7",
+                        "titel": "Wer die App bedient, kann den FRITZ!Box-Endpunkt umbiegen und so das gespeicherte Passwort abgreifen",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-9",
+                        "titel": "Ein einziger PATCH schaltet die Anmeldung für die ganze App ab",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-2",
+                        "titel": "TR-064 fällt bei jedem TLS-Fehler still auf Klartext-HTTP zurück und sendet dabei Digest-Anmeldedaten",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "als Doku erledigt (E-3=C, Kais Wahl): Restrisiko TR-064 HTTPS->HTTP-Fallback in docs/03-sicherheit.md Abschnitt 4 aufgenommen; Handbuch/README korrigiert (WARN je Lauf + Port-Hinweis 49443); kein Code-Eingriff; tests/test_docs.py gruen",
+                        "commit": "0b159fa",
+                        "notiz": "Restrisiko in 03-sicherheit.md \u00a74 dokumentiert (W8)"
+                },
+                {
+                        "id": "S-3",
+                        "titel": "Der CSV-Export schreibt Hostnamen, Notizen und Hersteller mit führenden Formelzeichen unverändert",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-4",
+                        "titel": "Die Login-Drossel zählt Fehlversuche erst nach der Passwortprüfung, parallele Anfragen umgehen das Limit",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-5",
+                        "titel": "Hinter einem Reverse Proxy sperren 20 falsche Logins jede Anmeldung, auch mit dem richtigen Passwort",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-10",
+                        "titel": "Mehrere Endpunkte antworten ohne Anmeldung mit WAN-IP, Gateway, Version und Scanzeiten",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-11",
+                        "titel": "Die mDNS-Rückwärtsauflösung übernimmt jede Antwort von jedem Host als Gerätenamen",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-12",
+                        "titel": "Embed-Tokens stehen im Klartext im Zugriffslog von uvicorn",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-13",
+                        "titel": "uvicorn wertet X-Forwarded-For aus, obwohl die Doku das Gegenteil sagt",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-14",
+                        "titel": "Die Online-Herstellerabfrage folgt Weiterleitungen, liest unbegrenzt und gibt die Antwort in die Oberfläche",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "N-5",
+                        "titel": "Ein HTTP-Protokollfehler bei der Online-Herstellerabfrage bricht den ganzen Scan ab",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-15",
+                        "titel": "Der TR-064-Client begrenzt weder Antwortgröße noch Geräteanzahl, und eine fehlerhafte Zahl bricht den Scan ab",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-16",
+                        "titel": "POST-Routen ohne Body lassen sich von Seiten desselben Standorts auslösen",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "S-17",
+                        "titel": "Datenbank und Log sind für alle lesbar, und das per Oberfläche gesetzte FRITZ!Box-Passwort liegt im Klartext in der Datenbank",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-10",
+                        "titel": "Der Token-Ablauf in Stunden wird nicht geprüft: 0 heißt unbegrenzt, negative Werte sind schon abgelaufen",
+                        "welle": "W2",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-3",
+                        "titel": "Der Start löscht ein echtes Gerät samt Notiz und Layout, wenn eine neue MAC dieselbe IP bekommt",
+                        "welle": "W3",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": "mit C-14"
+                },
+                {
+                        "id": "K-1",
+                        "titel": "Jeder Datenbankzugriff nimmt den Schreib-Lock, auch reine Lesezugriffe und der Healthcheck",
+                        "welle": "W3",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-2",
+                        "titel": "Der Scanner hält eine Schreibtransaktion offen, während er auf Netzwerkantworten wartet",
+                        "welle": "W3",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "N-1",
+                        "titel": "Die alte IP bleibt an einem Offline-Gerät stehen, und ein Treffer ohne MAC wird diesem Gerät zugeordnet",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-6",
+                        "titel": "Eine unvollständige Erkennung überschreibt Hostname, Hersteller und IP mit leeren Werten",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-5",
+                        "titel": "Nach einem Fehler mitten im Scan speichert run_once einen halben Scan",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-4",
+                        "titel": "Web und Scanner können beim ersten Start die Schemamigration gegeneinander laufen lassen",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-8",
+                        "titel": "Der Scanner ignoriert SIGTERM, und der Auto-Export schreibt Dateien nicht atomar",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-12",
+                        "titel": "Ein Fehler beim Zusammenführen beim Start wird geloggt, danach committet init_db die halbe Zusammenführung",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-6",
+                        "titel": "set_layout liest und schreibt in getrennten Schritten, eine gleichzeitige Änderung kann verloren gehen",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "K-10",
+                        "titel": "Lesen und erstes Schreiben laufen ohne gemeinsamen Schnappschuss, Exporte mischen Daten vor und nach einem Scan",
+                        "welle": "W3",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": "mit K-11"
+                },
+                {
+                        "id": "C-4",
+                        "titel": "Ein Gerät mit IPv4 und IPv6 verliert seine IPv4-Adresse, weil der IPv6-Eintrag den IPv4-Eintrag überschreibt",
+                        "welle": "W4",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-1",
+                        "titel": "Eine leere oder gescheiterte Erkennung markiert alle Geräte als offline, nach 30 Tagen werden sie gelöscht",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-2",
+                        "titel": "Fehler beim Scan sind im Scanzustand, in /api/health und im Healthcheck nicht sichtbar",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-5",
+                        "titel": "Fehlgeschlagene Benachrichtigungen sind unsichtbar, und der Neu-Gerät-Alarm geht verloren",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-5",
+                        "titel": "Offline gemeldete TR-064-Hosts bekommen bei jedem Scan ein neues last_seen, die Aufbewahrung greift nie",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-8",
+                        "titel": "Bei großen IPv6-Netzen wird die NDP-Liste nach dem Multicast-Ping berechnet und dann nicht benutzt",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-9",
+                        "titel": "Die SNMP-Zuordnung ignoriert den Port, und der letzte Switch gewinnt für alle MACs",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-3",
+                        "titel": "Der Healthcheck meldet gesund, solange scanning=1 steht, auch wenn der Scan nie endet",
+                        "welle": "W4",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": "mit K-9"
+                },
+                {
+                        "id": "C-13",
+                        "titel": "port_top wird still bei 1040 Ports gekappt, Ports aus der Umgebung werden nicht geprüft",
+                        "welle": "W4",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-8",
+                        "titel": "Mehrere Fehlerpfade im Scanner schlucken Ausnahmen ohne Logzeile",
+                        "welle": "W4",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": "mit TL-1"
+                },
+                {
+                        "id": "SF-7",
+                        "titel": "Der Entrypoint übergeht Fehler bei der chown-Prüfung ohne Meldung",
+                        "welle": "W4",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "N-4",
+                        "titel": "PDF-Fehler mit angehängtem Bild werden als 422 „Bild nicht lesbar“ gemeldet, ohne Logzeile",
+                        "welle": "W4",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-1",
+                        "titel": "Der Web-Prozess lädt gespeicherte Einstellungen beim Start nicht, eine in der Oberfläche eingeschaltete Anmeldung gilt nach einem Neustart nicht",
+                        "welle": "W1",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": "mit K-7"
+                },
+                {
+                        "id": "Q-1",
+                        "titel": "Das Einstellungsschema steht handkopiert an mindestens fünf Stellen",
+                        "welle": "W1",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "N-2",
+                        "titel": "snmp_switches lässt sich in der Oberfläche setzen, der Scanner ignoriert den Wert",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-2",
+                        "titel": "Ein in der Oberfläche geleertes Feld bleibt wirkungslos, weil der leere String als „nicht gesetzt“ gilt",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "C-3",
+                        "titel": "Die Oberfläche zeigt oui_online_enabled als an, obwohl es gespeichert aus ist, weil der Text „false“ als wahr gilt",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "",
+                        "commit": "9127178",
+                        "notiz": "Backend erledigt (getypte Werte), Frontend-Teil (Checkbox false) folgt in W5"
+                },
+                {
+                        "id": "D-2",
+                        "titel": "Dokumentierte Umgebungsvariablen erreichen den Container nicht, weil docker-compose.yml nur eine feste Liste weitergibt",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-2",
+                        "titel": "validate_settings ist eine Wenn-Dann-Leiter mit Komplexität 46 im Routenmodul",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "app/validation.py: validate_patch als reine Funktion (Meldungen byte-identisch); 0 noqa: C901 in app/ (ruff C90 clean); tests/test_settings_api.py gruen; gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": "C901-Zerlegung in W7 erledigt (war in_arbeit seit W1)"
+                },
+                {
+                        "id": "Q-8",
+                        "titel": "Meldungen von mDNS und Benachrichtigung erreichen weder netmap.log noch die Log-Ansicht",
+                        "welle": "W1",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "SF-4",
+                        "titel": "Ungültige gespeicherte Einstellungen fallen still auf Standardwerte zurück",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-9",
+                        "titel": "Die MAC-Normalisierung gibt es mehrfach, und der Geräte-Pfad der API ist groß-/kleinschreibungsempfindlich",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": "mit C-15"
+                },
+                {
+                        "id": "N-3",
+                        "titel": "Platzhalter-Schlüssel ip:<IP> werden beim Speichern zu ip:192:0:2:5 verstümmelt",
+                        "welle": "W1",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_settings_schema.py + test_settings_api.py + test_netutil.py + test_logging.py grün; gate.sh grün",
+                        "commit": "974b211",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-3",
+                        "titel": "Fehlgeschlagene Speichervorgänge in der Oberfläche gelten als Erfolg, es gibt keine Fehlermeldung",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": "mit SF-6"
+                },
+                {
+                        "id": "F-4",
+                        "titel": "Netzwerkfehler beim Start lassen die Oberfläche leer und ohne Bedienung",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-2",
+                        "titel": "Eine Aktualisierung zerstört die laufende Eingabe in der Tabelle",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-5",
+                        "titel": "Gezogene Knotenpositionen werden im Auto-Layout bei jeder Aktualisierung verworfen",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-6",
+                        "titel": "Jede Aktualisierung baut den ganzen Graphen neu und passt die Ansicht an, das Detailfenster zeigt danach Geisterdaten",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-8",
+                        "titel": "Enter auf einem Link in der Tabellenzeile wird verschluckt, Sortieren geht nur mit der Maus",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-9",
+                        "titel": "Die Seitenleiste hat keine Fokusführung, kein Escape und unvollständige Beschriftungen",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-10",
+                        "titel": "app.js ist ein 1647-Zeilen-Skript mit globalem Zustand und zusammengebautem HTML",
+                        "welle": "W5",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-1",
+                        "titel": "Bei überlappenden Ladeanfragen gewinnt die zuletzt eintreffende Antwort, nicht die zuletzt gestellte",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-7",
+                        "titel": "Die Kartenberechnung wächst kubisch, ab 1000 Geräten steht die Oberfläche",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-10",
+                        "titel": "Druck im dunklen Thema ist unlesbar, Log-Stufen und VPN-Badge liegen unter dem Kontrastminimum",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": "mit F-11"
+                },
+                {
+                        "id": "F-12",
+                        "titel": "Die eingebettete Ansicht zeigt wirkungslose Bedienelemente und Exportlinks ohne Token",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-13",
+                        "titel": "Fest deutsche Texte, nicht formatierte Datumswerte und ungeprüfte Übersetzungsschlüssel",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": "mit F-14, Q-11"
+                },
+                {
+                        "id": "F-15",
+                        "titel": "Das Einstellungsfenster leert Felder beim Tabwechsel, und das gespeicherte Thema wird nie angewandt",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "F-16",
+                        "titel": "Mobile Ansicht: feste Höhe 100vh, keine schmale Variante, Log-Status wird immer geschrieben",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "TL-4",
+                        "titel": "Toter Code und ungenutzte catch-Variablen in app.js",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-5",
+                        "titel": "Das mitgelieferte Cytoscape 3.30.2 steht fünf Minor-Versionen hinter 3.35.0 und wird nicht überwacht",
+                        "welle": "W5",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/*.mjs (api_errors, table_edit, layout_positions, map_refresh, keyboard, focus_a11y, render_perf, embed_mode, i18n_parity, layout_responsive, settings_form, vendor_version) + test_a11y_css.py + test_settings_api.py; 349 pytest + ALL UI CHECKS PASSED + gate.sh gruen",
+                        "commit": "9127178",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-1",
+                        "titel": "Schreib-Routen unter den Token-Pfaden sind nur durch Depends(require_auth) geschützt, und kein Test hält das fest",
+                        "welle": "W2",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_token_scope.py, test_token_routes.py, test_export_security.py, test_public_surface.py, test_login_race.py, test_process_hardening.py, test_csrf_origin.py, test_scanner_inputs.py; gate.sh grün",
+                        "commit": "bed6eed",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-2",
+                        "titel": "run_once und die Hauptschleife des Scanners werden von keinem Test ausgeführt",
+                        "welle": "W4",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-3",
+                        "titel": "Die Retention-Tests prüfen die Grenzen nicht, zu viel Löschen bleibt unentdeckt",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-6",
+                        "titel": "Der Auto-Export, der Dateien schreibt, hat keinen Test",
+                        "welle": "W4",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_merge_sources.py, test_scan_state.py, test_discovery_paths.py, test_health_status.py, test_notify.py, test_pdf_errors.py, test_retention.py, test_auto_export.py, test_scanner_loop.py, test_hardening.py; 346 Tests, gate.sh gruen",
+                        "commit": "ed7efa3",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-4",
+                        "titel": "Das Ablaufen einer Sitzung in is_valid_session ist nicht getestet",
+                        "welle": "W6",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_session_expiry.py::test_expired_session_rejected_without_prune + test_sessions_isolated_between_tests (autouse clean_auth_state in conftest.py, T-15)",
+                        "commit": "3f67b1b",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-16",
+                        "titel": "Mehrere Fix-Commits haben keinen Test, der beim Zurücksetzen fehlschlägt",
+                        "welle": "W6",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/ui/scan_indicator.mjs + tests/ui/hidden_css.mjs, tests/test_network_paths.py::test_tcp_probe_sweep_against_local_socket, tests/test_pdf_errors.py::test_pdf_long_text_is_wrapped_not_overlapping",
+                        "commit": "3f67b1b",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-7",
+                        "titel": "Es gibt keinen End-to-End-Test vom Scanner bis zur API in pytest",
+                        "welle": "W6",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_e2e_scan_api.py::test_scan_result_visible_via_api",
+                        "commit": "3f67b1b",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-9",
+                        "titel": "Die Scanner-Tests ersetzen Netzwerk und Unterprozesse fast überall durch Fakes",
+                        "welle": "W6",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_network_paths.py (echte 127.0.0.1-Sockets + tests/fixtures/net/), ports.py/snmp.py je 96% Coverage",
+                        "commit": "3f67b1b",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-10",
+                        "titel": "Datenbankmigrationen sind nur für drei Spalten aus einem handgeschriebenen Mini-Schema getestet",
+                        "welle": "W3",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_dedupe.py, test_db_concurrency.py, test_migrations.py, test_export_atomic.py, test_scanner_loop.py + test_db.py (test_merge_placeholders, test_init_db_survives_dedupe_io_error); 316 Tests, gate.sh gruen",
+                        "commit": "88f99df",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-11",
+                        "titel": "Parser für Daten aus dem LAN haben keine Property- oder Fuzz-Tests",
+                        "welle": "W6",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_parsers_property.py (hypothesis)::test_parse_packet_never_raises u.a.",
+                        "commit": "3f67b1b",
+                        "notiz": ""
+                },
+                {
+                        "id": "T-8",
+                        "titel": "Kleine Testschwächen: Quelltext-Vergleiche, feste Wartezeit im jsdom-Test und globaler Zustand zwischen Tests",
+                        "welle": "W6",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "ui_dom_check.mjs wartet auf Bereitschaft statt festem sleep; check_web mit frei gewaehltem geschlossenen Port (test_hardening.py); Literal-Tests als Wachposten markiert (T-14/T-15 siehe Notiz)",
+                        "commit": "3f67b1b",
+                        "notiz": "mit T-14, T-15"
+                },
+                {
+                        "id": "T-12",
+                        "titel": "Es gibt keinen Lasttest für 200 Geräte und keinen Schematest der API-Antworten",
+                        "welle": "W6",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_load.py::test_500_devices_list_under_budget + tests/test_api_contract.py Snapshot-Tests (T-13: tests/fixtures/api_devices_sample.json + tests/ui/fixture_parity.mjs)",
+                        "commit": "3f67b1b",
+                        "notiz": "mit T-13"
+                },
+                {
+                        "id": "Q-3",
+                        "titel": "collect_devices hat 125 Anweisungen und Komplexität 40, und der Scanner schreibt selbst in die Datenbank",
+                        "welle": "W7",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "app/scanner/pipeline.py: stufiges collect_devices; Charakterisierung tests/test_pipeline.py::test_collect_devices_output_unchanged (gruen auf altem und neuem Code); gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-4",
+                        "titel": "SQL und Fachlogik stecken in den Routen von api.py",
+                        "welle": "W7",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "Split app/api.py -> app/routers/{common,devices,scan,export,settings,tokens,meta}.py + app/services/{authz,devices}.py + app/models.py + db-Helper; tests/test_routes_inventory.py::test_route_table_unchanged; gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-14",
+                        "titel": "Parser und Klassifikator sind zu komplex",
+                        "welle": "W7",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "classify + parse_mesh gesplittet (categorize.py, tr064.py); tests/test_categorize.py::test_rule_order_unchanged + 25er-Snapshot; 0 noqa: C901 in app/ (ruff C90 clean)",
+                        "commit": "303d36d",
+                        "notiz": ""
+                },
+                {
+                        "id": "TL-5",
+                        "titel": "Typ-Artefakte und 159 Fehler unter mypy --strict, aber kein Laufzeitfehler",
+                        "welle": "W7",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "mypy --strict app: 0 Fehler in 41 Dateien (neuer Gate-Schritt in scripts/gate.sh); app/types.py TypedDicts + response_model an den Routen; gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-12",
+                        "titel": "Die Route /api/rooms wird von der Oberfläche nicht genutzt, und Altschlüssel halten zwei Konfigurationspfade",
+                        "welle": "W7",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_routes_inventory.py::test_no_unreferenced_routes (KEEP={/api/health,/api/rooms}); Entscheidung /api/rooms bleibt in docs/entscheidungen.md dokumentiert",
+                        "commit": "303d36d",
+                        "notiz": "/api/rooms bleibt (dokumentierte Entscheidung)"
+                },
+                {
+                        "id": "Q-16",
+                        "titel": "Doppelte Konfigurationspfade und Alias-Einstellungen ließen sich löschen",
+                        "welle": "W7",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "db._migrate_setting_aliases in init_db (subnet->subnets, fritz_url->fritz_urls); tests/test_settings_schema.py::test_legacy_alias_migrated + test_legacy_alias_migrated_allein",
+                        "commit": "303d36d",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-13",
+                        "titel": "Namen und Sprache sind gemischt, und Kategorien werden als deutsche Anzeigetexte gespeichert",
+                        "welle": "W7",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "Entscheidung in docs/entscheidungen.md dokumentiert (Namen/Kategorien: nur Doku, kein Code-Eingriff); gate.sh gruen",
+                        "commit": "303d36d",
+                        "notiz": "nur Doku-Entscheidung"
+                },
+                {
+                        "id": "Q-5",
+                        "titel": "Die Version steht an drei Stellen im Code, und die README nennt 1.6.4 statt 1.6.16",
+                        "welle": "W0",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "Q-6",
+                        "titel": "pyproject.toml ist keine echte Projektdefinition",
+                        "welle": "W0",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "TL-6",
+                        "titel": "CI prüft weder Format noch Typen noch Abdeckung noch JS-Lint, und 19 Dateien sind nicht formatiert",
+                        "welle": "W0",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": "mit Q-15, D-9"
+                },
+                {
+                        "id": "Q-7",
+                        "titel": "Das Dockerfile führt apt-get upgrade aus und ist einstufig, der Entrypoint läuft als root",
+                        "welle": "W0",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "TL-7",
+                        "titel": "ESLint und tsc melden Rauschen durch geteilte Globals, aber keine echten Fehler",
+                        "welle": "W0",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-6",
+                        "titel": "Der Digest des Basis-Images ist veraltet, und nur Python 3.12 wird getestet",
+                        "welle": "W0",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-7",
+                        "titel": "Dependabot sieht gitleaks, den Trivy-Pin und einen Docker-Cooldown nicht",
+                        "welle": "W0",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "gate.sh lokal grün 2026-11-26 (ruff/format/mypy/pytest 234/cov/UI/eslint/pip-audit); CI-Job docker auf nächstem Push",
+                        "commit": "8079aab",
+                        "notiz": ""
+                },
+                {
+                        "id": "N-6",
+                        "titel": "Mehrere Aussagen in docs/03-sicherheit.md und im Handbuch stimmen nicht mit dem Verhalten überein",
+                        "welle": "W8",
+                        "schwere": "mittel",
+                        "status": "erledigt",
+                        "nachweis": "alle 9 Stellen korrigiert: docs/03-sicherheit.md (2.3 globale Sperre + X-Forwarded-For/NETZ_FORWARDED_ALLOW_IPS, 2.5/2.6 Dateirechte 0600 + Klartext-Secrets in DB, 2.8 Settings ohne Klartext-Secrets + Token-Scope 404, 2.12 Log-Redaction, 2.9 uv.lock/Dockerfile, oeffentliche Endpunkte S-10) + 6 Handbuecher (TR-064-Fallback WARN je Lauf, Dedupe K-3); tests/test_docs.py::test_security_doc_names_global_lockout_and_forwarded_for + test_handbooks_same_structure gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-1",
+                        "titel": "Die README in Deutsch und Englisch nennt v1.6.4 und pinnt Beispiele darauf",
+                        "welle": "W8",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "README.md/README.en.md ohne gepinnte Versionen (Platzhalter <X.Y.Z>, Aktuell-Zeile entfernt), Version zentral in app/__init__.py dokumentiert; tests/test_docs.py::test_readme_has_no_stale_version gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-3",
+                        "titel": "Das CHANGELOG hat keinen Abschnitt [Unreleased], obwohl CONTRIBUTING ihn verlangt",
+                        "welle": "W8",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "docs_url=None, openapi_url=None in app/web.py::create_app; Entscheidung in docs/entscheidungen.md; CHANGELOG hat [Unreleased]; tests/test_docs.py::test_docs_url_disabled + test_changelog_has_unreleased_section gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-4",
+                        "titel": "Die Umgebungstabellen in allen sechs Handbüchern sind unvollständig, und /api/logout fehlt",
+                        "welle": "W8",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "scripts/gen_env_table.py generiert Env-Referenz in docs/05-betrieb.md Abschnitt 7 aus app/settings_schema.py (+ Defaults aus config.py, env-only aus .env.example); verlinkt aus README, allen 6 Handbuechern und docs/01-anforderungen.md; /api/logout + GET /api/rooms in den API-Tabellen; tests/test_docs.py::test_env_reference_covers_all_settings gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "D-10",
+                        "titel": "Betriebsdokumente fehlen: Runbook, Architektur, Bedrohungsmodell, Teststrategie, Release-Checkliste",
+                        "welle": "W8",
+                        "schwere": "niedrig",
+                        "status": "erledigt",
+                        "nachweis": "docs/05-betrieb.md (Runbook: WAL-sicheres Backup, Upgrade, Rollback, Monitoring, Env-Referenz) + docs/06-architektur.md (Komponenten, Datenfluss, Modulstruktur, Sicherheitsgrenzen, Teststrategie) neu; Release-Checkliste in CONTRIBUTING.md; prettier --check als Gate-Schritt; tests/test_docs.py::test_ops_docs_exist gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-1",
+                        "titel": "scripts/gate.sh` grün, lokal und in CI auf Python 3.12 und 3.13",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "scripts/gate.sh lokal gruen (ruff + format + mypy + mypy --strict + 423 pytest + cov + UI-DOM + eslint + prettier + pip-audit); CI-Matrix Python 3.12/3.13 seit W0",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-2",
+                        "titel": "Kein offener Befund der Schwere hoch oder mittel; jeder niedrige erledigt oder mit Begründung verworfen",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "checkliste.html: keine offenen Befunde der Schwere hoch oder mittel (101 erledigt, Rest ZK-Abschlusspruefungen)",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-3",
+                        "titel": "Jeder Fix hat einen Regressionstest, dessen Fehlschlag vor dem Fix in `ARCHIV.md` steht",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "Charakterisierungstests vor jedem Umbau gepinnt (W7: test_pipeline.py, test_categorize.py::test_rule_order_unchanged, test_routes_inventory.py); mutants.sh ALLE 11 GETOETET",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-4",
+                        "titel": "Alle Mutanten aus der Kill-Liste in Welle 6 werden von der Suite erkannt",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "scripts/mutants.sh kompletter Lauf nach W8: ALLE 11 MUTANTEN GETOETET (M10,B2,B3,M11,R1,R2,R3,F4,F5,F6,F7), exit 0",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-5",
+                        "titel": "Abdeckung Zeilen und Zweige mindestens 90 % gesamt, kein Modul unter 80 %",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "pytest --cov: TOTAL 91% Zeilen, 91% Branches (fail_under=84); ports.py/snmp.py je 96% (W6)",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-6",
+                        "titel": "mypy --strict` für `app/`, erweitertes `ruff`, `ruff format --check` und `eslint` grün, ohne globale Ausnahmen",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "mypy --strict app: 0 Fehler in 41 Dateien (Gate-Schritt seit W7); ruff check + format --check clean; ruff C90 ohne noqa",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-7",
+                        "titel": "pip-audit`, `npm audit` und Trivy (CRITICAL und HIGH mit Fix) ohne Treffer; Dependabot deckt uv, npm, docker, actions",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "pip-audit im Gate: 'No known vulnerabilities found'; eslint 0 errors; Trivy siehe ZK-8 (CI) bzw. scripts/trivy.sh",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-8",
+                        "titel": "CI-Job `docker` grün: UID 10001, Capabilities, schreibgeschütztes Root-Dateisystem, Smoke-Test",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "offen",
+                        "nachweis": "CI",
+                        "commit": "",
+                        "notiz": "CI-Job docker (UID 10001, Capabilities, read-only Root-FS, Healthcheck im Compose-Stack) lokal nicht pruefbar - kein Docker-Daemon; Kai prueft auf dem Push"
+                },
+                {
+                        "id": "ZK-9",
+                        "titel": "Ein Scanfehler ist in der Oberfläche, in `/api/health` und im Docker-Healthcheck sichtbar",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "SF-2/SF-3 (W4): Scanfehler in scan_state + /api/scan/status + /api/health unhealthy ab 3 Fehlern + UI-Anzeige; tests/test_scan_state.py + test_health_status.py gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-10",
+                        "titel": "Ende-zu-Ende-Test in pytest: Web und Scanner gegen `127.0.0.0/30`, ein voller `run_once",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_e2e_scan_api.py (Scanner->DB->API->Export, W6) + tests/test_network_paths.py (echte 127.0.0.0/30-Sockets, W6)",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-11",
+                        "titel": "Doku vollständig: README-Version stimmt, jede `NETZ_*`-Variable in Compose, README und Handbuch, Betriebshandbuch, Architektur, Bedrohungsmodell, `CHANGELOG.md` mit `[Unreleased]",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_docs.py (7 Tests, W8): README ohne veraltete Version, Env-Referenz deckt alle NETZ_* + aktuell, 6 Handbuecher gleiche Struktur + /api/-Verweise, Ops-Doku existiert",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-12",
+                        "titel": "500 Geräte: `GET /api/devices` unter 300 ms, Kartenaufbau im jsdom-Test unter 1 s",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "erledigt",
+                        "nachweis": "tests/test_load.py::test_500_devices_list_under_budget (W6) + ui_dom_check mit 500-Geraete-Fixture; 423 pytest gruen",
+                        "commit": "0b159fa",
+                        "notiz": ""
+                },
+                {
+                        "id": "ZK-13",
+                        "titel": "Abschlussprüfung: ein frischer Advisor liest den gesamten Diff des Branches gegen dieses Dokument und gibt APPROVED",
+                        "welle": "W8",
+                        "schwere": "hoch",
+                        "status": "offen",
+                        "nachweis": "Bericht in `ARCHIV.md`",
+                        "commit": "",
+                        "notiz": "Abschlusspruefung durch frischen Advisor auf dem gesamten Branch-Diff - macht Kai nach dem Push (Kampagne bleibt lokal, UEBERGABE 9.1)"
+                }
+        ]
+}
+    </script>
+    <script>
+      const D = JSON.parse(document.getElementById("daten").textContent);
+      const ST = [
+        "offen",
+        "in_arbeit",
+        "review",
+        "blockiert",
+        "erledigt",
+        "verworfen",
+      ];
+      const SV = ["kritisch", "hoch", "mittel", "niedrig"];
+      const el = (t, c, x) => {
+        const e = document.createElement(t);
+        if (c) e.className = c;
+        if (x != null) e.textContent = x;
+        return e;
+      };
+      document.getElementById("meta").textContent =
+        "Stand: " +
+        D.stand +
+        " · " +
+        D.punkte.length +
+        " Punkte · " +
+        D.punkte.filter((p) => p.status === "erledigt").length +
+        " erledigt";
+      const bars = document.getElementById("bars");
+      for (const w of D.wellen) {
+        const ps = D.punkte.filter(
+          (p) => p.welle === w.id && p.status !== "verworfen",
+        );
+        const done = ps.filter((p) => p.status === "erledigt").length;
+        const pct = ps.length ? Math.round((100 * done) / ps.length) : 0;
+        const b = el("div", "bar");
+        b.append(el("span", "", w.id + " " + w.titel));
+        const tr = el("div", "track");
+        const f = el("div", "fill");
+        f.style.width = pct + "%";
+        tr.append(f);
+        b.append(tr, el("span", "mut", done + "/" + ps.length));
+        bars.append(b);
+      }
+      const fill = (id, vals) => {
+        const s = document.getElementById(id);
+        for (const v of vals) s.append(new Option(v, v));
+      };
+      fill(
+        "f-welle",
+        D.wellen.map((w) => w.id),
+      );
+      fill("f-status", ST);
+      fill("f-schwere", SV);
+      function render() {
+        const fw = document.getElementById("f-welle").value,
+          fs = document.getElementById("f-status").value,
+          fv = document.getElementById("f-schwere").value,
+          ft = document.getElementById("f-text").value.toLowerCase();
+        const body = document.getElementById("rows");
+        body.replaceChildren();
+        for (const p of D.punkte) {
+          if (
+            (fw && p.welle !== fw) ||
+            (fs && p.status !== fs) ||
+            (fv && p.schwere !== fv)
+          )
+            continue;
+          if (
+            ft &&
+            !(p.id + " " + p.titel + " " + p.notiz).toLowerCase().includes(ft)
+          )
+            continue;
+          const r = el("tr");
+          r.append(el("td", "", p.id));
+          const t = el("td", "", p.titel);
+          if (p.notiz) {
+            t.append(el("br"));
+            t.append(el("span", "mut", p.notiz));
+          }
+          r.append(t);
+          r.append(
+            el("td", "", p.welle),
+            el("td", "sev-" + p.schwere, p.schwere),
+          );
+          const s = el("td");
+          s.append(el("span", "tag s-" + p.status, p.status.replace("_", " ")));
+          r.append(s);
+          r.append(el("td", "", p.nachweis));
+          const c = el("td");
+          c.append(el("code", "", p.commit));
+          r.append(c);
+          body.append(r);
+        }
+      }
+      for (const id of ["f-welle", "f-status", "f-schwere", "f-text"])
+        document.getElementById(id).addEventListener("input", render);
+      render();
+    </script>
+  </body>
+</html>

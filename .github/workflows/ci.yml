@@ -16,21 +16,20 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.12"
-      - name: Abhängigkeiten installieren (hash-gepinnt)
-        run: pip install --require-hashes --no-deps -r requirements-dev.txt && pip check
-      - name: Lint
-        run: ruff check .
-      - name: Tests
-        run: python -m pytest -q
-      - name: UI DOM-Test (Knopf-Audit)
-        run: |
-          npm ci --no-audit --no-fund
-          node tests/ui_dom_check.mjs
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+      - name: Gate (ruff, format, mypy, pytest+cov, UI-DOM, eslint, pip-audit)
+        run: bash scripts/gate.sh
 
   docker:
     # Baut das Image und prüft die Container-Härtung (v1.5.0) im laufenden Compose-Stack.
@@ -92,18 +91,25 @@ jobs:
       - name: Prozesse laufen als UID 10001 mit minimalen Capabilities
         run: |
           set -eu
+          # K-8: compose nutzt init: true -> tini ist PID 1 (root). Geprueft wird der App-Prozess:
+          # aeltestes Kind von PID 1 auf dem Host (entrypoint exec't -> das ist das python).
+          app_pid() { p1=$(docker inspect -f '{{.State.Pid}}' "$1"); pgrep -P "$p1" -o; }
           for c in fox-netmap fox-netmap-scanner; do
-            uid=$(docker exec "$c" awk '/^Uid:/{print $2}' /proc/1/status)
-            eff=$(docker exec "$c" awk '/^CapEff:/{print $2}' /proc/1/status)
-            bnd=$(docker exec "$c" awk '/^CapBnd:/{print $2}' /proc/1/status)
-            echo "$c uid=$uid CapEff=$eff CapBnd=$bnd"
+            pid=$(app_pid "$c")
+            uid=$(awk '/^Uid:/{print $2}' /proc/$pid/status)
+            eff=$(awk '/^CapEff:/{print $2}' /proc/$pid/status)
+            bnd=$(awk '/^CapBnd:/{print $2}' /proc/$pid/status)
+            echo "$c pid=$pid uid=$uid CapEff=$eff CapBnd=$bnd"
+            test -n "$pid"
             test "$uid" = 10001
             test "$eff" = 0000000000000000
           done
-          test "$(docker exec fox-netmap awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000000000
-          test "$(docker exec fox-netmap awk '/^NoNewPrivs:/{print $2}' /proc/1/status)" = 1
+          webpid=$(app_pid fox-netmap)
+          test "$(awk '/^CapBnd:/{print $2}' /proc/$webpid/status)" = 0000000000000000
+          test "$(awk '/^NoNewPrivs:/{print $2}' /proc/$webpid/status)" = 1
           # Scanner: nur NET_RAW (Bit 13) im Bounding-Set
-          test "$(docker exec fox-netmap-scanner awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000002000
+          scanpid=$(app_pid fox-netmap-scanner)
+          test "$(awk '/^CapBnd:/{print $2}' /proc/$scanpid/status)" = 0000000000002000
       - name: ping funktioniert ohne root im Scanner-Kontext
         run: |
           docker exec fox-netmap-scanner setpriv --reuid=10001 --regid=10001 --clear-groups \

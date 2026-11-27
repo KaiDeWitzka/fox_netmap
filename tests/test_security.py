@@ -53,9 +53,13 @@ def test_login_page_has_no_inline_script(client):
 def test_login_lockout_after_five_failures(client):
     for _ in range(5):
         assert client.post("/api/login", json={"username": "admin", "password": "falsch"}).status_code == 401
-    r = client.post("/api/login", json={"username": "admin", "password": "secret"})
+    # S-5: falsches Passwort bleibt waehrend der Sperre 429 ...
+    r = client.post("/api/login", json={"username": "admin", "password": "falsch"})
     assert r.status_code == 429
     assert int(r.headers["retry-after"]) > 0
+    # ... aber das richtige kommt durch und hebt die Sperre auf
+    r = client.post("/api/login", json={"username": "admin", "password": "secret"})
+    assert r.status_code == 200
 
 
 def test_login_success_resets_counter(client):

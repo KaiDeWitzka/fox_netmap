@@ -23,12 +23,26 @@ def _iface(uid, node, name, typ, mac="", links=()):
 
 
 def _link(uid, typ, n1, i1, n2, i2, state="CONNECTED"):
-    return {"uid": uid, "type": typ, "state": state, "node_1_uid": n1, "node_interface_1_uid": i1, "node_2_uid": n2, "node_interface_2_uid": i2}
+    return {
+        "uid": uid,
+        "type": typ,
+        "state": state,
+        "node_1_uid": n1,
+        "node_interface_1_uid": i1,
+        "node_2_uid": n2,
+        "node_interface_2_uid": i2,
+    }
 
 
 def _client(uid, mac, name, iface_uid, typ, link):
-    return {"uid": uid, "device_name": name, "device_mac_address": mac, "is_meshed": False, "mesh_role": "unknown",
-            "node_interfaces": [_iface(iface_uid, uid, "eth0" if typ == "LAN" else "wlan0", typ, mac, [link])]}
+    return {
+        "uid": uid,
+        "device_name": name,
+        "device_mac_address": mac,
+        "is_meshed": False,
+        "mesh_role": "unknown",
+        "node_interfaces": [_iface(iface_uid, uid, "eth0" if typ == "LAN" else "wlan0", typ, mac, [link])],
+    }
 
 
 def mesh_json():
@@ -43,7 +57,11 @@ def mesh_json():
     l_pr = _link("nl-8", "LAN", "n-rep", "ni-rep-lan1", "n-pr", "ni-pr")
     l_gone = _link("nl-9", "WLAN", "n-box", "ni-box-5g", "n-gone", "ni-gone", state="DISCONNECTED")
     box = {
-        "uid": "n-box", "device_name": "fritz.box", "device_mac_address": BOX, "is_meshed": True, "mesh_role": "master",
+        "uid": "n-box",
+        "device_name": "fritz.box",
+        "device_mac_address": BOX,
+        "is_meshed": True,
+        "mesh_role": "master",
         "node_interfaces": [
             _iface("ni-box-lan1", "n-box", "LAN:1", "LAN", BOX_LAN, [l_sw, l_pc, l_nas]),
             _iface("ni-box-5g", "n-box", "AP:5G:0", "WLAN", "3c:a6:2f:00:00:03", [l_rep5, l_phone, l_gone]),
@@ -52,7 +70,11 @@ def mesh_json():
         ],
     }
     rep = {
-        "uid": "n-rep", "device_name": "fritz-repeater", "device_mac_address": REP, "is_meshed": True, "mesh_role": "slave",
+        "uid": "n-rep",
+        "device_name": "fritz-repeater",
+        "device_mac_address": REP,
+        "is_meshed": True,
+        "mesh_role": "slave",
         "node_interfaces": [
             _iface("ni-rep-up5", "n-rep", "UPLINK:5G:0", "WLAN", "3c:a6:2f:00:00:21", [l_rep5]),
             _iface("ni-rep-up2", "n-rep", "UPLINK:2G:0", "WLAN", "3c:a6:2f:00:00:22", [l_rep2]),
@@ -63,7 +85,8 @@ def mesh_json():
     return {
         "schema_version": "8.7",
         "nodes": [
-            box, rep,
+            box,
+            rep,
             _client("n-sw", SWITCH, "TL-SG108E-GZ", "ni-sw", "LAN", l_sw),
             _client("n-pc", PC, "pc", "ni-pc", "LAN", l_pc),
             _client("n-nas", NAS, "nas", "ni-nas", "LAN", l_nas),
@@ -101,7 +124,9 @@ def test_parse_mesh_robust_gegen_schleifen_und_muell():
     data = mesh_json()
     data["nodes"].append({"uid": "x"})
     data["nodes"].append("kein dict")
-    data["nodes"][0]["node_interfaces"].append({"uid": "kaputt", "node_links": [{"state": "CONNECTED", "node_1_uid": "n-box", "node_2_uid": "fehlt"}]})
+    data["nodes"][0]["node_interfaces"].append(
+        {"uid": "kaputt", "node_links": [{"state": "CONNECTED", "node_1_uid": "n-box", "node_2_uid": "fehlt"}]}
+    )
     m = tr064.parse_mesh(data)
     assert m["parents"][TV]["parent"] == REP
     assert tr064.parse_mesh({"nodes": []}) == {"parents": {}, "nodes": {}, "master": ""}
@@ -121,7 +146,10 @@ def test_mesh_url_nur_relative_pfade(path):
 
 
 def test_mesh_url_relativ_ok():
-    assert tr064._mesh_url("http://192.168.178.1:49000/", "/meshlist.lua?sid=abc") == "http://192.168.178.1:49000/meshlist.lua?sid=abc"
+    assert (
+        tr064._mesh_url("http://192.168.178.1:49000/", "/meshlist.lua?sid=abc")
+        == "http://192.168.178.1:49000/meshlist.lua?sid=abc"
+    )
 
 
 class _Resp:
@@ -237,16 +265,49 @@ def test_collect_devices_mit_mesh(tmp_path, monkeypatch):
     """Ende-zu-Ende: Scan + TR-064-Hosts + Mesh ergibt Baum statt Stern."""
     conn = db.connect(str(tmp_path / "t.db"))
     db.init_db(conn)
-    settings = Settings(data_dir=str(tmp_path), subnets="192.168.178.0/24", fritz_user="u", fritz_pass="p", snmp_enabled=False, mdns_enabled=False)
-    ips = {BOX: "192.168.178.1", REP: "192.168.178.20", SWITCH: "192.168.178.10", PC: "192.168.178.100", NAS: "192.168.178.101", PHONE: "192.168.178.102", TV: "192.168.178.103", PRINTER: "192.168.178.104"}
-    names_ = {BOX: "fritz.box", REP: "fritz-repeater", SWITCH: "TL-SG108E-GZ", PC: "pc", NAS: "nas", PHONE: "iPhone", TV: "LGwebOSTV", PRINTER: "drucker"}
-    monkeypatch.setattr(run.discover, "discover", lambda subnets, timeout: [{"ip": ip, "mac": mac, "source": "ping+arp"} for mac, ip in ips.items()])
+    settings = Settings(
+        data_dir=str(tmp_path),
+        subnets="192.168.178.0/24",
+        fritz_user="u",
+        fritz_pass="p",
+        snmp_enabled=False,
+        mdns_enabled=False,
+    )
+    ips = {
+        BOX: "192.168.178.1",
+        REP: "192.168.178.20",
+        SWITCH: "192.168.178.10",
+        PC: "192.168.178.100",
+        NAS: "192.168.178.101",
+        PHONE: "192.168.178.102",
+        TV: "192.168.178.103",
+        PRINTER: "192.168.178.104",
+    }
+    names_ = {
+        BOX: "fritz.box",
+        REP: "fritz-repeater",
+        SWITCH: "TL-SG108E-GZ",
+        PC: "pc",
+        NAS: "nas",
+        PHONE: "iPhone",
+        TV: "LGwebOSTV",
+        PRINTER: "drucker",
+    }
+    monkeypatch.setattr(
+        run.discover,
+        "discover",
+        lambda subnets, timeout: [{"ip": ip, "mac": mac, "source": "ping+arp"} for mac, ip in ips.items()],
+    )
     monkeypatch.setattr(run.ports, "scan_ports", lambda *a, **k: [])
     monkeypatch.setattr(run.names, "resolve_all", lambda ips_, use_mdns=False: {})
     monkeypatch.setattr(run.topology, "gateway_ip", lambda: "192.168.178.1")
     monkeypatch.setattr(run.topology, "gateway_ip6", lambda: "")
     monkeypatch.setattr(run.oui, "lookup_online", lambda *a, **k: "")
-    hosts = [{"mac": m, "ip": ips[m], "hostname": names_[m], "active": True, "type": "LAN", "source": "tr064"} for m in ips if m != BOX]
+    hosts = [
+        {"mac": m, "ip": ips[m], "hostname": names_[m], "active": True, "type": "LAN", "source": "tr064"}
+        for m in ips
+        if m != BOX
+    ]
     monkeypatch.setattr(run.tr064, "fetch_hosts_with_fallback", lambda *a, **k: [dict(h) for h in hosts])
     monkeypatch.setattr(run.tr064, "fetch_wan", lambda *a, **k: None)
     monkeypatch.setattr(run.tr064, "fetch_mesh", lambda *a, **k: mesh_json())
@@ -271,13 +332,23 @@ def test_collect_devices_mit_mesh(tmp_path, monkeypatch):
     # Abschaltbar: ohne Mesh wieder Stern am Gateway
     settings2 = settings.model_copy(update={"fritz_mesh": False})
     devices2 = run.collect_devices(settings2, conn)
-    assert {d["layout"]["connected_to"] for d in devices2 if d["mac"] != BOX} <= {"192.168.178.1", "192.168.178.1:49000", "wlan:192.168.178.1"}
+    assert {d["layout"]["connected_to"] for d in devices2 if d["mac"] != BOX} <= {
+        "192.168.178.1",
+        "192.168.178.1:49000",
+        "wlan:192.168.178.1",
+    }
 
 
-@pytest.mark.parametrize("raw,exp", [("Ethernet", "lan"), ("802.11", "wlan"), ("HomePlug", "plc"), ("", ""), ("WLAN", "wlan"), ("LAN", "lan")])
+@pytest.mark.parametrize(
+    "raw,exp",
+    [("Ethernet", "lan"), ("802.11", "wlan"), ("HomePlug", "plc"), ("", ""), ("WLAN", "wlan"), ("LAN", "lan")],
+)
 def test_conn_type_avm_werte(raw, exp):
     assert topology.conn_type(raw) == exp
 
 
 def test_resolve_wlan_bei_80211():
-    assert topology.resolve_connected_to("m", "192.168.178.5", tr064_type="802.11", gateway="192.168.178.1") == "wlan:192.168.178.1"
+    assert (
+        topology.resolve_connected_to("m", "192.168.178.5", tr064_type="802.11", gateway="192.168.178.1")
+        == "wlan:192.168.178.1"
+    )

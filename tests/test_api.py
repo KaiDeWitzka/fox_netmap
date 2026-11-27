@@ -27,15 +27,13 @@ def insert_device(app, mac="aa:bb:cc:dd:ee:ff"):
 
 
 def test_health(client):
+    # S-10: oeffentlicher Healthcheck liefert nur noch den Status, keine Metadaten
     r = client.get("/api/health")
     assert r.status_code == 200
-    body = r.json()
-    assert body["status"] == "ok"
-    assert body["devices"] == 0
-    assert body["version"] == "1.6.18"
+    assert r.json() == {"status": "ok"}
 
 
-def test_meta_public(client, app):
+def test_meta_public(client, auth_client, app):
     conn = db.connect(app.state.db_path)
     db.set_setting(conn, "gateway", "192.168.178.1")
     db.set_setting(conn, "wan_ip", "203.0.113.10")
@@ -43,9 +41,12 @@ def test_meta_public(client, app):
     db.set_setting(conn, "wan_endpoint", "fritz.box")
     conn.commit()
     conn.close()
-    r = client.get("/api/meta")
-    assert r.status_code == 200
+    r = auth_client.get("/api/meta")
+    assert r.status_code == 200  # mit Sitzung sichtbar
     body = r.json()
+    client.cookies.clear()  # auth_client-Fixture teilt den Client - ohne Cookie kein Zugriff
+    r = client.get("/api/meta")
+    assert r.status_code == 401  # S-10: /api/meta braucht Sitzung oder gueltigen Token
     assert body["gateway"] == "192.168.178.1" and body["wan_ip"] == "203.0.113.10"
     assert body["wan_endpoint"] == "fritz.box"  # TR-064-Router-Endpunkt wird mitgeliefert
     assert body["version"]  # Version wird mitgeliefert
@@ -244,7 +245,12 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"ports": "80,443,8080"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"fritz_url": "192.168.178.1:49000"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"fritz_url": "kein endpoint!"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"fritz_urls": "http://192.168.178.14:49000, 192.168.178.16:49000"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"fritz_urls": "http://192.168.178.14:49000, 192.168.178.16:49000"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"notify_webhook": "keine-url"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"notify_webhook": "https://hook.example/x"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"notify_ntfy": "https://ntfy.example/t"}).status_code == 200
@@ -256,8 +262,11 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"oui_online_url": "https://api.macvendors.com"}).status_code == 200
     assert auth_client.patch("/api/settings", json={"oui_online_enabled": False}).status_code == 200
     body = auth_client.get("/api/settings").json()
-    for secret in ("fritz_pass", "auth_pass", "notify_gotify_token", "notify_ntfy_token"):
-        assert secret not in body, secret
+    # S-8: Secrets nie im Klartext, sondern als {"configured": bool}; auth_pass ist env-only und gar nicht im GET
+    assert "auth_pass" not in body
+    for secret in ("fritz_pass", "notify_gotify_token", "notify_ntfy_token"):
+        assert body[secret] == {"configured": False}, secret
+    assert body["snmp_community"] == {"configured": True}  # wurde oben auf "public" gesetzt
     assert body["fritz_url"] == "192.168.178.1:49000"
     assert body["scan_timeout"] in (2.5, "2.5")
     assert auth_client.patch("/api/settings", json={"auto_export_dir": "../etc"}).status_code == 422
@@ -266,7 +275,12 @@ def test_settings_validation(auth_client, app):
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 721}).status_code == 422
     assert auth_client.patch("/api/settings", json={"auto_export_interval_hours": 24}).status_code == 200
     assert auth_client.patch("/api/settings", json={"alarm_whitelist": "bogus!!"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"alarm_whitelist": "AA:BB:CC:DD:EE:FF, 192.168.178.50, 2003::1"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"alarm_whitelist": "AA:BB:CC:DD:EE:FF, 192.168.178.50, 2003::1"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"mdns_enabled": False}).status_code == 200
     r = auth_client.patch("/api/settings", json={"scan_interval": 600})
     assert r.status_code == 200
@@ -300,7 +314,9 @@ def test_sites_api_filter_export(auth_client, app):
     assert auth_client.patch("/api/settings", json={"sites": "Kaputt"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"sites": ":192.168.1.0/24"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"sites": "X:keine-ip"}).status_code == 422
-    r = auth_client.patch("/api/settings", json={"sites": "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24, 10.9.0.0/16"})
+    r = auth_client.patch(
+        "/api/settings", json={"sites": "Zuhause:192.168.178.0/24; Remote:192.168.179.0/24, 10.9.0.0/16"}
+    )
     assert r.status_code == 200
     body = auth_client.get("/api/sites").json()
     assert body["names"] == ["Remote", "Zuhause"]
@@ -313,7 +329,22 @@ def test_sites_api_filter_export(auth_client, app):
         ("aa:bb:cc:00:00:01", "192.168.178.10", "192.168.178.0/24"),
         ("aa:bb:cc:00:00:02", "192.168.179.20", "192.168.179.0/24"),
     ]:
-        db.upsert_device(conn, {"mac": mac, "ip": ip, "hostname": "h-" + ip, "vendor": "", "category": "Client", "status": "online", "subnet": subnet, "source": "ping", "ports": [], "layout": {}}, now)
+        db.upsert_device(
+            conn,
+            {
+                "mac": mac,
+                "ip": ip,
+                "hostname": "h-" + ip,
+                "vendor": "",
+                "category": "Client",
+                "status": "online",
+                "subnet": subnet,
+                "source": "ping",
+                "ports": [],
+                "layout": {},
+            },
+            now,
+        )
     conn.commit()
     conn.close()
 
@@ -334,7 +365,7 @@ def test_fritz_pass_write_only(auth_client, app):
     r = auth_client.patch("/api/settings", json={"fritz_pass": "geheim123"})
     assert r.status_code == 200
     body = auth_client.get("/api/settings").json()
-    assert "fritz_pass" not in body
+    assert body["fritz_pass"] == {"configured": True}  # S-8: write-only, nur configured im GET
     conn = db.connect(app.state.db_path)
     assert db.get_setting(conn, "fritz_pass") == "geheim123"
     conn.close()
@@ -361,7 +392,7 @@ def test_export_pdf(auth_client, client, app):
     # kaputtes PNG (Magic ok, Daten Muell)
     bad = b64.b64encode(b"\x89PNG\r\n\x1a\n" + b"garbage").decode()
     assert auth_client.post("/api/export/pdf", json={"image": "data:image/png;base64," + bad}).status_code == 422
-    # ohne Session -> 401; mit gueltigem Token -> 200 (TOKEN_PATHS deckt /api/export/ ab)
+    # ohne Session -> 401; mit gueltigem Token -> 200 ohne Bild, 422 mit Bild (S-6)
     from fastapi.testclient import TestClient
 
     anon0 = TestClient(app)
@@ -370,6 +401,8 @@ def test_export_pdf(auth_client, client, app):
     tok = auth_client.post("/api/tokens", json={"expires_hours": 24}).json()["token"]
     r3 = anon0.post(f"/api/export/pdf?token={tok}", json={})
     assert r3.status_code == 200 and r3.content.startswith(b"%PDF")
+    r4 = anon0.post(f"/api/export/pdf?token={tok}", json={"image": "data:image/png;base64," + png_b64})
+    assert r4.status_code == 422  # S-6: mit Token kein Bild
 
 
 def _pdf_mediabox(pdf: bytes):
@@ -384,13 +417,12 @@ def _pdf_text(pdf: bytes) -> bytes:
     """Rohe PDF-Bytes + alle FlateDecode-Streams entpackt (damit Text assertions greifen)."""
     import re
     import zlib
+    from contextlib import suppress
 
     out = pdf
     for m in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
-        try:
+        with suppress(Exception):
             out += zlib.decompress(m.group(1))
-        except Exception:
-            pass
     return out
 
 
@@ -476,7 +508,12 @@ def test_settings_vpn_pool(auth_client, app):
     assert r.json()["vpn_pool"] == "off"  # Default: keine Pool-Annahme
     assert auth_client.patch("/api/settings", json={"vpn_pool": "keine-ip"}).status_code == 422
     assert auth_client.patch("/api/settings", json={"vpn_pool": "192.168.178.210-192.168.178.201"}).status_code == 422
-    assert auth_client.patch("/api/settings", json={"vpn_pool": "auto, 10.8.0.0/24, 192.168.178.201-192.168.178.210"}).status_code == 200
+    assert (
+        auth_client.patch(
+            "/api/settings", json={"vpn_pool": "auto, 10.8.0.0/24, 192.168.178.201-192.168.178.210"}
+        ).status_code
+        == 200
+    )
     assert auth_client.patch("/api/settings", json={"vpn_pool": "off"}).status_code == 200
     conn = db.connect(app.state.db_path)
     assert db.get_setting(conn, "vpn_pool") == "off"
@@ -487,7 +524,16 @@ def test_devices_api_und_export_mit_vpn(auth_client, app):
     conn = db.connect(app.state.db_path)
     db.upsert_device(
         conn,
-        {"mac": "00:7a:a4:9b:d9:68", "ip": "192.168.178.201", "vpn": True, "status": "online", "category": "Unbekannt", "hostname": "fritz.box", "link_port": "LAN:2", "connection": "lan"},
+        {
+            "mac": "00:7a:a4:9b:d9:68",
+            "ip": "192.168.178.201",
+            "vpn": True,
+            "status": "online",
+            "category": "Unbekannt",
+            "hostname": "fritz.box",
+            "link_port": "LAN:2",
+            "connection": "lan",
+        },
         db.utcnow(),
     )
     conn.commit()

@@ -2,9 +2,12 @@ import csv
 import io
 import json
 import os
-from datetime import datetime, timedelta, timezone
+import sqlite3
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from . import db
+from .config import Settings
 
 CSV_FIELDS = [
     "mac",
@@ -27,12 +30,10 @@ CSV_FIELDS = [
 ]
 
 
-def devices_payload(settings, rows: list[dict], conn) -> dict:
+def devices_payload(settings: Settings, rows: list[dict[str, Any]], conn: sqlite3.Connection) -> dict[str, Any]:
     devices = []
     for r in rows:
-        port_rows = conn.execute(
-            "SELECT port FROM device_ports WHERE mac = ? ORDER BY port", (r["mac"],)
-        ).fetchall()
+        port_rows = conn.execute("SELECT port FROM device_ports WHERE mac = ? ORDER BY port", (r["mac"],)).fetchall()
         devices.append(
             {
                 "mac": r["mac"],
@@ -65,7 +66,16 @@ def devices_payload(settings, rows: list[dict], conn) -> dict:
     }
 
 
-def to_csv(rows: list[dict], delimiter: str = ";") -> str:
+def _csv_cell(value: Any, formula: bool = False) -> str:
+    # S-3: Freitextfelder mit fuehrendem =,+,-,@,Tab,CR werden in Tabellenkalkulationen als Formel
+    # ausgewertet - ein ' wird vorangestellt. Gilt nicht fuer MAC/IP/Ports/Zeitstempel und nicht fuer JSON.
+    s = "" if value is None else str(value)
+    if formula and s[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + s
+    return s
+
+
+def to_csv(rows: list[dict[str, Any]], delimiter: str = ";") -> str:
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=delimiter, lineterminator="\n")
     writer.writerow(CSV_FIELDS)
@@ -76,17 +86,17 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
                 r["ip"],
                 r.get("ip6", ""),
                 "ja" if r.get("vpn") else "nein",
-                r["hostname"],
-                r["vendor"],
+                _csv_cell(r["hostname"], formula=True),
+                _csv_cell(r["vendor"], formula=True),
                 r["category"],
                 r["status"],
                 r["subnet"],
-                r.get("site", ""),
-                r.get("connected_to") or "",
-                r.get("link_port") or "",
+                _csv_cell(r.get("site", ""), formula=True),
+                _csv_cell(r.get("connected_to") or "", formula=True),
+                _csv_cell(r.get("link_port") or "", formula=True),
                 r.get("ports_str") or "",
-                r["note"],
-                r.get("room", ""),
+                _csv_cell(r["note"], formula=True),
+                _csv_cell(r.get("room", ""), formula=True),
                 r["first_seen"],
                 r["last_seen"],
             ]
@@ -94,44 +104,57 @@ def to_csv(rows: list[dict], delimiter: str = ";") -> str:
     return buf.getvalue()
 
 
-def auto_export_due(last: str | None, interval_hours: int, now=None) -> bool:
+def auto_export_due(last: str | None, interval_hours: int, now: datetime | None = None) -> bool:
     if interval_hours <= 0:
         return True
     if not last:
         return True
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     try:
         last_dt = datetime.fromisoformat(last)
     except ValueError:
         return True
     if last_dt.tzinfo is None:
-        last_dt = last_dt.replace(tzinfo=timezone.utc)
-    return (now - last_dt) >= timedelta(hours=interval_hours)
+        last_dt = last_dt.replace(tzinfo=UTC)
+    return bool((now - last_dt) >= timedelta(hours=interval_hours))
 
 
-def auto_export(settings, conn) -> list[str]:
-    out_dir = os.path.join(settings.data_dir, settings.auto_export_dir)
+def _write_atomic(path: str, data: str) -> None:
+    # K-8: atomar schreiben (tmp + os.replace) - ein Abbruch hinterlaesst keine abgeschnittene Datei
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        fh.write(data)
+    os.replace(tmp, path)
+
+
+def auto_export(settings: Settings, conn: sqlite3.Connection) -> list[str]:
+    # T-6: Exportziel muss im Datenverzeichnis bleiben (auto_export_dir darf nicht mit ../ entkommen)
+    data_real = os.path.realpath(settings.data_dir)
+    out_dir = os.path.realpath(os.path.join(data_real, settings.auto_export_dir))
+    if out_dir != data_real and not out_dir.startswith(data_real + os.sep):
+        raise ValueError(f"auto_export_dir zeigt aus dem Datenverzeichnis: {settings.auto_export_dir!r}")
     os.makedirs(out_dir, exist_ok=True)
-    rows = db.list_devices(conn)
-    for r in rows:
-        r["site"] = settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""
+    with db.read_snapshot(conn):  # K-11: konsistenter Schnappschuss statt Daten vor/nach Scan
+        rows = db.list_devices(conn)
+        for r in rows:
+            r["site"] = settings.site_map.get(r["subnet"], "") if r.get("subnet") else ""
+        payload = devices_payload(settings, rows, conn)
+        csv_text = to_csv(rows, ";")
     stamp = db.utcnow().replace(":", "-")
     written = []
     json_path = os.path.join(out_dir, f"netmap-{stamp}.json")
-    with open(json_path, "w", encoding="utf-8") as fh:
-        json.dump(devices_payload(settings, rows, conn), fh, ensure_ascii=False, indent=2)
+    _write_atomic(json_path, json.dumps(payload, ensure_ascii=False, indent=2))
     written.append(json_path)
     csv_path = os.path.join(out_dir, f"netmap-{stamp}.csv")
-    with open(csv_path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(to_csv(rows, ";"))
+    _write_atomic(csv_path, csv_text)
     written.append(csv_path)
     return written
 
 
 def build_pdf(
-    settings,
-    rows: list[dict],
-    conn,
+    settings: Settings,
+    rows: list[dict[str, Any]],
+    conn: sqlite3.Connection,
     image_bytes: bytes | None = None,
     title: str = "",
     orientation: str = "portrait",
@@ -154,7 +177,12 @@ def build_pdf(
     usable_w = page[0] - 2 * margin
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=page, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin,
+        buf,
+        pagesize=page,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=margin,
+        bottomMargin=margin,
         title=title or "fox_netmap Export",
     )
     styles = getSampleStyleSheet()
@@ -171,6 +199,12 @@ def build_pdf(
     story.append(Spacer(1, 6 * mm))
 
     if image_bytes:
+        # S-6: Pixelzahl vor reportlab pruefen - ein 9000x9000-Bild belegt sonst >1 GB RAM
+        from reportlab.lib.utils import ImageReader
+
+        _w, _h = ImageReader(io.BytesIO(image_bytes)).getSize()
+        if _w * _h > 16_000_000:
+            raise ValueError("image zu gross (max 16 Megapixel)")
         img = Image(io.BytesIO(image_bytes))
         ratio = img.imageHeight / float(img.imageWidth or 1)
         img.drawWidth = usable_w
@@ -186,10 +220,22 @@ def build_pdf(
     fracs = [0.15, 0.11, 0.14, 0.13, 0.10, 0.07, 0.12, 0.10, 0.08]
     data = [[Paragraph(escape(h), head_style) for h in header]]
     for r in rows:
-        data.append([
-            Paragraph(escape(str(r.get(k) or "")), cell_style)
-            for k in ("hostname", "ip", "mac", "vendor", "category", "status", "subnet", "connected_to", "ports_str")
-        ])
+        data.append(
+            [
+                Paragraph(escape(str(r.get(k) or "")), cell_style)
+                for k in (
+                    "hostname",
+                    "ip",
+                    "mac",
+                    "vendor",
+                    "category",
+                    "status",
+                    "subnet",
+                    "connected_to",
+                    "ports_str",
+                )
+            ]
+        )
     t = Table(data, repeatRows=1, colWidths=[f * usable_w for f in fracs])
     t.setStyle(
         TableStyle(

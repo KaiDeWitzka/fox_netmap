@@ -1,7 +1,14 @@
 import json
+import logging
 import xml.etree.ElementTree as ET
+from contextlib import suppress
+from typing import Any
 
 import httpx
+
+from .. import netutil
+
+log = logging.getLogger("fox_netmap.tr064")
 
 HOSTS_SERVICE = "urn:dslforum-org:service:Hosts:1"
 HOSTS_PATH = "/upnp/control/hosts"
@@ -15,7 +22,7 @@ class TR064Error(Exception):
     pass
 
 
-def _soap_body(service: str, action: str, args: dict) -> str:
+def _soap_body(service: str, action: str, args: dict[str, Any]) -> str:
     return (
         '<?xml version="1.0"?>'
         '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
@@ -41,7 +48,7 @@ def _soap_fault_root(root: ET.Element) -> str:
     return " ".join(p for p in (faultstring, code, desc) if p)
 
 
-def _parse_fields(root: ET.Element) -> dict:
+def _parse_fields(root: ET.Element) -> dict[str, Any]:
     out = {}
     for el in root.iter():
         tag = el.tag.split("}")[-1]
@@ -50,22 +57,40 @@ def _parse_fields(root: ET.Element) -> dict:
     return out
 
 
-def _soap_call(base_url: str, path: str, service: str, action: str, args: dict, user: str, password: str, timeout: float = 8.0, verify: bool = True) -> dict:
+def _soap_call(
+    base_url: str,
+    path: str,
+    service: str,
+    action: str,
+    args: dict[str, Any],
+    user: str,
+    password: str,
+    timeout: float = 8.0,
+    verify: bool = True,
+) -> dict[str, Any]:
     url = f"{base_url.rstrip('/')}{path}"
     headers = {"Content-Type": 'text/xml; charset="utf-8"', "SOAPAction": f'"{service}#{action}"'}
     auth = httpx.DigestAuth(user, password) if user else None
     try:
-        response = httpx.post(url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout, verify=verify)
+        response = httpx.post(
+            url, content=_soap_body(service, action, args), headers=headers, auth=auth, timeout=timeout, verify=verify
+        )
     except httpx.HTTPError as exc:
         raise TR064Error(f"{action} -> {url}: Verbindungsfehler: {exc}") from exc
+    # S-15: Antwortgroesse auf ~1 MB deckeln (declared + gelesen) - ein boeser Gegenueber darf nicht unbegrenzt liefern
+    headers = getattr(response, "headers", None) or {}
+    cl = headers.get("content-length")
+    content = getattr(response, "content", b"") or b""
+    if (cl and int(cl) > 1_000_000) or len(content) > 1_000_000:
+        raise TR064Error(f"{action} -> {url}: Antwort zu gross (>1 MB)")
     if response.status_code >= 400:
         try:
-            fault = _soap_fault_root(ET.fromstring(response.text))
+            fault = _soap_fault_root(ET.fromstring(response.text))  # noqa: S314 - SOAP-Antwort aus dem LAN; Groessen-/Host-Limit in W2 (S-15)
         except ET.ParseError:
             fault = ""
         raise TR064Error(f"{action} -> HTTP {response.status_code}" + (f" ({fault})" if fault else ""))
     try:
-        root = ET.fromstring(response.text)
+        root = ET.fromstring(response.text)  # noqa: S314 - SOAP-Antwort aus dem LAN; Groessen-/Host-Limit in W2 (S-15)
     except ET.ParseError as exc:
         raise TR064Error(f"{action} -> {url}: ungültige XML-Antwort") from exc
     fault = _soap_fault_root(root)
@@ -80,14 +105,30 @@ def _normalize_base(base_url: str) -> str:
     return base_url.rstrip("/")
 
 
-def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
+def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) -> list[dict[str, Any]]:
     base_url = _normalize_base(base_url)
     count = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetHostNumberOfEntries", {}, user, password, verify=verify)
-    n = int(count.get("NewHostNumberOfEntries", "0") or 0)
+    try:
+        n = int(count.get("NewHostNumberOfEntries", "0") or 0)
+    except ValueError as exc:
+        # S-15: kaputte Zahl darf den Scan nicht abbrechen
+        raise TR064Error(f"GetHostNumberOfEntries: ungueltige Zahl {count.get('NewHostNumberOfEntries')!r}") from exc
+    if n > 4096:
+        log.warning("TR-064 meldet %s Hosts - auf 4096 begrenzt", n)
+        n = 4096
     hosts = []
     for i in range(n):
-        h = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "GetGenericHostEntry", {"NewIndex": str(i)}, user, password, verify=verify)
-        mac = h.get("NewMACAddress", "").lower()
+        h = _soap_call(
+            base_url,
+            HOSTS_PATH,
+            HOSTS_SERVICE,
+            "GetGenericHostEntry",
+            {"NewIndex": str(i)},
+            user,
+            password,
+            verify=verify,
+        )
+        mac = netutil.normalize_mac_key(h.get("NewMACAddress", ""))
         if mac or h.get("NewIPAddress"):
             hosts.append(
                 {
@@ -105,11 +146,11 @@ def fetch_hosts(base_url: str, user: str, password: str, verify: bool = True) ->
 def _http_fallback_url(base_url: str) -> str | None:
     """https://… -> http://… (gleicher Host/Port), sonst None."""
     if base_url.startswith("https://"):
-        return "http://" + base_url[len("https://"):]
+        return "http://" + base_url[len("https://") :]
     return None
 
 
-def fetch_hosts_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> list[dict]:
+def fetch_hosts_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> list[dict[str, Any]]:
     base_url = _normalize_base(base_url)
     try:
         return fetch_hosts(base_url, user, password, verify=verify)
@@ -120,7 +161,7 @@ def fetch_hosts_with_fallback(base_url: str, user: str, password: str, verify: b
         raise
 
 
-def fetch_wan_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> dict | None:
+def fetch_wan_with_fallback(base_url: str, user: str, password: str, verify: bool = True) -> dict[str, Any] | None:
     base_url = _normalize_base(base_url)
     try:
         wan = fetch_wan(base_url, user, password, verify=verify)
@@ -134,7 +175,9 @@ def fetch_wan_with_fallback(base_url: str, user: str, password: str, verify: boo
         raise
 
 
-def fetch_mesh_with_fallback(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict:
+def fetch_mesh_with_fallback(
+    base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True
+) -> dict[str, Any]:
     base_url = _normalize_base(base_url)
     try:
         return fetch_mesh(base_url, user, password, timeout=timeout, verify=verify)
@@ -145,7 +188,7 @@ def fetch_mesh_with_fallback(base_url: str, user: str, password: str, timeout: f
         raise
 
 
-def fetch_wan(base_url: str, user: str, password: str, verify: bool = True) -> dict | None:
+def fetch_wan(base_url: str, user: str, password: str, verify: bool = True) -> dict[str, Any] | None:
     base_url = _normalize_base(base_url)
     for service, path in WAN_SERVICES:
         try:
@@ -156,10 +199,10 @@ def fetch_wan(base_url: str, user: str, password: str, verify: bool = True) -> d
             except TR064Error:
                 continue
         wan_ip = ""
-        try:
-            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password, verify=verify).get("NewExternalIPAddress", "")
-        except TR064Error:
-            pass
+        with suppress(TR064Error):
+            wan_ip = _soap_call(base_url, path, service, "GetExternalIPAddress", {}, user, password, verify=verify).get(
+                "NewExternalIPAddress", ""
+            )
         return {
             "wan_ip": wan_ip,
             "status": status.get("NewStatus", ""),
@@ -189,7 +232,7 @@ def _mesh_url(base_url: str, path: str) -> str:
     return base_url.rstrip("/") + path
 
 
-def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict:
+def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0, verify: bool = True) -> dict[str, Any]:
     base_url = _normalize_base(base_url)
     res = _soap_call(base_url, HOSTS_PATH, HOSTS_SERVICE, "X_AVM-DE_GetMeshListPath", {}, user, password, verify=verify)
     url = _mesh_url(base_url, res.get("NewX_AVM-DE_MeshListPath", ""))
@@ -214,7 +257,7 @@ def fetch_mesh(base_url: str, user: str, password: str, timeout: float = 10.0, v
     return data
 
 
-def _mac(v) -> str:
+def _mac(v: Any) -> str:
     v = (v or "").strip().lower() if isinstance(v, str) else ""
     return "" if v in ("", _ZERO_MAC) else v
 
@@ -227,15 +270,10 @@ def _band(iface_name: str) -> str:
     return ""
 
 
-def parse_mesh(data: dict) -> dict:
-    """Wertet das Mesh-JSON aus.
-
-    Rueckgabe:
-      parents: {mac: {"parent": mac, "conn": "lan"|"wlan"|"plc", "port": Schnittstelle am Elternknoten,
-                      "band": "5 GHz"|..., "role": Rolle des Elternknotens}}
-      nodes:   {mac: {"name", "role", "meshed", "macs"}}  (alle Knoten, macs = Geraete- und Schnittstellen-MACs)
-      master:  MAC des Mesh-Masters oder ""
-    """
+def _parse_nodes(
+    data: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, str], dict[str, list[str]]]:
+    """Knoten, Schnittstellen und MAC-Zuordnung aus dem Mesh-JSON."""
     nodes = [n for n in data.get("nodes", []) if isinstance(n, dict) and n.get("uid")]
     iface = {}
     node_mac = {}
@@ -256,7 +294,12 @@ def parse_mesh(data: dict) -> dict:
             node_mac[n["uid"]] = macs[0]
             node_macs[n["uid"]] = macs
 
-    adj: dict[str, list] = {n["uid"]: [] for n in nodes}
+    return nodes, iface, node_mac, node_macs
+
+
+def _parse_links(nodes: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    """Adjazenzliste aus den CONNECTED-Links (jede Kante nur einmal)."""
+    adj: dict[str, list[Any]] = {n["uid"]: [] for n in nodes}
     seen_links = set()
     for n in nodes:
         for i in n.get("node_interfaces") or []:
@@ -275,8 +318,18 @@ def parse_mesh(data: dict) -> dict:
                 adj[a].append((b, ltype, ia))
                 adj[b].append((a, ltype, ib))
 
-    role = {n["uid"]: (n.get("mesh_role") or "unknown") for n in nodes}
-    masters = [n["uid"] for n in nodes if role[n["uid"]] == "master"]
+    return adj
+
+
+def _resolve_attachment(
+    adj: dict[str, list[Any]],
+    role: dict[str, str],
+    node_mac: dict[str, str],
+    node_macs: dict[str, list[str]],
+    iface: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], str]:
+    """Breitensuche ab dem Mesh-Master: Eltern je Knoten bestimmen (AVM: Topologie darf Schleifen enthalten)."""
+    masters = [u for u in role if role[u] == "master"]
     root = masters[0] if masters else (max(adj, key=lambda u: len(adj[u])) if adj else "")
 
     parents = {}
@@ -288,7 +341,9 @@ def parse_mesh(data: dict) -> dict:
         while queue:
             cur = queue.popleft()
             # Mesh-Knoten (Repeater) zuerst, damit Clients nicht ueber einen Nachbar-Client "verbunden" werden
-            for other, ltype, own_iface in sorted(adj[cur], key=lambda x: (role.get(x[0]) == "unknown", _LINK_PRIO.get(x[1], 9))):
+            for other, ltype, own_iface in sorted(
+                adj[cur], key=lambda x: (role.get(x[0]) == "unknown", _LINK_PRIO.get(x[1], 9))
+            ):
                 if other in visited:
                     continue
                 visited.add(other)
@@ -307,14 +362,39 @@ def parse_mesh(data: dict) -> dict:
                 for m in node_macs.get(other, [child_mac]):
                     parents[m] = info
 
+    return parents, root
+
+
+def _node_summary(
+    nodes: list[dict[str, Any]], role: dict[str, str], node_mac: dict[str, str], node_macs: dict[str, list[str]]
+) -> dict[str, Any]:
     out_nodes = {}
     for n in nodes:
-        m = node_mac.get(n["uid"])
-        if m:
-            out_nodes[m] = {
+        mac = node_mac.get(n["uid"])
+        if mac:
+            out_nodes[mac] = {
                 "name": n.get("device_name") or "",
                 "role": role[n["uid"]],
                 "meshed": bool(n.get("is_meshed")),
                 "macs": node_macs[n["uid"]],
             }
+    return out_nodes
+
+
+def parse_mesh(data: dict[str, Any]) -> dict[str, Any]:
+    """Wertet das Mesh-JSON aus (Q-14: in parse_nodes/parse_links/resolve_attachment zerlegt).
+
+    Rueckgabe:
+      parents: {mac: {"parent": mac, "conn": "lan"|"wlan"|"plc", "port": Schnittstelle am Elternknoten,
+                      "band": "5 GHz"|..., "role": Rolle des Elternknotens}}
+      nodes:   {mac: {"name", "role", "meshed", "macs"}}  (alle Knoten, macs = Geraete- und Schnittstellen-MACs)
+      master:  MAC des Mesh-Masters oder ""
+    """
+    nodes, iface, node_mac, node_macs = _parse_nodes(data)
+    adj = _parse_links(nodes)
+    parents, root = _resolve_attachment(
+        adj, {n["uid"]: (n.get("mesh_role") or "unknown") for n in nodes}, node_mac, node_macs, iface
+    )
+    role = {n["uid"]: (n.get("mesh_role") or "unknown") for n in nodes}
+    out_nodes = _node_summary(nodes, role, node_mac, node_macs)
     return {"parents": parents, "nodes": out_nodes, "master": node_mac.get(root, "") if root else ""}

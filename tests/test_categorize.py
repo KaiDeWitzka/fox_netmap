@@ -11,15 +11,36 @@ from app.scanner import mdns, names
 @pytest.mark.parametrize(
     "host,exp",
     [
-        ("iPhone", c.MOBILE), ("Kais-iPad", c.MOBILE), ("Galaxy-S23", c.MOBILE), ("android-3f2a", c.MOBILE),
-        ("PS5-642", c.MEDIA), ("LGwebOSTV", c.MEDIA), ("MagentaTV-One-2-Generation", c.MEDIA), ("Nintendo-Switch", c.MEDIA),
-        ("Apple-TV-Wohnzimmer", c.MEDIA), ("sonos-kueche", c.MEDIA),
-        ("Mac", c.CLIENT), ("iMac", c.CLIENT), ("NettiMac", c.CLIENT), ("Kais-Mac-mini", c.CLIENT), ("MacBook-Pro", c.CLIENT),
+        ("iPhone", c.MOBILE),
+        ("Kais-iPad", c.MOBILE),
+        ("Galaxy-S23", c.MOBILE),
+        ("android-3f2a", c.MOBILE),
+        ("PS5-642", c.MEDIA),
+        ("LGwebOSTV", c.MEDIA),
+        ("MagentaTV-One-2-Generation", c.MEDIA),
+        ("Nintendo-Switch", c.MEDIA),
+        ("Apple-TV-Wohnzimmer", c.MEDIA),
+        ("sonos-kueche", c.MEDIA),
+        ("Mac", c.CLIENT),
+        ("iMac", c.CLIENT),
+        ("NettiMac", c.CLIENT),
+        ("Kais-Mac-mini", c.CLIENT),
+        ("MacBook-Pro", c.CLIENT),
         ("DESKTOP-4KQ7T1B", c.CLIENT),
-        ("NPI077254", c.PRINTER), ("BRW0080927AFBCE", c.PRINTER), ("drucker-buero", c.PRINTER),
-        ("HueBridge", c.IOT), ("shelly-wohnzimmer", c.IOT), ("steckdose-1", c.IOT), ("ring-tuer", c.IOT),
-        ("PupsNAS", c.SERVER), ("pups-nas", c.SERVER), ("pve", c.SERVER), ("pi-hole", c.SERVER),
-        ("TL-SG108E-GZ", c.SWITCH), ("fritz.box", c.ROUTER), ("fritz-repeater", c.REPEATER),
+        ("NPI077254", c.PRINTER),
+        ("BRW0080927AFBCE", c.PRINTER),
+        ("drucker-buero", c.PRINTER),
+        ("HueBridge", c.IOT),
+        ("shelly-wohnzimmer", c.IOT),
+        ("steckdose-1", c.IOT),
+        ("ring-tuer", c.IOT),
+        ("PupsNAS", c.SERVER),
+        ("pups-nas", c.SERVER),
+        ("pve", c.SERVER),
+        ("pi-hole", c.SERVER),
+        ("TL-SG108E-GZ", c.SWITCH),
+        ("fritz.box", c.ROUTER),
+        ("fritz-repeater", c.REPEATER),
     ],
 )
 def test_hostnamen(host, exp):
@@ -93,6 +114,7 @@ def test_kategorien_api_entspricht_scanner():
 
 # ---- mDNS ----
 
+
 def _name(n: str) -> bytes:
     return names._encode_name(n)
 
@@ -151,3 +173,73 @@ def test_browse_ohne_netz(monkeypatch):
 
     monkeypatch.setattr(mdns.socket, "socket", Dead)
     assert mdns.browse(0.1) == {}
+
+
+# W7 Q-14: Charakterisierung der Regelreihenfolge - der Umbau auf eine explizite Regeltabelle
+# darf weder die Tabellenordnung noch ein Ergebnis aendern (erste Regel gewinnt, dann Punkte,
+# bei Gleichstand die CATEGORIES-Reihenfolge).
+def test_rule_order_unchanged():
+    assert [cat for cat, _ in c.HOSTNAME_RULES] == [
+        c.MEDIA,
+        c.PRINTER,
+        c.REPEATER,
+        c.ROUTER,
+        c.SWITCH,
+        c.MOBILE,
+        c.MEDIA,
+        c.IOT,
+        c.SERVER,
+        c.CLIENT,
+    ]
+    assert [cat for cat, _ in c.VENDOR_RULES] == [c.MEDIA, c.PRINTER, c.IOT, c.SERVER, c.REPEATER, c.CLIENT]
+    assert [cat for cat, _ in c.MODEL_RULES] == [c.MOBILE, c.MEDIA, c.CLIENT]
+    assert c.CATEGORIES == [
+        c.ROUTER,
+        c.REPEATER,
+        c.SWITCH,
+        c.SERVER,
+        c.CLIENT,
+        c.MOBILE,
+        c.MEDIA,
+        c.PRINTER,
+        c.IOT,
+        c.UNKNOWN,
+    ]
+    assert sorted(p for p in c.PORT_RULES if p > 1000) == c.FINGERPRINT_PORTS
+
+
+@pytest.mark.parametrize(
+    "kw,exp",
+    [
+        (dict(hostname="Nintendo-Switch"), (c.MEDIA, "host:nintendo")),  # erste MEDIA-Regel schlaegt Switch
+        (dict(hostname="TL-SG108E-GZ"), (c.SWITCH, "host:tl-sg")),
+        (dict(hostname="fritz.box"), (c.ROUTER, "host:fritz.box")),
+        (dict(hostname="iPhone-15"), (c.MOBILE, "host:iphone")),
+        (dict(hostname="drucker-buero"), (c.PRINTER, "host:drucker")),
+        (dict(hostname="PupsNAS"), (c.SERVER, "host:pupsnas")),
+        (dict(hostname="ring-tuer"), (c.IOT, "host:ring")),
+        (dict(hostname="LGwebOSTV"), (c.MEDIA, "host:lgwebostv")),
+        (dict(hostname="unbekannter-host"), (c.UNKNOWN, "")),
+        (dict(hostname="", vendor="Synology"), (c.SERVER, "vendor:Synology")),
+        (dict(hostname="", vendor="AVM"), (c.REPEATER, "vendor:AVM")),  # AVM ohne Gateway/Mesh -> Repeater
+        (dict(hostname="pc", ports=[{"port": 445}]), (c.CLIENT, "host:pc")),  # Hostname (6) schlaegt Port (1)
+        (dict(hostname="pc", ports=[{"port": 445}, {"port": 22}]), (c.CLIENT, "host:pc")),
+        (dict(hostname="pc", ports=[{"port": 22}, {"port": 80}, {"port": 443}]), (c.CLIENT, "host:pc")),
+        (dict(hostname="x", ports=[{"port": 62078}]), (c.MOBILE, "port:62078")),
+        (dict(hostname="x", ports=[{"port": 49000}], is_gateway=True), (c.ROUTER, "gateway")),
+        (dict(hostname="x", ports=[{"port": 49000}]), (c.REPEATER, "port:49000")),
+        (dict(hostname="x", mesh_role="master"), (c.ROUTER, "mesh:master")),
+        (dict(hostname="x", mesh_role="slave"), (c.REPEATER, "mesh:slave")),
+        (dict(hostname="x", is_gateway=True, mesh_role="slave"), (c.ROUTER, "gateway")),
+        (
+            dict(hostname="tv", mdns={"model": "iPhone14,2", "services": {"_airplay._tcp"}}),
+            (c.MOBILE, "mdns:iPhone14,2"),
+        ),
+        (dict(hostname="tv", mdns={"services": {"_ipp._tcp", "_sonos._tcp"}}), (c.MEDIA, "host:tv")),
+        (dict(hostname="", mac="02:00:00:00:00:01", connection="wlan"), (c.MOBILE, "mac:random")),
+        (dict(hostname="", mac="00:00:00:00:00:01", connection="lan"), (c.UNKNOWN, "")),
+        (dict(hostname="nas", vendor="Synology", ports=[{"port": 5001}]), (c.SERVER, "host:nas")),
+    ],
+)
+def test_classify_snapshot_unchanged(kw, exp):
+    assert c.classify(**kw) == exp
