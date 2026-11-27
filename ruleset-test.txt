@@ -1,0 +1,1 @@
+ruleset test - triviale Aenderung, nur um den PR-Flow zu pruefen
