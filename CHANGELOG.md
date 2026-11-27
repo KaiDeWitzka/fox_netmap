@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [1.7.0] – 2026-11-27
+
+Release 1.7.0: Produktionsreife-Kampagne W0–W8 abgeschlossen (101 Befunde aus `docs/produktionsreife/UEBERGABE.md` erledigt, Details in `docs/produktionsreife/STAND.md`/`ARCHIV.md` und den Wave-Abschnitten unten). Highlights: zentrales Einstellungs-Schema mit Secrets nur als `configured`, gehärtete öffentliche API (Token-Scope, kein `/docs`/`/openapi.json`), nicht-destruktive Dedupe, transaktionale Scans + sauberes SIGTERM, scanner-seitige Fehler im Healthcheck sichtbar, UI-Accessibility + i18n (6 Sprachen), 423 Tests (cov 91 %) + `mypy --strict` + Mutationstests, Doku in 6 Sprachen + Runbook/Architektur + generierte Env-Referenz. Runtipi-App in `foxhole` auf 1.7.0 aktualisiert.
+
 Produktionsreife Welle 1 (Bausteine, siehe docs/produktionsreife/UEBERGABE.md):
 
 - Neues zentrales Einstellungs-Schema `app/settings_schema.py`; `GET /api/settings` liefert getypte Werte und Secrets nur noch als `{"configured": true}` (nie Klartext) (S-8)
