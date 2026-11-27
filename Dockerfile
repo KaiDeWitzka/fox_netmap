@@ -25,11 +25,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Systempakete: kein apt-get upgrade (der Digest-Pin des Basis-Images waere wertlos,
-# Aktualitaet kommt ueber Dependabot-Digest-Updates und den Trivy-Scan).
+# Aktualitaet kommt ueber Dependabot-Digest-Updates und den Trivy-Scan). Ausnahme: Pakete mit
+# gefixtem CVE werden explizit genannt, damit apt die gefixte Version aus dem Repo installiert
+# (z. B. libzstd1: CVE-2026-124851 HIGH, Fix 1.5.7+dfsg-1+deb13u1, Basis-Image traegt noch -1).
 # libcap2-bin nur fuer setcap waehrend des Builds; danach wieder entfernt.
 RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
     && apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 install -y --no-install-recommends \
        iputils-ping iproute2 snmp libcap2-bin \
+       libzstd1 \
     && setcap cap_net_raw+ep "$(readlink -f /bin/ping)" \
     && apt-get purge -y libcap2-bin && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
