@@ -91,18 +91,27 @@ jobs:
       - name: Prozesse laufen als UID 10001 mit minimalen Capabilities
         run: |
           set -eu
+          # K-8: compose nutzt init: true -> tini ist PID 1 (root). Geprueft wird der App-Prozess
+          # (python -m app web|scanner), nicht PID 1.
+          app_pid() {
+            docker exec "$1" sh -c 'for d in /proc/[0-9]*; do cmd=$(tr "\0" " " < "$d/cmdline" 2>/dev/null); case "$cmd" in *"python -m app web"*|*"python -m app scanner"*) basename "$d"; return;; esac; done'
+          }
           for c in fox-netmap fox-netmap-scanner; do
-            uid=$(docker exec "$c" awk '/^Uid:/{print $2}' /proc/1/status)
-            eff=$(docker exec "$c" awk '/^CapEff:/{print $2}' /proc/1/status)
-            bnd=$(docker exec "$c" awk '/^CapBnd:/{print $2}' /proc/1/status)
-            echo "$c uid=$uid CapEff=$eff CapBnd=$bnd"
+            pid=$(app_pid "$c")
+            uid=$(docker exec "$c" awk '/^Uid:/{print $2}' /proc/$pid/status)
+            eff=$(docker exec "$c" awk '/^CapEff:/{print $2}' /proc/$pid/status)
+            bnd=$(docker exec "$c" awk '/^CapBnd:/{print $2}' /proc/$pid/status)
+            echo "$c pid=$pid uid=$uid CapEff=$eff CapBnd=$bnd"
+            test -n "$pid"
             test "$uid" = 10001
             test "$eff" = 0000000000000000
           done
-          test "$(docker exec fox-netmap awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000000000
-          test "$(docker exec fox-netmap awk '/^NoNewPrivs:/{print $2}' /proc/1/status)" = 1
+          webpid=$(app_pid fox-netmap)
+          test "$(docker exec fox-netmap awk '/^CapBnd:/{print $2}' /proc/$webpid/status)" = 0000000000000000
+          test "$(docker exec fox-netmap awk '/^NoNewPrivs:/{print $2}' /proc/$webpid/status)" = 1
           # Scanner: nur NET_RAW (Bit 13) im Bounding-Set
-          test "$(docker exec fox-netmap-scanner awk '/^CapBnd:/{print $2}' /proc/1/status)" = 0000000000002000
+          scanpid=$(app_pid fox-netmap-scanner)
+          test "$(docker exec fox-netmap-scanner awk '/^CapBnd:/{print $2}' /proc/$scanpid/status)" = 0000000000002000
       - name: ping funktioniert ohne root im Scanner-Kontext
         run: |
           docker exec fox-netmap-scanner setpriv --reuid=10001 --regid=10001 --clear-groups \
