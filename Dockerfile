@@ -1,6 +1,6 @@
 # Zweistufiger Build auf uv-Basis (W0): Build-Stage installiert die gepinnten Pakete aus uv.lock,
 # Runtime-Stage uebernimmt nur das venv + den App-Code. Basis-Images per Digest gepinnt.
-FROM ghcr.io/astral-sh/uv:0.11.16@sha256:440fd6477af86a2f1b38080c539f1672cd22acb1b1a47e321dba5158ab08864d AS uv
+FROM ghcr.io/astral-sh/uv:0.13.10@sha256:a3ea1357342c1a4bf9a0c53a3deb1b55379aefa037338d8113d5771efa01774f AS uv
 FROM python:3.12-slim@sha256:4a68d3169325c47e1bafbb86425220f03fbdff6f079a419e8d39407183288217 AS build
 
 COPY --from=uv /uv /usr/local/bin/uv
