@@ -9,7 +9,8 @@
   `NETZ_PVE_TOKEN_SECRET` (Secret, write-only) und `NETZ_PVE_INSECURE_TLS`; Validierung inkl. Querfeldprüfung
   (`app/validation.py`: PVE-URLs ohne Zugangsdaten, `user@realm`, Token-ID `user@realm!name`, aktiv nur mit
   kompletter Konfiguration); i18n in 6 Sprachen, docker-compose/.env, generierte Env-Referenz, Handbücher,
-  `docs/03-sicherheit.md` §2.19. Scanner-Stage (`app/scanner/pve.py`) folgt separat.
+  `docs/03-sicherheit.md` §2.19; Schritt-für-Schritt-Anleitung zum read-only-API-Token in allen 6 Handbüchern (Abschnitt 8).
+  Scanner-Stage (`app/scanner/pve.py`) folgt separat.
 
 ## [1.8.2] – 2026-11-28
 

@@ -209,6 +209,17 @@ Tout ce qui est modifié ici prend effet **au prochain scan sans redémarrer le 
 webhook sans `https://`) sont signalées immédiatement dans le frontend et rejetées par le
 backend avec HTTP 422.
 
+#### Proxmox VE : créer un jeton API (exemple)
+
+Pour que fox_netmap puisse lire les VM/CT sans stocker de mot de passe :
+
+1. Dans Proxmox VE : **Datacenter → Permissions → Roles → Create** - ID de rôle `fox_netmap`, privilèges `VM.Audit` et `Sys.Audit` (lecture seule).
+2. **Datacenter → Permissions → API Tokens → Add** - utilisateur `root@pam`, ID de jeton `fox_netmap`, laisser **Privilege Separation activé** (par défaut). Le secret n'est affiché qu'une seule fois - copiez-le !
+3. **Datacenter → Permissions → Add** - chemin `/`, utilisateur `root@pam!fox_netmap`, rôle `fox_netmap` (le jeton n'a ainsi qu'un accès lecture, malgré `root@pam`).
+4. Dans fox_netmap sous **Paramètres → Proxmox VE** : URL `https://<ip-pve>:8006`, utilisateur `root@pam`, ID de jeton `root@pam!fox_netmap`, secret = secret copié. Activer le scan.
+
+Alternative : utiliser un utilisateur dédié (p. ex. `monitor@pve`) avec le même rôle au lieu de `root@pam`. N'activer `NETZ_PVE_INSECURE_TLS` que dans votre propre LAN (risque MITM).
+
 ---
 
 ## 9. Intégration (embed, lecture seule)

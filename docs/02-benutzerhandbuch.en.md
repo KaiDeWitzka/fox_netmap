@@ -203,6 +203,17 @@ Everything changed here takes effect **on the next scan without restarting the c
 **Validation:** invalid input (e.g. `not-an-ip` as subnet, port `abc`, webhook without
 `https://`) is reported in the frontend immediately and rejected by the backend with HTTP 422.
 
+#### Proxmox VE: create an API token (example)
+
+So that fox_netmap can read VMs/containers without storing a password:
+
+1. In Proxmox VE: **Datacenter → Permissions → Roles → Create** - role ID `fox_netmap`, privileges `VM.Audit` and `Sys.Audit` (read-only).
+2. **Datacenter → Permissions → API Tokens → Add** - user `root@pam`, token ID `fox_netmap`, keep **Privilege Separation enabled** (default). The secret is shown only once - copy it!
+3. **Datacenter → Permissions → Add** - path `/`, user `root@pam!fox_netmap`, role `fox_netmap` (so the token has read-only access despite `root@pam`).
+4. In fox_netmap under **Settings → Proxmox VE** enter: URL `https://<pve-ip>:8006`, user `root@pam`, token ID `root@pam!fox_netmap`, secret = the copied secret. Enable the scan.
+
+Alternatively use a dedicated user (e.g. `monitor@pve`) with the same role instead of `root@pam`. Only enable `NETZ_PVE_INSECURE_TLS` in your own LAN (MITM risk).
+
 ---
 
 ## 9. Embed (embeddable, read-only)

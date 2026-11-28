@@ -31,6 +31,8 @@ SPECIAL_NOTES = {
     "host": "Bind-Adresse im Container",
     "embed_ancestors": "CSP frame-ancestors fuer `/embed`",
     "oui_online_url": "nur bei aktiviertem Online-OUI (Datenschutz, Default aus)",
+    "pve_enabled": "Token read-only anlegen (Rolle fox_netmap, VM.Audit+Sys.Audit) - Anleitung: Handbuch 02, Abschnitt 8 'Proxmox VE'",
+    "pve_token_secret": "Secret des API-Tokens; wird nur einmal in PVE angezeigt - Anleitung: Handbuch 02, Abschnitt 8 'Proxmox VE'",
 }
 EXTRA_NOTES = {
     "NETZ_SQLITE_JOURNAL": "SQLite-Journal-Modus (`app/db.py`): `auto` = WAL per Schreibprobe, Fallback `delete` bei `disk I/O error`",

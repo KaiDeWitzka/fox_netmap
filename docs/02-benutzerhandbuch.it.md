@@ -209,6 +209,17 @@ predefinito env).
 **Validazione:** input non validi (p. es. `non-un-ip` come sottorete, porta `abc`, webhook senza
 `https://`) vengono segnalati subito nel frontend e rifiutati dal backend con HTTP 422.
 
+#### Proxmox VE: creare un token API (esempio)
+
+Così fox_netmap può leggere VM/CT senza salvare una password:
+
+1. In Proxmox VE: **Datacenter → Permissions → Roles → Create** - ID ruolo `fox_netmap`, privilegi `VM.Audit` e `Sys.Audit` (sola lettura).
+2. **Datacenter → Permissions → API Tokens → Add** - utente `root@pam`, ID token `fox_netmap`, lasciare **Privilege Separation abilitato** (predefinito). Il segreto viene mostrato una sola volta - copiarlo!
+3. **Datacenter → Permissions → Add** - percorso `/`, utente `root@pam!fox_netmap`, ruolo `fox_netmap` (così il token ha solo lettura nonostante `root@pam`).
+4. In fox_netmap in **Impostazioni → Proxmox VE**: URL `https://<ip-pve>:8006`, utente `root@pam`, ID token `root@pam!fox_netmap`, segreto = segreto copiato. Attivare la scansione.
+
+In alternativa usare un utente dedicato (es. `monitor@pve`) con lo stesso ruolo invece di `root@pam`. Attivare `NETZ_PVE_INSECURE_TLS` solo nella propria LAN (rischio MITM).
+
 ---
 
 ## 9. Incorporamento (embed, sola lettura)
