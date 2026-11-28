@@ -12,6 +12,7 @@ from typing import Any
 
 from .. import db as _db
 from ..config import Settings
+from ..logsetup import warn_once
 from ..netutil import normalize_mac as _norm_mac
 from ..netutil import oui_prefix as _oui_prefix
 
@@ -120,8 +121,33 @@ def lookup_online(mac: str, settings: Settings, conn: sqlite3.Connection, budget
     budget["left"] = budget.get("left", 0) - 1
     try:
         vendor = parse_vendor(_http_get(url))
-    except Exception:  # N-5: ein Protokollfehler darf den ganzen Scan nicht abbrechen
-        log.warning("OUI-Online-Lookup fehlgeschlagen fuer %s", url, exc_info=True)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429 or exc.code >= 500:
+            # Rate-Limit/Serverfehler: Online-Lookups fuer den Rest dieses Scans pausieren,
+            # statt jede MAC erneut zu fragen (Log-Spam, weiterer 429)
+            budget["left"] = 0
+            warn_once(
+                f"oui:http{exc.code}",
+                "OUI-Online-Lookup HTTP %s - Online-Lookups fuer diesen Scan pausiert (%s)",
+                exc.code,
+                url,
+            )
+        else:
+            warn_once(
+                f"oui:http{exc.code}:{prefix}",
+                "OUI-Online-Lookup fehlgeschlagen (HTTP %s) fuer %s",
+                exc.code,
+                url,
+            )
+        return ""
+    except Exception as exc:  # noqa: BLE001  # N-5: ein Protokollfehler darf den ganzen Scan nicht abbrechen
+        # kein exc_info: sonst landet pro MAC ein voller Traceback im Log (Log-Spam bei Ausfall)
+        warn_once(
+            f"oui:{type(exc).__name__}:{prefix}",
+            "OUI-Online-Lookup fehlgeschlagen (%s) fuer %s",
+            type(exc).__name__,
+            url,
+        )
         return ""
     if vendor and conn is not None:
         _db.set_oui_cache(conn, prefix, vendor)

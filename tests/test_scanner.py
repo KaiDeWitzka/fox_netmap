@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import UTC
 
@@ -817,6 +818,67 @@ def test_oui_online_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr(oui, "_http_get", lambda url, timeout=5.0: '{"vendor": "JsonVendor"}')
     assert oui.lookup_online("DE:AD:BE:EF:00:02", settings, conn, {"left": 5}) == "JsonVendor"
     assert db.get_oui_cache(conn, "DEADBE") == "JsonVendor"
+    conn.close()
+
+
+def test_oui_online_429_pauses_scan_without_traceback(tmp_path, monkeypatch, caplog):
+    """Fix 1.8.1: HTTP 429/5xx pausiert die Online-Lookups fuer den Rest des Scans
+    (kein Log-Spam mit Traceback pro MAC), Budget wird geleert."""
+    import urllib.error
+
+    conn, settings = make(tmp_path)
+    settings = settings.model_copy(
+        update={"oui_online_enabled": True, "oui_online_max": 5, "oui_online_url": "https://oui.example"}
+    )
+    calls = []
+
+    def rate_limited(url, timeout=5.0):
+        calls.append(url)
+        raise urllib.error.HTTPError(url, 429, "Too Many Requests", {}, None)
+
+    monkeypatch.setattr(oui, "_http_get", rate_limited)
+    budget = {"left": 5}
+    with caplog.at_level(logging.WARNING):
+        assert oui.lookup_online("AA:BB:CC:11:22:33", settings, conn, budget) == ""
+    assert budget["left"] == 0  # Scan pausiert
+    assert len(calls) == 1
+    # naechster Aufruf im selben Scan: kein HTTP mehr
+    assert oui.lookup_online("AA:BB:CC:44:55:66", settings, conn, budget) == ""
+    assert len(calls) == 1
+    # genau eine WARNING-Zeile, kein Traceback im Log
+    assert caplog.text.count("OUI-Online-Lookup") == 1
+    assert "Traceback" not in caplog.text
+    assert "429" in caplog.text
+    conn.close()
+
+
+def test_oui_online_error_warn_once_no_traceback(tmp_path, monkeypatch, caplog):
+    """Fix 1.8.1: generischer Fehler -> warn_once ohne exc_info (kein Traceback pro MAC)."""
+    import urllib.error
+
+    conn, settings = make(tmp_path)
+    settings = settings.model_copy(
+        update={"oui_online_enabled": True, "oui_online_max": 5, "oui_online_url": "https://oui.example"}
+    )
+    monkeypatch.setattr(oui, "_http_get", lambda url, timeout=5.0: (_ for _ in ()).throw(OSError("down")))
+    budget = {"left": 5}
+    with caplog.at_level(logging.WARNING):
+        assert oui.lookup_online("AA:BB:CC:11:22:33", settings, conn, budget) == ""
+        assert oui.lookup_online("11:22:33:44:55:66", settings, conn, budget) == ""  # anderer OUI-Praefix
+    assert budget["left"] == 3  # generischer Fehler verbraucht Budget, pausiert aber nicht
+    assert caplog.text.count("OUI-Online-Lookup fehlgeschlagen") == 2  # pro Prefix einmal
+    assert "Traceback" not in caplog.text
+
+    # HTTP 404 (unbekannter Hersteller): Budget wird verbraucht, Scan laeuft weiter
+    def not_found(url, timeout=5.0):
+        raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(oui, "_http_get", not_found)
+    budget2 = {"left": 5}
+    with caplog.at_level(logging.WARNING):
+        assert oui.lookup_online("DE:AD:BE:EF:00:01", settings, conn, budget2) == ""
+    assert budget2["left"] == 4
+    assert "Traceback" not in caplog.text
     conn.close()
 
 
