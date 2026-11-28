@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Einstellungen für die Proxmox-VE-Anbindung (Backlog #112 #13, E-9): eigener Abschnitt "Proxmox VE" in den
+  Einstellungen mit `NETZ_PVE_ENABLED` (default aus), `NETZ_PVE_URLS`, `NETZ_PVE_USER`, `NETZ_PVE_TOKEN_ID`,
+  `NETZ_PVE_TOKEN_SECRET` (Secret, write-only) und `NETZ_PVE_INSECURE_TLS`; Validierung inkl. Querfeldprüfung
+  (`app/validation.py`: PVE-URLs ohne Zugangsdaten, `user@realm`, Token-ID `user@realm!name`, aktiv nur mit
+  kompletter Konfiguration); i18n in 6 Sprachen, docker-compose/.env, generierte Env-Referenz, Handbücher,
+  `docs/03-sicherheit.md` §2.19. Scanner-Stage (`app/scanner/pve.py`) folgt separat.
+
 ## [1.8.2] – 2026-11-28
 
 ### Changed

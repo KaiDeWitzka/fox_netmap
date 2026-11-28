@@ -123,6 +123,15 @@
               <label><span data-i18n="st.snmpCommunity">SNMP-Community</span> <input id="st-snmpcommunity" type="password" autocomplete="off" aria-describedby="st-snmpcommunity-hint"> <button type="button" id="st-snmpcommunity-clear" class="secret-clear" hidden data-i18n="btn.clear_secret">Löschen</button></label>
               <p id="st-snmpcommunity-hint" class="muted" data-i18n="st.snmpCommunityHint">Kein Standardwert. Ohne Community wird SNMP übersprungen. Nicht „public“ verwenden.</p>
             </fieldset>
+            <fieldset class="st-group"><legend data-i18n="st.g.pve">Proxmox VE</legend>
+              <label><input id="st-pve" type="checkbox"> <span data-i18n="st.pve">Proxmox-VE-Scan aktiv</span></label>
+              <label><span data-i18n="st.pveUrls">PVE-URLs (kommagetrennt)</span> <input id="st-pveurls" type="text" data-i18n-ph="st.pveUrlsPh" placeholder="https://192.168.178.10:8006"></label>
+              <label><span data-i18n="st.pveUser">PVE-Benutzer (user@realm)</span> <input id="st-pveuser" type="text" data-i18n-ph="st.pveUserPh" placeholder="root@pam"></label>
+              <label><span data-i18n="st.pveTokenId">API-Token-ID (user@realm!name)</span> <input id="st-pvetokenid" type="text" data-i18n-ph="st.pveTokenIdPh" placeholder="root@pam!fox_netmap"></label>
+              <label><span data-i18n="st.pveTokenSecret">API-Token-Secret</span> <input id="st-pvetokensecret" type="password" autocomplete="new-password" data-i18n-ph="st.pveTokenSecretPh" placeholder="unverändert, wenn leer"> <button type="button" id="st-pvetokensecret-clear" class="secret-clear" hidden data-i18n="btn.clear_secret">Löschen</button></label>
+              <label><input id="st-pveinsecuretls" type="checkbox"> <span data-i18n="st.pveInsecureTls">PVE: TLS-Zertifikatsprüfung abschalten (nur eigenes LAN)</span></label>
+              <p class="muted" data-i18n="st.pveHint">Nur lesende API-Abfragen (GET) auf Port 8006, Authentifizierung per API-Token - es wird kein Passwort gespeichert. Default: aus (ein PVE-API-Token kann admin-äquivalent sein). Token-Secret ist write-only (leer = unverändert, Löschen entfernt es).</p>
+            </fieldset>
             <fieldset class="st-group"><legend data-i18n="st.g.alarms">Alarme</legend>
               <label><span data-i18n="st.notifyWebhook">Alarm-Webhook-URL</span> <input id="st-notifywebhook" type="url" placeholder="https://…"></label>
               <label><span data-i18n="st.notifyGotify">Gotify-URL</span> <input id="st-notifygotify" type="url" placeholder="https://…"></label>

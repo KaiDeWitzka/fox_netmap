@@ -88,6 +88,34 @@ def parse_endpoint(text: str) -> str:
     raise ValueError(f"{t!r} (URL oder host:port erwartet)")
 
 
+PVE_FIELDS = ("pve_enabled", "pve_urls", "pve_user", "pve_token_id", "pve_token_secret", "pve_insecure_tls")
+
+
+def parse_pve_url(text: str) -> str:
+    """Proxmox-VE-API-Basis-URL: https?://host(:port)?(/api2/json)? - Default-Port 8006.
+
+    S-8: Zugangsdaten (user:pass@host) in URLs werden abgelehnt; nur Basis-URL ohne Pfad.
+    """
+    t = text.strip()
+    if t.endswith("/api2/json"):
+        t = t[: -len("/api2/json")]
+    t = t.rstrip("/")
+    p = urlparse(t)
+    if p.scheme not in ("http", "https") or not p.hostname:
+        raise ValueError(f"{text!r} (https://host:8006 erwartet)")
+    if p.username or p.password:
+        raise ValueError(f"URL darf keine Zugangsdaten (user:pass@) enthalten: {text!r}")
+    if p.path not in ("", "/"):
+        raise ValueError(f"nur Basis-URL ohne Pfad angeben (ausser /api2/json): {text!r}")
+    try:
+        port = p.port
+    except ValueError as exc:
+        raise ValueError(f"ungueltiger Port in Proxmox-URL: {text!r}") from exc
+    if port is not None and not (1 <= port <= 65535):
+        raise ValueError(f"Port ausserhalb 1-65535 in Proxmox-URL: {text!r}")
+    return t
+
+
 def parse_whitelist(text: str) -> list[str]:
     out = []
     for entry in text.split(","):
@@ -250,10 +278,54 @@ def _check_misc(data: dict[str, Any]) -> str | None:
     return None
 
 
-def validate_patch(data: dict[str, Any]) -> str | None:
-    """Prueft ein settings-PATCH (nur gesetzte Felder). None = ok, sonst Fehlermeldung (woertlich wie frueher)."""
+def _check_pve(data: dict[str, Any], current: Any = None) -> str | None:
+    # E-9: Proxmox VE. Querfeldpruefung gegen den Ist-Zustand (current = Settings), damit ein
+    # gespeichertes Token-Secret beim Re-Aktivieren nicht erneut eingegeben werden muss.
+    eff: dict[str, Any] = {k: getattr(current, k, "") for k in PVE_FIELDS} if current is not None else {}
+    # S-8: leeres Secret im PATCH heisst "unveraendert" -> Ist-Zustand gilt weiter
+    eff.update(
+        {
+            k: v
+            for k, v in data.items()
+            if k in PVE_FIELDS and v is not None and not (k == "pve_token_secret" and v == "")
+        }
+    )
+    urls = str(eff.get("pve_urls") or "")
+    if urls.strip():
+        for u in urls.split(","):
+            u = u.strip()
+            if u:
+                try:
+                    parse_pve_url(u)
+                except ValueError as exc:
+                    return f"ungueltige Proxmox-VE-URL: {exc}"
+    user = str(eff.get("pve_user") or "").strip()
+    if user and not re.match(r"^[^\s@]+@[^\s@]+$", user):
+        return f"ungueltiger Proxmox-Benutzer (user@realm erwartet, z. B. root@pam): {user}"
+    token_id = str(eff.get("pve_token_id") or "").strip()
+    if token_id and not re.match(r"^[^\s@]+@[^\s@]+![^\s]+$", token_id):
+        return f"ungueltige Proxmox-Token-ID (user@realm!name erwartet, z. B. root@pam!fox_netmap): {token_id}"
+    if data.get("pve_token_secret") is not None and len(str(data["pve_token_secret"])) > 256:
+        return "pve_token_secret darf hoechstens 256 Zeichen haben"
+    if eff.get("pve_enabled"):
+        for key, label in (
+            ("pve_urls", "PVE-URL(s)"),
+            ("pve_user", "Benutzer (user@realm)"),
+            ("pve_token_id", "Token-ID (user@realm!name)"),
+            ("pve_token_secret", "Token-Secret"),
+        ):
+            if not str(eff.get(key) or "").strip():
+                return f"Proxmox VE ist aktiv, aber {label} fehlt (NETZ_PVE_*)"
+    return None
+
+
+def validate_patch(data: dict[str, Any], current: Any = None) -> str | None:
+    """Prueft ein settings-PATCH (nur gesetzte Felder). None = ok, sonst Fehlermeldung (woertlich wie frueher).
+
+    current: optionales Settings-Objekt fuer Querfeldpruefungen gegen den Ist-Zustand (E-9/PVE).
+    """
     for check in (_check_ranges, _check_ports, _check_fritz, _check_notify, _check_misc):
         err = check(data)
         if err:
             return err
-    return None
+    return _check_pve(data, current)

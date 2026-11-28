@@ -71,6 +71,13 @@ FIELDS: dict[str, SettingField] = {
     "docker_hosts": SettingField(*_STR),
     "docker_insecure_tls": SettingField(*_BOOL),
     "docker_token": SettingField(*_STR, secret=True),
+    # Proxmox VE API (VMs/CTs, read-only GETs, Token-Auth statt Passwort, E-9; Backlog #112 #13)
+    "pve_enabled": SettingField(*_BOOL),
+    "pve_urls": SettingField(*_STR),
+    "pve_user": SettingField(*_STR),
+    "pve_token_id": SettingField(*_STR),
+    "pve_token_secret": SettingField(*_STR, secret=True),
+    "pve_insecure_tls": SettingField(*_BOOL),
     # Alarm
     "notify_webhook": SettingField(*_STR),
     "notify_gotify": SettingField(*_STR),

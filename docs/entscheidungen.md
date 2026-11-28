@@ -57,3 +57,20 @@ Q-13/Q-12/Q-16). Verhalten aendert sich dadurch nicht.
   `docs/03-sicherheit.md`). Container werden als Geräte mit synthetischer MAC `ip:<ip>`,
   Kategorie `Container`, „verbunden mit" = Docker-Host. Host-Network-Container werden übersprungen.
 - **Später:** Proxmox VE über eigene API (Backlog #13), Kubernetes als eigener Punkt (Backlog #15).
+
+## E-9 – Proxmox VE über die REST-API, read-only, API-Token statt Passwort (Backlog #112 #13)
+
+- **Fakt:** VMs und Container (CTs) auf Proxmox VE sind per ARP/Port-Scan nicht zuverlässig von anderen Geräten
+  unterscheidbar; die PVE-API liefert dagegen verlässliche Namen, VMIDs, MAC-Adressen und Typen. Ein PVE-API-Token
+  kann admin-äquivalent sein; Passwörter sollen nicht gespeichert werden (Grundschutz/DSGVO: minimale Credentials,
+  keine Klartext-Passwörter in der DB).
+- **Entscheidung:** Anbindung über die PVE-REST-API (`https://host:8006/api2/json`), ausschließlich read-only GETs
+  (`/nodes`, `/nodes/{node}/qemu`, `/nodes/{node}/lxc`), Authentifizierung per API-Token im `PVEAPIToken`-Header.
+  Neue Einstellungen in einem eigenen Abschnitt "Proxmox VE": `NETZ_PVE_ENABLED` (default **aus**), `NETZ_PVE_URLS`
+  (kommagetrennt, Default-Port 8006), `NETZ_PVE_USER` (`user@realm`), `NETZ_PVE_TOKEN_ID` (`user@realm!name`),
+  `NETZ_PVE_TOKEN_SECRET` (Secret, nie geloggt, in der UI write-only), `NETZ_PVE_INSECURE_TLS` (WARN beim Scan,
+  MITM-Risiko). Validierung in `app/validation.py::validate_patch` inkl. Querfeldprüfung gegen den Ist-Zustand
+  (aktiv nur mit kompletter Konfiguration); URLs mit `user:pass@` werden abgelehnt (S-8). Doku:
+  `docs/03-sicherheit.md` §2.19. Scanner-Stage (`app/scanner/pve.py`, Anreicherung der Geräte per MAC) folgt als
+  eigener Schritt.
+- **Später:** Kubernetes (Backlog #15), verschachtelte Container-Ansicht (#16), Docker-Bridge-Fallback (#17).

@@ -58,6 +58,12 @@ class SettingsPatch(BaseModel):
     docker_hosts: str | None = None
     docker_insecure_tls: bool | None = None
     docker_token: str | None = None
+    pve_enabled: bool | None = None
+    pve_urls: str | None = None
+    pve_user: str | None = None
+    pve_token_id: str | None = None
+    pve_token_secret: str | None = None
+    pve_insecure_tls: bool | None = None
     notify_webhook: str | None = None
     notify_gotify: str | None = None
     notify_gotify_token: str | None = None
@@ -84,10 +90,11 @@ def patch_settings(
 ) -> dict[str, Any]:
     # Q-2: reine Pruefung in app/validation.py::validate_patch, Meldungen woertlich gleich
     data_all = body.model_dump(exclude_none=True)
-    error = validation.validate_patch(data_all)
+    settings = request.app.state.settings
+    # E-9: Querfeldpruefung Proxmox VE braucht den Ist-Zustand (z. B. gespeichertes Token-Secret)
+    error = validation.validate_patch(data_all, current=settings)
     if error:
         raise HTTPException(status_code=422, detail=error)
-    settings = request.app.state.settings
     data = {k: v for k, v in body.model_dump().items() if k in body.model_fields_set}
     # S-7: wer den FRITZ!Box-Endpunkt aendert, darf das gespeicherte Passwort nicht an den neuen Host senden
     if any(k in data for k in ("fritz_url", "fritz_urls", "fritz_user")) and "fritz_pass" not in data:

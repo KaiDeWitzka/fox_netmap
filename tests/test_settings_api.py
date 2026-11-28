@@ -93,3 +93,83 @@ def test_null_secret_in_patch_deletes_stored_value(auth_client, app):
     conn.close()
     body = auth_client.get("/api/settings").json()
     assert body["snmp_community"] == {"configured": False}
+
+
+# --- E-9: Proxmox VE (Backlog #112 #13) ---
+
+PVE_FULL = {
+    "pve_enabled": True,
+    "pve_urls": "https://192.168.178.10:8006, https://pve2:8006/api2/json",
+    "pve_user": "root@pam",
+    "pve_token_id": "root@pam!fox_netmap",
+    "pve_token_secret": "00000000-0000-0000-0000-000000000000",
+    "pve_insecure_tls": False,
+}
+
+
+def test_pve_full_patch_ok_and_secret_masked(auth_client):
+    r = auth_client.patch("/api/settings", json=PVE_FULL)
+    assert r.status_code == 200, r.text
+    body = auth_client.get("/api/settings").json()
+    assert body["pve_enabled"] is True
+    assert body["pve_urls"] == PVE_FULL["pve_urls"]
+    assert body["pve_user"] == "root@pam"
+    assert body["pve_token_id"] == "root@pam!fox_netmap"
+    assert body["pve_token_secret"] == {"configured": True}  # S-8: nie Klartext
+    assert body["pve_insecure_tls"] is False
+
+
+def test_pve_enabled_without_complete_config_rejected(auth_client):
+    # aktiv ohne Token-Secret -> 422 (Querfeldpruefung gegen den Ist-Zustand)
+    r = auth_client.patch("/api/settings", json={k: v for k, v in PVE_FULL.items() if k != "pve_token_secret"})
+    assert r.status_code == 422
+    assert "Token-Secret" in r.json()["detail"]
+    r = auth_client.patch("/api/settings", json={**PVE_FULL, "pve_token_secret": ""})
+    assert r.status_code == 422  # leer = unveraendert, hier ist nichts gespeichert -> fehlt
+    r = auth_client.patch("/api/settings", json={"pve_enabled": True, "pve_urls": "https://pve:8006"})
+    assert r.status_code == 422
+    assert "Proxmox" in r.json()["detail"]
+
+
+def test_pve_invalid_values_rejected(auth_client):
+    bad_urls = ["https://user:pass@pve:8006", "ftp://pve:8006", "https://pve:8006/irgendwas", "https://pve:99999"]
+    for u in bad_urls:
+        r = auth_client.patch("/api/settings", json={"pve_urls": u})
+        assert r.status_code == 422, u
+    assert auth_client.patch("/api/settings", json={"pve_user": "kein-realm"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"pve_user": "root@pam"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"pve_token_id": "ohne-bang"}).status_code == 422
+    assert auth_client.patch("/api/settings", json={"pve_token_id": "root@pam!fox_netmap"}).status_code == 200
+    assert auth_client.patch("/api/settings", json={"pve_token_secret": "x" * 257}).status_code == 422
+
+
+def test_pve_enable_with_stored_secret_ok_and_null_deletes(auth_client, app):
+    # Secret zuerst (deaktiviert) speichern, dann aktivieren -> Querfeldpruefung greift auf Ist-Zustand
+    r = auth_client.patch("/api/settings", json={**PVE_FULL, "pve_enabled": False})
+    assert r.status_code == 200
+    r = auth_client.patch("/api/settings", json={"pve_enabled": True})
+    assert r.status_code == 200, r.text
+    assert auth_client.get("/api/settings").json()["pve_token_secret"] == {"configured": True}
+    r = auth_client.patch("/api/settings", json={"pve_token_secret": None})
+    assert r.status_code == 200
+    body = auth_client.get("/api/settings").json()
+    assert body["pve_token_secret"] == {"configured": False}
+    # jetzt ist "aktiv ohne Secret" wieder ein Fehler
+    r = auth_client.patch("/api/settings", json={"pve_enabled": True})
+    assert r.status_code == 422
+
+
+def test_validate_patch_pve_pure_function():
+    from app.validation import validate_patch
+
+    assert validate_patch({"pve_urls": "https://pve:8006"}) is None
+    assert validate_patch({"pve_urls": "https://pve:8006/"}) is None
+    assert validate_patch({"pve_urls": "https://pve:8006/api2/json"}) is None
+    assert validate_patch({"pve_urls": "http://[::1]:8006"}) is None
+    assert validate_patch({"pve_urls": "https://pve:8006", "pve_enabled": False}) is None
+    err = validate_patch({"pve_urls": "https://pve:8006", "pve_enabled": True})
+    assert err and "fehlt" in err
+    err = validate_patch({"pve_user": "root"})
+    assert err and "user@realm" in err
+    err = validate_patch({"pve_token_id": "root@pam"})
+    assert err and "!name" in err

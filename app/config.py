@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     # TLS-Zertifikatspruefung fuer 2376 abschalten (selbstsigniert); nur im eigenen LAN (MITM-Risiko)
     docker_insecure_tls: bool = False
     docker_token: str = ""  # Bearer-Token fuer API-geschuetzte Daemons; secret, nie geloggt
+    # Proxmox VE API (Backlog #112 #13, E-9): default AUS, ein PVE-API-Token kann admin-aequivalent
+    # sein. Nur read-only GETs auf Port 8006/HTTPS, Authentifizierung per API-Token - kein Passwort.
+    pve_enabled: bool = False
+    pve_urls: str = ""  # "https://pve1:8006, https://pve2:8006" - ohne Port wird 8006 angenommen
+    pve_user: str = ""  # "user@realm", z. B. "root@pam"
+    pve_token_id: str = ""  # "user@realm!tokenname", z. B. "root@pam!fox_netmap"
+    pve_insecure_tls: bool = (
+        False  # TLS-Zertifikatspruefung abschalten (selbstsigniert); nur im eigenen LAN (MITM-Risiko)
+    )
+    pve_token_secret: str = ""  # Secret des API-Tokens (PVEAPIToken-Header); secret, nie geloggt
     auth_enabled: bool = True
     auth_user: str = "admin"
     auth_pass: str = ""
