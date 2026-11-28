@@ -236,6 +236,8 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   (S-12-Redaction), nur im `Authorization`-Header.
 - `NETZ_PVE_INSECURE_TLS=1` schaltet die Zertifikatsprüfung ab (selbstsignierte PVE-Zertifikate) und wird beim Scan
   als WARN geloggt - nur im eigenen LAN aktivieren (MITM-Risiko), analog `NETZ_TR064_INSECURE_TLS`.
+- Anleitung zum Anlegen eines read-only-Tokens (Rolle `fox_netmap` mit `VM.Audit` + `Sys.Audit`, Token mit
+  Privilege Separation): `docs/02-benutzerhandbuch.md` Abschnitt 8 (Proxmox VE), in allen 6 Sprachen.
 
 ### 2.15 Löschfrist für Ereignisse (seit v1.6.0)
 
