@@ -116,6 +116,9 @@ Scanner (zyklisch/manuell)
 - Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) — Backlog, Issue #112 #13
 - Verbesserung IPv6 (aktuell TR-064/SNMP nur IPv4-seitig; v6-Nutzung verbessern) — Backlog, Issue #112 #14
 - Kubernetes-Cluster erkennen (kubelet/API read-only) — Backlog, Issue #112 #15 (kommt nach Proxmox)
+- Scan der Containerlandschaft (Container/Container-Hosts erkennen und in der Karte abbilden) — Backlog, Issue #112 #12
+- Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) — Backlog, Issue #112 #13
+- Verbesserung IPv6 (aktuell TR-064/SNMP nur IPv4-seitig; v6-Nutzung verbessern) — Backlog, Issue #112 #14
 - Online-OUI-Fallback: umgesetzt — `NETZ_OUI_ONLINE_ENABLED` (Default an), `NETZ_OUI_ONLINE_MAX` (max. Lookups pro Scan, Default 10), `NETZ_OUI_ONLINE_URL` (Default `https://api.macvendors.com`); nur bei lokalem Fehltreffer, Ergebnis gecacht in DB-Tabelle `oui_cache`; in den Einstellungen änderbar
 
 ## 6. Out of Scope (bestätigt)
