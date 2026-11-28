@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.8.2] – 2026-11-28
+
+### Changed
+
+- Backlog-Doku: #16 (Container als Unterzeilen des Hosts in der Tabelle) und #17 (Docker-Bridge-Fallback bei geschlossener Engine-API) in Issue #112 und `docs/01-anforderungen.md` §5 (PR #126, #127). Enthält inhaltlich 1.8.1 (Docker-Scan #123 + OUI-Rate-Limit-Fix #125).
+
 ## [1.8.1] – 2026-11-28
 
 ### Fixed
