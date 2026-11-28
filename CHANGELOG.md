@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.8.1] – 2026-11-28
+
+### Fixed
+
+- OUI-Online-Lookup: bei HTTP 429/5xx werden die Online-Lookups für den Rest des Scans pausiert (Budget geleert) statt jede MAC erneut zu fragen; Fehler loggen jetzt einmalig pro Präfix ohne Traceback (`warn_once` statt `log.warning(exc_info=True)`) – vorher ~196 Tracebacks pro Tag im Log bei Rate-Limit. 2 Regressionstests in `tests/test_scanner.py`
+
 ### Added
 
 - Containerlandschaft-Scan über die Docker Engine API (read-only, E-8): `NETZ_DOCKER_ENABLED` (default aus), `NETZ_DOCKER_HOSTS`, `NETZ_DOCKER_INSECURE_TLS`, `NETZ_DOCKER_TOKEN` (Secret); Host-Autoerkennung über Ports 2375/2376; Container als Geräte mit synthetischer MAC `ip:<ip>`, neuer Kategorie `Container` (Icon + i18n 6 Sprachen), Anbindung „verbunden mit" = Docker-Host; Host-Network-Container werden übersprungen; 14 Tests (`tests/test_docker.py`)
