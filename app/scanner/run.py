@@ -9,7 +9,7 @@ from .. import db
 from ..config import Settings, effective_settings, get_settings
 from ..exporters import auto_export, auto_export_due
 from ..logsetup import get_logger
-from . import categorize, discover, mdns, names, notify, oui, ports, snmp, topology, tr064  # noqa: F401 - Anker fuer monkeypatch(run.<modul>) in Tests
+from . import categorize, discover, docker, mdns, names, notify, oui, ports, snmp, topology, tr064  # noqa: F401 - Anker fuer monkeypatch(run.<modul>) in Tests
 from .pipeline import (  # noqa: F401 - Re-Exporte: bestehende Imports/Patches auf app.scanner.run bleiben gueltig
     add_source,
     collect_devices,

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Containerlandschaft-Scan über die Docker Engine API (read-only, E-8): `NETZ_DOCKER_ENABLED` (default aus), `NETZ_DOCKER_HOSTS`, `NETZ_DOCKER_INSECURE_TLS`, `NETZ_DOCKER_TOKEN` (Secret); Host-Autoerkennung über Ports 2375/2376; Container als Geräte mit synthetischer MAC `ip:<ip>`, neuer Kategorie `Container` (Icon + i18n 6 Sprachen), Anbindung „verbunden mit" = Docker-Host; Host-Network-Container werden übersprungen; 14 Tests (`tests/test_docker.py`)
+
 ## [1.7.0] – 2026-11-27
 
 Release 1.7.0: Produktionsreife-Kampagne W0–W8 abgeschlossen (101 Befunde aus `docs/produktionsreife/UEBERGABE.md` erledigt, Details in `docs/produktionsreife/STAND.md`/`ARCHIV.md` und den Wave-Abschnitten unten). Highlights: zentrales Einstellungs-Schema mit Secrets nur als `configured`, gehärtete öffentliche API (Token-Scope, kein `/docs`/`/openapi.json`), nicht-destruktive Dedupe, transaktionale Scans + sauberes SIGTERM, scanner-seitige Fehler im Healthcheck sichtbar, UI-Accessibility + i18n (6 Sprachen), 423 Tests (cov 91 %) + `mypy --strict` + Mutationstests, Doku in 6 Sprachen + Runbook/Architektur + generierte Env-Referenz. Runtipi-App in `foxhole` auf 1.7.0 aktualisiert.

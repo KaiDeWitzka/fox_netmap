@@ -203,6 +203,7 @@ def test_rule_order_unchanged():
         c.MEDIA,
         c.PRINTER,
         c.IOT,
+        c.CONTAINER,
         c.UNKNOWN,
     ]
     assert sorted(p for p in c.PORT_RULES if p > 1000) == c.FINGERPRINT_PORTS

@@ -27,6 +27,11 @@ class Device(TypedDict, total=False):
     tr064_endpoint: str
     ports: list[dict[str, Any]]
     layout: dict[str, Any]
+    # Docker-Container (E-8): is_container setzt die Kategorie, docker_host(_mac) die Anbindung
+    is_container: bool
+    docker_host: str
+    docker_host_mac: str
+    docker: dict[str, Any]
 
 
 class PortRow(TypedDict, total=False):

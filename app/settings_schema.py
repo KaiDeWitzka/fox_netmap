@@ -66,6 +66,11 @@ FIELDS: dict[str, SettingField] = {
     # SNMP
     "snmp_enabled": SettingField(*_BOOL),
     "snmp_switches": SettingField(*_STR),
+    # Docker Engine API (Containerlandschaft-Scan, read-only, E-8)
+    "docker_enabled": SettingField(*_BOOL),
+    "docker_hosts": SettingField(*_STR),
+    "docker_insecure_tls": SettingField(*_BOOL),
+    "docker_token": SettingField(*_STR, secret=True),
     # Alarm
     "notify_webhook": SettingField(*_STR),
     "notify_gotify": SettingField(*_STR),

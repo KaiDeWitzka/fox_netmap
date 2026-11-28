@@ -7,12 +7,13 @@ import ipaddress
 import logging
 import os
 import sqlite3
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 from urllib.parse import urlparse
 
 from .. import db, netutil
 from ..config import Settings
-from . import categorize, discover, mdns, names, oui, ports, snmp, topology, tr064
+from ..types import Device
+from . import categorize, discover, docker, mdns, names, oui, ports, snmp, topology, tr064
 
 SEED_OUI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "oui_seed.txt")
 
@@ -230,6 +231,7 @@ class Ctx(TypedDict):
     hostnames: dict[str, str]
     mdns_map: dict[str, Any]
     snmp_map: dict[str, str]
+    docker_parent: NotRequired[dict[str, str]]
 
 
 def _persist_gateways(conn: sqlite3.Connection, gateway: str, gateway6: str) -> None:
@@ -369,6 +371,14 @@ def snmp_stage(settings: Settings, live: list[dict[str, Any]], gateway: str) -> 
     return snmp_map
 
 
+def docker_stage(settings: Settings, live: list[dict[str, Any]]) -> tuple[list[Device], dict[str, str], list[str]]:
+    """Stufe 5b: Docker-Hosts (NETZ_DOCKER_HOSTS oder offene Ports 2375/2376) read-only abfragen.
+
+    Liefert (Container-Devices, {Container-MAC: Host-MAC}, zusaetzliche Container-Subnetze).
+    """
+    return docker.docker_stage(settings, live)
+
+
 def _finalize_device(
     d: dict[str, Any],
     ctx: Ctx,
@@ -417,6 +427,7 @@ def _finalize_device(
     d["connection"] = topology.conn_type(d.get("tr064_type", ""))
     link = ctx["mesh_info"]["parents"].get(d["mac"]) if ctx["mesh_info"] else None
     d["category"], d["category_reason"] = categorize.classify(
+        is_container=bool(d.get("is_container")),
         hostname=d.get("hostname", ""),
         vendor=d.get("vendor", ""),
         ports=d.get("ports", []),
@@ -427,7 +438,9 @@ def _finalize_device(
         connection=link["conn"] if link else d["connection"],
     )
     layout = db.get_layout(ctx["conn"], d["mac"]) or {}
-    manual = layout.get("connected_to") if layout.get("connected_manual") else None
+    manual = (
+        layout.get("connected_to") if layout.get("connected_manual") else ctx.get("docker_parent", {}).get(d["mac"])
+    )
     d["layout"] = {
         "connected_to": topology.resolve_connected_to(
             d["mac"],
@@ -493,10 +506,18 @@ def collect_devices(settings: Settings, conn: sqlite3.Connection) -> list[dict[s
     scan_ports_stage(settings, live, port_plan_for(settings))
     hostnames, mdns_map = names_mdns_stage(settings, live)
     snmp_map = snmp_stage(settings, live, gateway)
+    container_devs, docker_parent, docker_subnets = docker_stage(settings, live)
+    if container_devs:
+        existing_ips = {d.get("ip") for d in devices if d.get("ip")}
+        added = [dict(d) for d in container_devs if d.get("ip") not in existing_ips]
+        if added:
+            log.info("Docker: %s Container als Geraete uebernommen", len(added))
+        devices.extend(added)
+    extra_subnets = [s for s in docker_subnets if s and s not in subnets]
     ctx: Ctx = {
         "settings": settings,
         "conn": conn,
-        "subnets": subnets,
+        "subnets": subnets + extra_subnets,
         "v6_by_mac": v6_by_mac,
         "oui_table": oui_table,
         "oui_budget": {"left": settings.oui_online_max},
@@ -508,5 +529,6 @@ def collect_devices(settings: Settings, conn: sqlite3.Connection) -> list[dict[s
         "hostnames": hostnames,
         "mdns_map": mdns_map,
         "snmp_map": snmp_map,
+        "docker_parent": docker_parent,
     }
     return finalize(devices, ctx)

@@ -54,6 +54,10 @@ class SettingsPatch(BaseModel):
     snmp_enabled: bool | None = None
     snmp_community: str | None = None
     snmp_switches: str | None = None
+    docker_enabled: bool | None = None
+    docker_hosts: str | None = None
+    docker_insecure_tls: bool | None = None
+    docker_token: str | None = None
     notify_webhook: str | None = None
     notify_gotify: str | None = None
     notify_gotify_token: str | None = None

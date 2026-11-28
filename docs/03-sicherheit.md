@@ -208,6 +208,20 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   Scanner kein Gerät per SNMP ab und vermerkt das im Log.
 - Die Einstellungen weisen darauf hin, keine Standard-Community wie `public` zu verwenden.
 
+### 2.18 Docker Engine API: read-only, default aus (Backlog #112 #12, E-8)
+
+- Der Containerlandschaft-Scan nutzt **nur lesende** Endpunkte der Docker Engine API
+  (`/version`, `/containers/json?all=1`, `/networks`) auf 2376/TLS (bevorzugt) oder 2375/HTTP.
+  Der Docker-Socket wird **nicht** gemountet (root-äquivalent am Host).
+- `NETZ_DOCKER_ENABLED` ist default **aus**, weil die Engine-API root-äquivalent am Host ist:
+  sie kann Container lesen **und** steuern. Hosts werden nur abgefragt, wenn sie explizit in
+  `NETZ_DOCKER_HOSTS` stehen oder der Port-Scan 2375/2376 offen meldet.
+- `NETZ_DOCKER_TOKEN` (Bearer) ist ein Secret: nie im Klartext auslieferbar (GET zeigt nur
+  `configured`), nie im Log (S-12-Redaction), nur im `Authorization`-Header.
+- `NETZ_DOCKER_INSECURE_TLS=1` schaltet die Zertifikatsprüfung ab (selbstsignierte Zertifikate)
+  und wird beim Scan als WARN geloggt – nur im eigenen LAN aktivieren (MITM-Risiko), analog
+  `NETZ_TR064_INSECURE_TLS`.
+
 ### 2.15 Löschfrist für Ereignisse (seit v1.6.0)
 
 - Ereignisse (neu, online, offline, Ports geändert) werden nach `NETZ_EVENT_RETENTION_DAYS` Tagen gelöscht,

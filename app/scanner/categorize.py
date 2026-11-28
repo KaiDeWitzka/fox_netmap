@@ -21,9 +21,10 @@ MOBILE = "Mobilgerät"
 MEDIA = "Multimedia"
 PRINTER = "Drucker"
 IOT = "Smart-Home/IoT"
+CONTAINER = "Container"
 UNKNOWN = "Unbekannt"
 
-CATEGORIES = [ROUTER, REPEATER, SWITCH, SERVER, CLIENT, MOBILE, MEDIA, PRINTER, IOT, UNKNOWN]
+CATEGORIES = [ROUTER, REPEATER, SWITCH, SERVER, CLIENT, MOBILE, MEDIA, PRINTER, IOT, CONTAINER, UNKNOWN]
 
 
 def _rx(*parts: str) -> re.Pattern[str]:
@@ -348,6 +349,8 @@ PORT_RULES: dict[int, tuple[str, int]] = {
     3389: (CLIENT, 3),
     161: (SWITCH, 1),
     49000: (REPEATER, 2),  # TR-064 (AVM), nur wenn das Geraet nicht das Gateway ist
+    2375: (SERVER, 4),  # Docker Engine API (HTTP) - Host mit Docker
+    2376: (SERVER, 4),  # Docker Engine API (TLS)
 }
 
 # Ports, die zusaetzlich zur normalen Liste geprueft werden, weil sie die Einordnung entscheiden
@@ -469,10 +472,13 @@ def classify(
     mesh_role: str = "",
     mdns: dict[str, Any] | None = None,
     connection: str = "",
+    is_container: bool = False,
 ) -> tuple[str, str]:
     """Liefert (Kategorie, Begruendung). Begruendung: "<signal>:<wert>", "" bei Unbekannt.
     Signale als Regeltabelle (HOSTNAME_RULES, VENDOR_RULES, ...): hoechste Punktsumme gewinnt,
     bei Gleichstand die CATEGORIES-Reihenfolge (Q-14)."""
+    if is_container:
+        return CONTAINER, "docker:container"
     scores: dict[str, int] = {}
     reasons: dict[str, tuple[int, str]] = {}
     _score_gateway_mesh(scores, reasons, is_gateway, mesh_role)
