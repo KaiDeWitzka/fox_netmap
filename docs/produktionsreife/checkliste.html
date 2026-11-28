@@ -205,7 +205,7 @@
 
     <script id="daten" type="application/json">
       {
-        "stand": "2026-11-26, W0-W8 erledigt (8079aab, 974b211, bed6eed, 88f99df, ed7efa3, 9127178, 3f67b1b, 303d36d, 0b159fa), Kampagne lokal abgeschlossen - Push/PR/Release macht Kai",
+        "stand": "2026-11-28, W0\u2013W8 erledigt, Release v1.7.0 durch (PR #115 merged 1d633f1, Tag v1.7.0, GHCR-Image + SBOM/Trivy ver\u00f6ffentlicht, foxhole #46 gemerged); 113/114 erledigt \u2013 ZK-13 (Advisor-Abschlusspr\u00fcfung) offen (Kai)",
         "wellen": [
                 {
                         "id": "W0",
@@ -1330,10 +1330,10 @@
                         "titel": "CI-Job `docker` grün: UID 10001, Capabilities, schreibgeschütztes Root-Dateisystem, Smoke-Test",
                         "welle": "W8",
                         "schwere": "hoch",
-                        "status": "offen",
-                        "nachweis": "CI",
-                        "commit": "",
-                        "notiz": "CI-Job docker (UID 10001, Capabilities, read-only Root-FS, Healthcheck im Compose-Stack) lokal nicht pruefbar - kein Docker-Daemon; Kai prueft auf dem Push"
+                        "status": "erledigt",
+                        "nachweis": "ci/docker-Job gr\u00fcn in Actions-Run 46010485982 (main 9d24b24 nach Merge #115\u2013#118) und PR #115 Run 45964912754: App-Prozess l\u00e4uft als UID 10001 (Host-PID-Aufl\u00f6sung via pgrep -P), Capabilities leer, read-only Root-FS, Healthcheck-Smoke gr\u00fcn",
+                        "commit": "9d24b24",
+                        "notiz": "CI-seitig auf main gepr\u00fcft; ZK-13 (Advisor-Abschlusspr\u00fcfung) bleibt offen (Kai)"
                 },
                 {
                         "id": "ZK-9",

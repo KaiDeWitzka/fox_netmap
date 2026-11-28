@@ -1,7 +1,7 @@
 # Kampagnenstand – Produktionsreife fox_netmap
 
-- **Stand:** 2026-11-27, `main` a2ee055 (v1.6.18), Arbeitsbranch `vibe/produktionsreife-2b2bb8`; **Release 1.7.0 vorbereitet** (Version in `app/__init__.py`, CHANGELOG `[1.7.0]`) – Push/Merge/Tag `v1.7.0` macht Kai (ÜBERGABE §9.1), danach Runtipi-App in `foxhole` auf 1.7.0
-- **Nächste Welle:** keine – **W0–W8 erledigt, Kampagne lokal abgeschlossen** (112/114 Checkliste-Punkte erledigt; ZK-8 CI-Docker-Job und ZK-13 Advisor-Abschlussprüfung macht Kai nach dem Push, ÜBERGABE §9.1)
+- **Stand:** 2026-11-28, `main` c78228e (**v1.7.0**); **Release v1.7.0 durch**: PR #115 gemerged (`1d633f1`), Tag `v1.7.0` + GitHub-Release mit SBOM/Trivy, GHCR-Image `1.7.0@sha256:3d757df0…`, foxhole PR #46 gemerged (Runtipi-App auf 1.7.0 mit Digest-Pin)
+- **Nächste Welle:** keine – **W0–W8 erledigt, Release durch** (113/114 Checkliste-Punkte erledigt; ZK-8 erledigt @ `9d24b24` – CI-Docker-Job grün; **ZK-13 Advisor-Abschlussprüfung offen (Kai)**, ÜBERGABE §9.1)
 - **Grundlage:** `docs/produktionsreife/UEBERGABE.md` (Befunde Stand a63750f, vor jedem Fix gegen aktuellen Stand prüfen)
 
 ## Getroffene Entscheidungen (UEBERGABE Abschnitt 5)
