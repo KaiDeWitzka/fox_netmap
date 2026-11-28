@@ -107,10 +107,10 @@ Scanner (zyklisch/manuell)
 ## 5. Backlog
 
 - Mehrere Standorte (VPN-vernetzte Netze): umgesetzt — `NETZ_SITES` bildet Subnetze auf benannte Standorte ab (Spalte/Filter in Tabelle, Standort im Detail, Standort-Label in Subnetz-Gruppen der Karte, `site`-Feld in JSON/CSV-Export, `?site=`-Filter in `/api/devices`, `/api/sites`). Entferntes VPN-Subnetz als weiteres `NETZ_SUBNETS` (Fund via TCP-Probe, da ICMP/ARP dort nicht greifen; MAC nur via TR-064, sonst synthetischer Schlüssel `ip:<ip>` und MAC-Anzeige „–“)
-- Mehr als 200 Geräte (Performance-Optimierung)
+- Mehr als 200 Geräte (Performance-Optimierung): **erledigt** – W6-Lasttest `tests/test_load.py` (500 Geräte < 10 s), Issue #112 Punkt 4
 - IPv6: umgesetzt — v6-Subnetze in `NETZ_SUBNETS` (z. B. `2003:db8::/64`), Fund bei großen Netzen via NDP (`ip -6 neigh`) + Gateway-Ping, bei kleinen Netzen (<= /120 äquivalent) zusätzlich Ping/TCP-Sweep; MAC via NDP, synthetischer Schlüssel `ip:<v6>` sonst; Gateway-v6 (`gateway6`) für Topologie/„Verbunden mit“, mDNS-PTR über `ip6.arpa`, Web-Links mit `[v6]`-Klammern, Settings-Validierung akzeptiert v6-CIDRs. Einschränkungen: TR-064/SNMP bleiben IPv4-seitig.
 - Serverseitig generiertes PDF (Karten-Snapshot + Tabelle): umgesetzt — `POST /api/export/pdf` (Karten-Snapshot als PNG/JPEG aus dem Frontend + Geräte-Tabelle, reportlab), Button **PDF** im Header, auch mit Embed-Token; Filter wie bei JSON/CSV via Query-Parameter
-- Gruppieren der Geräte nach Räumen/Etagen in der Karte
+- Gruppieren der Geräte nach Räumen/Etagen in der Karte: **erledigt / bewusst nein** – nur Tabelle + Edit-Modus, Issue #112 Punkt 5
 - Weitere Sprachen: umgesetzt — de/en/fr/es/it/pt (`NETZ_LANG`, Sprachwahl im Header + Settings, `?lang=` für Embed, Login-Seite mehrsprachig; Kategorie-Schlüssel bleiben kanonisch englisch, Anzeige lokalisiert)
 - Online-OUI-Fallback: umgesetzt — `NETZ_OUI_ONLINE_ENABLED` (Default an), `NETZ_OUI_ONLINE_MAX` (max. Lookups pro Scan, Default 10), `NETZ_OUI_ONLINE_URL` (Default `https://api.macvendors.com`); nur bei lokalem Fehltreffer, Ergebnis gecacht in DB-Tabelle `oui_cache`; in den Einstellungen änderbar
 
