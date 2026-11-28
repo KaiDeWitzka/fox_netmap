@@ -36,6 +36,8 @@ export async function run() {
     h.doc.getElementById("st-fritzpass").value === "" && h.doc.getElementById("st-fritzpass-clear").hidden);
   h.check("S-8: konfiguriertes Secret (snmp_community) -> Loeschen-Button sichtbar, Feld leer",
     h.doc.getElementById("st-snmpcommunity").value === "" && !h.doc.getElementById("st-snmpcommunity-clear").hidden);
+  h.check("E-9: PVE-Abschnitt vorhanden, Token-Secret nicht konfiguriert -> Loeschen-Button versteckt",
+    !!h.doc.getElementById("st-pve") && !!h.doc.getElementById("st-pvetokensecret") && h.doc.getElementById("st-pvetokensecret-clear").hidden);
   h.doc.getElementById("st-snmpcommunity-clear").click();
   await sleep(100);
   const patch = [...h.calls].reverse().find((c) => c.url.includes("/api/settings") && c.method === "PATCH");

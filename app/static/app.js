@@ -1502,9 +1502,16 @@ function bindSidebar() {
       alarm_whitelist: document.getElementById("st-whitelist").value,
       sites: document.getElementById("st-sites").value,
       vpn_pool: document.getElementById("st-vpnpool").value,
+      pve_enabled: document.getElementById("st-pve").checked,
+      pve_urls: document.getElementById("st-pveurls").value,
+      pve_user: document.getElementById("st-pveuser").value,
+      pve_token_id: document.getElementById("st-pvetokenid").value,
+      pve_insecure_tls: document.getElementById("st-pveinsecuretls").checked,
     };
     const fritzPassVal = document.getElementById("st-fritzpass").value;
     if (fritzPassVal) body.fritz_pass = fritzPassVal;
+    const pveTokenVal = document.getElementById("st-pvetokensecret").value;
+    if (pveTokenVal) body.pve_token_secret = pveTokenVal;
     const errs = validateSettings(body);
     if (errs.length) {
       msg.textContent = t("msg.check") + errs.join("; ");
@@ -1520,7 +1527,7 @@ function bindSidebar() {
     }
   });
   // S-8 (Frontend): gespeicherte Secrets als "configured" anzeigen, Loeschen-Button nur wenn gesetzt
-  for (const [inputId, field] of [["st-fritzpass", "fritz_pass"], ["st-snmpcommunity", "snmp_community"]]) {
+  for (const [inputId, field] of [["st-fritzpass", "fritz_pass"], ["st-snmpcommunity", "snmp_community"], ["st-pvetokensecret", "pve_token_secret"]]) {
     const clearBtn = document.getElementById(inputId + "-clear");
     if (!clearBtn) continue;
     clearBtn.addEventListener("click", async () => {
@@ -1642,6 +1649,16 @@ function validateSettings(v) {
     if (!validCidrAny(sn)) errs.push(t("err.subnet", { v: sn }));
   for (const ip of v.snmp_switches.split(",").map((s) => s.trim()).filter(Boolean))
     if (!validIp(ip)) errs.push(t("err.snmp", { v: ip }));
+  // E-9: Proxmox VE (Token-Secret-Completeness prueft das Backend gegen den Ist-Zustand)
+  for (const u of String(v.pve_urls || "").split(",").map((x) => x.trim()).filter(Boolean))
+    if (!/^https?:\/\/[^\s@/]+(:\d+)?(\/api2\/json)?\/?$/.test(u)) errs.push(t("err.pveUrl", { v: u }));
+  const pveUser = String(v.pve_user || "").trim();
+  if (pveUser && !/^[^\s@]+@[^\s@]+$/.test(pveUser)) errs.push(t("err.pveUser", { v: pveUser }));
+  const pveTok = String(v.pve_token_id || "").trim();
+  if (pveTok && !/^[^\s@]+@[^\s@]+![^\s]+$/.test(pveTok)) errs.push(t("err.pveTokenId", { v: pveTok }));
+  if (v.pve_enabled)
+    for (const k of ["pve_urls", "pve_user", "pve_token_id"])
+      if (!String(v[k] || "").trim()) errs.push(t("err.pveMissing", { v: k }));
   return errs;
 }
 
@@ -1743,7 +1760,7 @@ async function loadSettings() {
   document.getElementById("st-porttop").value = s.port_top;
   document.getElementById("st-ports").value = s.ports || "";
   // S-8 (Frontend): Secrets kommen als {"configured": bool} - Feld leer lassen, Loeschen-Button nur wenn gesetzt
-  for (const [id, val] of [["st-snmpcommunity", s.snmp_community], ["st-fritzpass", s.fritz_pass]]) {
+  for (const [id, val] of [["st-snmpcommunity", s.snmp_community], ["st-fritzpass", s.fritz_pass], ["st-pvetokensecret", s.pve_token_secret]]) {
     const input = document.getElementById(id);
     const clearBtn = document.getElementById(id + "-clear");
     input.value = "";
@@ -1774,6 +1791,11 @@ async function loadSettings() {
   document.getElementById("st-whitelist").value = s.alarm_whitelist || "";
   document.getElementById("st-sites").value = s.sites || "";
   document.getElementById("st-vpnpool").value = s.vpn_pool || "off";
+  document.getElementById("st-pve").checked = s.pve_enabled === true || s.pve_enabled === "true";
+  document.getElementById("st-pveurls").value = s.pve_urls || "";
+  document.getElementById("st-pveuser").value = s.pve_user || "";
+  document.getElementById("st-pvetokenid").value = s.pve_token_id || "";
+  document.getElementById("st-pveinsecuretls").checked = String(s.pve_insecure_tls) === "true" || s.pve_insecure_tls === true;
   loadTokens();
 }
 

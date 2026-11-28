@@ -113,11 +113,13 @@ Scanner (zyklisch/manuell)
 - Gruppieren der Geräte nach Räumen/Etagen in der Karte: **erledigt / bewusst nein** – nur Tabelle + Edit-Modus, Issue #112 Punkt 5
 - Weitere Sprachen: umgesetzt — de/en/fr/es/it/pt (`NETZ_LANG`, Sprachwahl im Header + Settings, `?lang=` für Embed, Login-Seite mehrsprachig; Kategorie-Schlüssel bleiben kanonisch englisch, Anzeige lokalisiert)
 - Scan der Containerlandschaft: umgesetzt — Docker Engine API read-only (E-8), `NETZ_DOCKER_*`, Kategorie `Container`, Host-Erkennung über Ports 2375/2376; Issue #112 #12
-- Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) — Backlog, Issue #112 #13
+- Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) - **in Arbeit**:
+  Einstellungen umgesetzt (eigener Abschnitt "Proxmox VE", E-9, `NETZ_PVE_*`), Scanner-Stage folgt - Issue #112 #13
 - Verbesserung IPv6 (aktuell TR-064/SNMP nur IPv4-seitig; v6-Nutzung verbessern) — Backlog, Issue #112 #14
 - Kubernetes-Cluster erkennen (kubelet/API read-only) — Backlog, Issue #112 #15 (kommt nach Proxmox)
 - Scan der Containerlandschaft (Container/Container-Hosts erkennen und in der Karte abbilden) — Backlog, Issue #112 #12
-- Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) — Backlog, Issue #112 #13
+- Verbindung Proxmox VE (VMs/CTs über die Proxmox-API auslesen, als Geräte abbilden) - **in Arbeit**:
+  Einstellungen umgesetzt (eigener Abschnitt "Proxmox VE", E-9, `NETZ_PVE_*`), Scanner-Stage folgt - Issue #112 #13
 - Verbesserung IPv6 (aktuell TR-064/SNMP nur IPv4-seitig; v6-Nutzung verbessern) — Backlog, Issue #112 #14
 - Container als Unterzeilen des Docker-Hosts in der Tabelle (verschachtelte Ansicht) — Backlog, Issue #112 #16
 - Docker-Bridge-Fallback (ARP-Scan der Bridge-Netze bei geschlossener Engine-API, NETZ_DOCKER_BRIDGE_SCAN) — Backlog, Issue #112 #17

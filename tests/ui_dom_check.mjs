@@ -228,13 +228,13 @@ await sleep(50);
 check("Tabelle + ⚙: Sidebar sichtbar", vis($("#detail")));
 check("Tabelle + ⚙: Settings-Tab aktiv", $("#settings-content").hidden === false && $("#detail-content").hidden === true);
 check(
-  "Settings: Formular in 7 Themenschwerpunkten gruppiert (fieldset+legend)",
-  doc.querySelectorAll("#settings-form fieldset.st-group").length === 7 &&
+  "Settings: Formular in 8 Themenschwerpunkten gruppiert (fieldset+legend)",
+  doc.querySelectorAll("#settings-form fieldset.st-group").length === 8 &&
     [...doc.querySelectorAll("#settings-form fieldset.st-group legend")].every((l) => l.textContent.trim().length > 0)
 );
 check(
   "Settings: alle Eingabe-IDs stabil geblieben",
-  ["st-theme", "st-lang", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl"].every((id) => !!$("#" + id))
+  ["st-theme", "st-lang", "st-interval", "st-subnets", "st-scantimeout", "st-porttop", "st-ports", "st-history", "st-retention", "st-eventretention", "st-mdns", "st-fritzurl", "st-fritzurls", "st-fritzuser", "st-fritzpass", "st-tr064insecuretls", "st-snmp", "st-switches", "st-snmpcommunity", "st-notifywebhook", "st-notifygotify", "st-notifyntfy", "st-whitelist", "st-autoexport", "st-autoexport-interval", "st-autoexportdir", "st-sites", "st-vpnpool", "st-ouionline", "st-ouimax", "st-ouiurl", "st-pve", "st-pveurls", "st-pveuser", "st-pvetokenid", "st-pvetokensecret", "st-pveinsecuretls"].every((id) => !!$("#" + id))
 );
 
 $("#settings-form").dispatchEvent(new w.Event("submit", { cancelable: true }));

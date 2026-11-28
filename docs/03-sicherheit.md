@@ -222,6 +222,21 @@ Nicht genutzt, weil im privaten Repository ohne GitHub Advanced Security nicht v
   und wird beim Scan als WARN geloggt – nur im eigenen LAN aktivieren (MITM-Risiko), analog
   `NETZ_TR064_INSECURE_TLS`.
 
+### 2.19 Proxmox VE API: read-only, API-Token statt Passwort, default aus (Backlog #112 #13, E-9)
+
+- Die Proxmox-VE-Anbindung nutzt **nur lesende** API-Endpunkte (GET, z. B. `/nodes`, `/nodes/{node}/qemu`,
+  `/nodes/{node}/lxc`) auf Port 8006/HTTPS (`https://host:8006/api2/json`).
+- Authentifizierung ausschließlich per **API-Token** (`Authorization: PVEAPIToken=<user>@<realm>!<token-id>=<secret>`)
+  - es wird **kein Passwort** gespeichert oder übertragen. URLs mit Zugangsdaten (`user:pass@host`) werden in der
+    Validierung abgelehnt (S-8).
+- `NETZ_PVE_ENABLED` ist default **aus**, weil ein PVE-API-Token admin-äquivalent sein kann. Aktiv nur mit
+  kompletter Konfiguration (`NETZ_PVE_URLS`, `NETZ_PVE_USER`, `NETZ_PVE_TOKEN_ID`, `NETZ_PVE_TOKEN_SECRET`) -
+  sonst HTTP 422 beim Speichern bzw. WARN + Überspringen beim Scan.
+- `NETZ_PVE_TOKEN_SECRET` ist ein Secret: nie im Klartext auslieferbar (GET zeigt nur `configured`), nie im Log
+  (S-12-Redaction), nur im `Authorization`-Header.
+- `NETZ_PVE_INSECURE_TLS=1` schaltet die Zertifikatsprüfung ab (selbstsignierte PVE-Zertifikate) und wird beim Scan
+  als WARN geloggt - nur im eigenen LAN aktivieren (MITM-Risiko), analog `NETZ_TR064_INSECURE_TLS`.
+
 ### 2.15 Löschfrist für Ereignisse (seit v1.6.0)
 
 - Ereignisse (neu, online, offline, Ports geändert) werden nach `NETZ_EVENT_RETENTION_DAYS` Tagen gelöscht,

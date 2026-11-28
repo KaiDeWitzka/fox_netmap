@@ -131,6 +131,12 @@ uv run python scripts/gen_env_table.py --check  # prueft die Aktualitaet (Gate/T
 | `NETZ_DOCKER_HOSTS` | str | (leer) | - | - |  |
 | `NETZ_DOCKER_INSECURE_TLS` | bool | `false` | - | - |  |
 | `NETZ_DOCKER_TOKEN` | str | (leer) | - | Secret (GET nur `configured`) |  |
+| `NETZ_PVE_ENABLED` | bool | `false` | - | - |  |
+| `NETZ_PVE_URLS` | str | (leer) | - | - |  |
+| `NETZ_PVE_USER` | str | (leer) | - | - |  |
+| `NETZ_PVE_TOKEN_ID` | str | (leer) | - | - |  |
+| `NETZ_PVE_TOKEN_SECRET` | str | (leer) | - | Secret (GET nur `configured`) |  |
+| `NETZ_PVE_INSECURE_TLS` | bool | `false` | - | - |  |
 | `NETZ_NOTIFY_WEBHOOK` | str | (leer) | - | - |  |
 | `NETZ_NOTIFY_GOTIFY` | str | (leer) | - | - |  |
 | `NETZ_NOTIFY_NTFY` | str | (leer) | - | - |  |
