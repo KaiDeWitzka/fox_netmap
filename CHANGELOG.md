@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.8.0] – 2026-11-28
+
 ### Added
 
 - Containerlandschaft-Scan über die Docker Engine API (read-only, E-8): `NETZ_DOCKER_ENABLED` (default aus), `NETZ_DOCKER_HOSTS`, `NETZ_DOCKER_INSECURE_TLS`, `NETZ_DOCKER_TOKEN` (Secret); Host-Autoerkennung über Ports 2375/2376; Container als Geräte mit synthetischer MAC `ip:<ip>`, neuer Kategorie `Container` (Icon + i18n 6 Sprachen), Anbindung „verbunden mit" = Docker-Host; Host-Network-Container werden übersprungen; 14 Tests (`tests/test_docker.py`)
