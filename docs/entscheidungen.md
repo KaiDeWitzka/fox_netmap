@@ -42,3 +42,18 @@ Q-13/Q-12/Q-16). Verhalten aendert sich dadurch nicht.
 - **Entscheidung (W8):** `docs_url=None, openapi_url=None` in `app/web.py::create_app`. Die Doku
   liegt versioniert im Repo unter `docs/`; eine automatisch generierte API-Doku ohne Review ist
   kein Mehrwert. Nachweis: `tests/test_docs.py::test_docs_url_disabled`.
+
+## E-8 – Containerlandschaft-Scan über die Docker Engine API, read-only (Backlog #112 #12)
+
+- **Fakt:** Container sind ohne Engine-API nicht zuverlässig erkennbar: Port 2375/2376 zeigt nur
+  den Docker-Host, nicht die Container. Bridge-Scans (172.16.0.0/12) finden Container-IPs nur im
+  selben L2-Segment. Der Docker-Socket (`/var/run/docker.sock`) im Scanner-Container wäre
+  root-äquivalent am Host und wird **nicht** gemountet.
+- **Entscheidung:** Scan über die Engine-API (2376/TLS bevorzugt, 2375 fallback), ausschließlich
+  read-only Endpunkte (`/version`, `/info`, `/containers/json?all=1`, `/networks`), optional
+  `Authorization: Bearer` via `NETZ_DOCKER_TOKEN` (secret, nie geloggt). Hosts entweder explizit
+  (`NETZ_DOCKER_HOSTS`) oder auto-detektiert über offene Ports 2375/2376 im Port-Scan.
+  `NETZ_DOCKER_ENABLED` default **aus** (API ist root-äquivalent am Host; Doku-Warnung in
+  `docs/03-sicherheit.md`). Container werden als Geräte mit synthetischer MAC `ip:<ip>`,
+  Kategorie `Container`, „verbunden mit" = Docker-Host. Host-Network-Container werden übersprungen.
+- **Später:** Proxmox VE über eigene API (Backlog #13), Kubernetes als eigener Punkt (Backlog #15).

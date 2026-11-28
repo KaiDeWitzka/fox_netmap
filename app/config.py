@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # Kein Standardwert "public" mehr (v1.6.0): ohne gesetzte Community wird SNMP uebersprungen
     snmp_community: str = ""
     snmp_switches: str = ""
+    # Containerlandschaft-Scan ueber die Docker Engine API (E-8): default AUS, die API ist
+    # root-aequivalent am Host. Nur read-only Endpunkte, Hosts explizit (NETZ_DOCKER_HOSTS)
+    # oder auto-detektiert ueber offene Ports 2375/2376.
+    docker_enabled: bool = False
+    docker_hosts: str = ""  # "host1:2376,host2" - ohne Port wird 2376 (TLS) dann 2375 (HTTP) versucht
+    # TLS-Zertifikatspruefung fuer 2376 abschalten (selbstsigniert); nur im eigenen LAN (MITM-Risiko)
+    docker_insecure_tls: bool = False
+    docker_token: str = ""  # Bearer-Token fuer API-geschuetzte Daemons; secret, nie geloggt
     auth_enabled: bool = True
     auth_user: str = "admin"
     auth_pass: str = ""

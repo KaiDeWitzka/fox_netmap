@@ -127,6 +127,10 @@ uv run python scripts/gen_env_table.py --check  # prueft die Aktualitaet (Gate/T
 | `NETZ_VPN_POOL` | str | `off` | - | - |  |
 | `NETZ_SNMP_ENABLED` | bool | `true` | - | - |  |
 | `NETZ_SNMP_SWITCHES` | str | (leer) | - | - |  |
+| `NETZ_DOCKER_ENABLED` | bool | `false` | - | - |  |
+| `NETZ_DOCKER_HOSTS` | str | (leer) | - | - |  |
+| `NETZ_DOCKER_INSECURE_TLS` | bool | `false` | - | - |  |
+| `NETZ_DOCKER_TOKEN` | str | (leer) | - | Secret (GET nur `configured`) |  |
 | `NETZ_NOTIFY_WEBHOOK` | str | (leer) | - | - |  |
 | `NETZ_NOTIFY_GOTIFY` | str | (leer) | - | - |  |
 | `NETZ_NOTIFY_NTFY` | str | (leer) | - | - |  |
