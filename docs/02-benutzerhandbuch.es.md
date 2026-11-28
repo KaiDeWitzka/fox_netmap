@@ -211,6 +211,17 @@ vacío = valor por defecto del entorno).
 webhook sin `https://`) se muestran de inmediato en el frontend y el backend las rechaza con
 HTTP 422.
 
+#### Proxmox VE: crear un token de API (ejemplo)
+
+Para que fox_netmap pueda leer VM/CT sin guardar una contraseña:
+
+1. En Proxmox VE: **Datacenter → Permissions → Roles → Create** - ID de rol `fox_netmap`, privilegios `VM.Audit` y `Sys.Audit` (solo lectura).
+2. **Datacenter → Permissions → API Tokens → Add** - usuario `root@pam`, ID de token `fox_netmap`, dejar **Privilege Separation activado** (por defecto). El secreto se muestra una sola vez: ¡copiarlo!
+3. **Datacenter → Permissions → Add** - ruta `/`, usuario `root@pam!fox_netmap`, rol `fox_netmap` (así el token solo tiene lectura pese a `root@pam`).
+4. En fox_netmap en **Configuración → Proxmox VE**: URL `https://<ip-pve>:8006`, usuario `root@pam`, ID de token `root@pam!fox_netmap`, secreto = secreto copiado. Activar el escaneo.
+
+Alternativa: usar un usuario dedicado (p. ej. `monitor@pve`) con el mismo rol en lugar de `root@pam`. Activar `NETZ_PVE_INSECURE_TLS` solo en la LAN propia (riesgo MITM).
+
 ---
 
 ## 9. Integración (embed, solo lectura)

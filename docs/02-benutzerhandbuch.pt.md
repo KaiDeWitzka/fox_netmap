@@ -206,6 +206,17 @@ env do compose continuam a ser os predefinidos para novas instalações; vazio =
 **Validação:** entradas inválidas (p. ex. `nao-e-ip` como sub-rede, porta `abc`, webhook sem
 `https://`) são indicadas de imediato no frontend e rejeitadas pelo backend com HTTP 422.
 
+#### Proxmox VE: criar um token de API (exemplo)
+
+Para que o fox_netmap possa ler VM/CT sem guardar uma palavra-passe:
+
+1. No Proxmox VE: **Datacenter → Permissions → Roles → Create** - ID do papel `fox_netmap`, privilégios `VM.Audit` e `Sys.Audit` (apenas leitura).
+2. **Datacenter → Permissions → API Tokens → Add** - utilizador `root@pam`, ID do token `fox_netmap`, deixar **Privilege Separation ativado** (predefinição). O segredo é mostrado apenas uma vez - copie-o!
+3. **Datacenter → Permissions → Add** - caminho `/`, utilizador `root@pam!fox_netmap`, papel `fox_netmap` (assim o token tem apenas leitura, apesar de `root@pam`).
+4. No fox_netmap em **Definições → Proxmox VE**: URL `https://<ip-pve>:8006`, utilizador `root@pam`, ID do token `root@pam!fox_netmap`, segredo = segredo copiado. Ativar a varredura.
+
+Alternativa: usar um utilizador dedicado (p. ex. `monitor@pve`) com o mesmo papel em vez de `root@pam`. Ativar `NETZ_PVE_INSECURE_TLS` apenas na LAN própria (risco MITM).
+
 ---
 
 ## 9. Incorporação (embed, só de leitura)
